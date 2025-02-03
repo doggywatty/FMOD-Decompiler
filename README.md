@@ -41,5 +41,5 @@ FMOD-Decompiler --input "path/to/bank/folder" --output "path/to/output/project"
 Pull requests and issue reports are welcome! Feel free to contribute improvements or report bugs.
 
 ## License
-This project is licensed under the MIT License. See `LICENSE` for more details.
+This project is licensed under the GNU License. See `LICENSE` for more details.
 
