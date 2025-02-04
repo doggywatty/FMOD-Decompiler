@@ -1,6 +1,8 @@
 ﻿using System;
+using System.ComponentModel;
 using System.Diagnostics.Tracing;
 using System.IO;
+using System.Reflection;
 using FMOD;
 using FMOD.Studio;
 
@@ -11,6 +13,16 @@ namespace BankToFSPro
         static void Main(string[] args)
         {
             // initialize
+            Console.WriteLine("Welcome to the FMOD Bank Decompiler (WIP Version)"
+            + "\n\nby CatMateo"
+            + "\nand burnedpopcorn180"
+
+            + "\n\nTHIS IS STILL VERY WIP"
+            + "\nAND IS CURRENTLY NON-FUNCTIONAL"
+
+            + "\n"
+            );
+
             string bankFolder = "";
             string outputProjectPath = "";
             bool verbose = false;
@@ -113,10 +125,13 @@ namespace BankToFSPro
                     FMOD.Studio.EventInstance eventInstance;
                     eventDescription.createInstance(out eventInstance);
 
+                    // get event name
+                    eventDescription.getPath(out string eventname);
+
                     // save the event instance to the project (this is a placeholder, actual saving logic may vary)
                     if (verbose)
-                        Console.WriteLine($"Saving Event: {eventDescription}");// FIX THIS
-                    SaveEventInstance(eventInstance, outputProjectPath);
+                        Console.WriteLine($"Saving Event: {eventname}");
+                    SaveEventInstance(eventInstance, eventDescription, outputProjectPath);
                 }
             }
 
@@ -126,7 +141,7 @@ namespace BankToFSPro
             studioSystem.release();
         }
 
-        static void SaveEventInstance(FMOD.Studio.EventInstance eventInstance, string outputProjectPath)
+        static void SaveEventInstance(FMOD.Studio.EventInstance eventInstance, FMOD.Studio.EventDescription eventDescription, string outputProjectPath)
         {
             // implement the logic to save the event instance to the specified path
             // this is a placeholder implementation
