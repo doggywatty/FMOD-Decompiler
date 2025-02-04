@@ -3,7 +3,12 @@
 FMOD-Decompiler is a VERY VERY WIP tool that attempts to decompile multiple FMOD bank files into a single `.fspro` project. This allows users to reconstruct an FMOD project from compiled bank files, making it easier to analyze or modify existing audio assets.<br>
 
 
-This not may work however, as it tries to find the DLL from the [FMOD Studio API](https://fmod.com/download#fmodengine). And it fails to load sooo..
+This uses DLLs from the [FMOD Studio API](https://fmod.com/download#fmodengine).
+
+> [!IMPORTANT]
+> Currently, you have to manually add ```fmod.dll``` and ```fmodstudio.dll``` into the System32 folder
+>
+> This will be fixed in future updates
 
 ## Features
 - Parses and extracts data from FMOD bank files (`.bank`)

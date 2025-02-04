@@ -15,9 +15,31 @@ namespace BankToFSPro
             Console.Write("Enter the path to output the FSPro project: ");
             string outputProjectPath = Console.ReadLine();
 
+            // If user input nothing
+            if (bankFolder == null || outputProjectPath == null) 
+            {
+                Console.WriteLine("Input File paths are empty\nQuitting...");
+                return;
+            }
+
+            // remove any qoutes in the strings, just in case
+            bankFolder = bankFolder.Replace("\"", "");
+            outputProjectPath = outputProjectPath.Replace("\"", "");
+
+            // If bank folder doesn't exist
+            if (!Directory.Exists(bankFolder)) 
+            {
+                Console.WriteLine("Bank Folder does not exist\nQuitting...");
+                return;
+            }
+
+            // If output folder doesn't exist, warn user
+            if (!Directory.Exists(bankFolder))
+                Console.WriteLine("Output Folder does not exist\nContinuing Anyways...");
+
             // create the FMOD Studio system
             FMOD.Studio.System studioSystem;
-            FMOD.Studio.System.create(out studioSystem);
+            FMOD.Studio.System.create(out studioSystem);// THE ONE WITH THE ISSUES
             studioSystem.initialize(512, FMOD.Studio.INITFLAGS.NORMAL, FMOD.INITFLAGS.NORMAL, IntPtr.Zero);
 
             // load all the banks in the specified folder

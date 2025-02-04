@@ -1,8 +1,8 @@
 {
   "version": 2,
-  "dgSpecHash": "IfS0LJKw2wyLmh0VOkhOF4Bg7H7bF6V3RckbrxjR7zYv/bbU/Z+nSGkPD1bm7majYbp/30SKQ21ZDDpDwHxeqg==",
+  "dgSpecHash": "ka+UDQT6xcg=",
   "success": true,
-  "projectFilePath": "F:\\Mateo\\FMOD-Decompiler\\FMOD-Decompiler\\FMOD-Decompiler.csproj",
+  "projectFilePath": "C:\\Users\\juanm\\Downloads\\FMOD_Test_Code\\FMOD-Decompiler\\FMOD-Decompiler.csproj",
   "expectedPackageFiles": [],
   "logs": []
 }
