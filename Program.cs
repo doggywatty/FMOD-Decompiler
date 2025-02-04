@@ -27,6 +27,73 @@ namespace BankToFSPro
             string outputProjectPath = "";
             bool verbose = false;
 
+            // Long ass shit that we should just ignore
+            #region DLLs
+
+            // kinda shit way of doing it, but i really dont want to fuck with the FMOD code just to dynamically link it
+            if (!File.Exists(@"C:\Windows\System32\fmod.dll"))
+            {
+                string backupfmodDLL = Path.GetDirectoryName(Environment.ProcessPath) + @"dlls\fmod.dll"; // Path to your DLL
+                try {
+                    // Check if the fmod.dll exists
+                    if (File.Exists(backupfmodDLL))
+                    {
+                        // Copy the file to System32
+                        File.Copy(backupfmodDLL, @"C:\Windows\System32\fmod.dll");
+
+                        // check if this isn't is missing, so we can just end execution
+                        // if its missing tho, we move on to the next dll
+                        if (File.Exists(@"C:\Windows\System32\fmodstudio.dll"))
+                        {
+                            Console.WriteLine("fmod.dll was applied!\nPlease restart the program for changes to take effect");
+                            return;
+                        }
+                        else 
+                        {
+                            Console.WriteLine("fmod.dll was applied!");
+                            // dont stop execution, since if we're here, the other one needs to be added
+                        }
+                    }
+                    else
+                    {
+                        Console.WriteLine("fmod.dll was not found in the /dlls folder.");
+                    }
+                }
+                catch (UnauthorizedAccessException ex)
+                {
+                    Console.WriteLine("fmod.dll could not be copied to System\nPlease restart the program as an administrator");
+                    return;
+                }
+            }
+
+            if (!File.Exists(@"C:\Windows\System32\fmodstudio.dll"))
+            {
+                string backupfmodstudioDLL = Path.GetDirectoryName(Environment.ProcessPath) + @"dlls\fmodstudio.dll"; // Path to your DLL
+                try
+                {
+                    // Check if the fmod.dll exists
+                    if (File.Exists(backupfmodstudioDLL))
+                    {
+                        // Copy the file to System32
+                        File.Copy(backupfmodstudioDLL, @"C:\Windows\System32\fmodstudio.dll");
+
+                        // we can just end execution, since it was already checked above
+                        Console.WriteLine("fmodstudio.dll was applied!\nPlease restart the program for changes to take effect");
+                        return;
+                    }
+                    else
+                    {
+                        Console.WriteLine("fmodstudio.dll was not found in the /dlls folder.");
+                    }
+                }
+                catch (UnauthorizedAccessException ex)
+                {
+                    Console.WriteLine("fmodstudio.dll could not be copied to System\nPlease restart the program as an administrator");
+                    return;
+                }
+            }
+
+            #endregion
             #region Arguments and Folders
 
             // check arguments
