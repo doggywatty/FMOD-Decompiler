@@ -14,6 +14,8 @@ namespace BankToFSPro
             string outputProjectPath = "";
             bool verbose = false;
 
+            #region Arguments and Folders
+
             // check arguments
             for (int i = 0; i < args.Length; i++)
             {
@@ -78,6 +80,8 @@ namespace BankToFSPro
             // If output folder doesn't exist, warn user
             if (!Directory.Exists(bankFolder))
                 Console.WriteLine("Output Folder does not exist\nContinuing Anyways...");
+
+            #endregion
 
             // create the FMOD Studio system
             FMOD.Studio.System studioSystem;
