@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics.Tracing;
 using System.IO;
 using FMOD;
 using FMOD.Studio;
@@ -88,6 +89,9 @@ namespace BankToFSPro
             FMOD.Studio.System.create(out studioSystem);
             studioSystem.initialize(512, FMOD.Studio.INITFLAGS.NORMAL, FMOD.INITFLAGS.NORMAL, IntPtr.Zero);
 
+            if (!verbose)
+                Console.WriteLine("Finding and Saving Events....");
+
             // load all the banks in the specified folder
             foreach (string bankFilePath in Directory.GetFiles(bankFolder, "*.bank"))
             {
@@ -97,6 +101,8 @@ namespace BankToFSPro
                 // get the list of events in the bank
                 int eventCount;
                 bank.getEventCount(out eventCount);
+                if (verbose)
+                    Console.WriteLine($"\nEvents Found in {bankFilePath}: {eventCount}\n");
 
                 FMOD.Studio.EventDescription[] eventDescriptions = new FMOD.Studio.EventDescription[eventCount];
                 bank.getEventList(out eventDescriptions);
@@ -108,11 +114,13 @@ namespace BankToFSPro
                     eventDescription.createInstance(out eventInstance);
 
                     // save the event instance to the project (this is a placeholder, actual saving logic may vary)
+                    if (verbose)
+                        Console.WriteLine($"Saving Event: {eventDescription}");// FIX THIS
                     SaveEventInstance(eventInstance, outputProjectPath);
                 }
             }
 
-            Console.WriteLine("Conversion complete!");
+            Console.WriteLine("\nConversion complete!");
 
             // Clean up the FMOD Studio system
             studioSystem.release();
