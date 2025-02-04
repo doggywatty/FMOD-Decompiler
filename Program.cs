@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics.Tracing;
 using System.IO;
 using FMOD;
 using FMOD.Studio;
@@ -9,16 +10,60 @@ namespace BankToFSPro
     {
         static void Main(string[] args)
         {
-            Console.Write("Enter the path to the bank folder: ");
-            string bankFolder = Console.ReadLine();
+            // initialize
+            string bankFolder = "";
+            string outputProjectPath = "";
+            bool verbose = false;
 
-            Console.Write("Enter the path to output the FSPro project: ");
-            string outputProjectPath = Console.ReadLine();
+            #region Arguments and Folders
+
+            // check arguments
+            for (int i = 0; i < args.Length; i++)
+            {
+                // check for --input argument
+                if (args[i] == "--input" && i + 1 < args.Length)
+                {
+                    bankFolder = args[i + 1];
+                    i++; // Skip the next element (value for --input)
+                }
+                // check the --output argument
+                else if (args[i] == "--output" && i + 1 < args.Length)
+                {
+                    outputProjectPath = args[i + 1];
+                    i++; // Skip the next element (value for --output)
+                }
+                // check the --verbose flag
+                else if (args[i] == "--verbose")
+                {
+                    verbose = true;
+                }
+                else
+                {
+                    // Handle missing arguments
+                    Console.WriteLine($"Missing argument: {args[i]}");
+                    return;
+                }
+            }
+
+            // if no arguments were added
+            if (args.Length == 0)
+            {
+                Console.Write("Enter the path to the bank folder: ");
+                bankFolder = Console.ReadLine();
+
+                Console.Write("Enter the path to output the FSPro project: ");
+                outputProjectPath = Console.ReadLine();
+            }
 
             // If user input nothing
-            if (bankFolder == null || outputProjectPath == null) 
+            if (bankFolder == "") 
             {
-                Console.WriteLine("Input File paths are empty\nQuitting...");
+                Console.WriteLine("No Bank file path provided\nQuitting...");
+                return;
+            }
+            if (outputProjectPath == "")
+            {
+                Console.WriteLine("No Output file path provided\nQuitting...");
                 return;
             }
 
@@ -37,10 +82,15 @@ namespace BankToFSPro
             if (!Directory.Exists(bankFolder))
                 Console.WriteLine("Output Folder does not exist\nContinuing Anyways...");
 
+            #endregion
+
             // create the FMOD Studio system
             FMOD.Studio.System studioSystem;
-            FMOD.Studio.System.create(out studioSystem);// THE ONE WITH THE ISSUES
+            FMOD.Studio.System.create(out studioSystem);
             studioSystem.initialize(512, FMOD.Studio.INITFLAGS.NORMAL, FMOD.INITFLAGS.NORMAL, IntPtr.Zero);
+
+            if (!verbose)
+                Console.WriteLine("Finding and Saving Events....");
 
             // load all the banks in the specified folder
             foreach (string bankFilePath in Directory.GetFiles(bankFolder, "*.bank"))
@@ -51,6 +101,8 @@ namespace BankToFSPro
                 // get the list of events in the bank
                 int eventCount;
                 bank.getEventCount(out eventCount);
+                if (verbose)
+                    Console.WriteLine($"\nEvents Found in {bankFilePath}: {eventCount}\n");
 
                 FMOD.Studio.EventDescription[] eventDescriptions = new FMOD.Studio.EventDescription[eventCount];
                 bank.getEventList(out eventDescriptions);
@@ -62,11 +114,13 @@ namespace BankToFSPro
                     eventDescription.createInstance(out eventInstance);
 
                     // save the event instance to the project (this is a placeholder, actual saving logic may vary)
+                    if (verbose)
+                        Console.WriteLine($"Saving Event: {eventDescription}");// FIX THIS
                     SaveEventInstance(eventInstance, outputProjectPath);
                 }
             }
 
-            Console.WriteLine("Conversion complete!");
+            Console.WriteLine("\nConversion complete!");
 
             // Clean up the FMOD Studio system
             studioSystem.release();
