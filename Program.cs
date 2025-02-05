@@ -5,22 +5,45 @@ using System.IO;
 using System.Reflection;
 using FMOD;
 using FMOD.Studio;
+// shit that extracts sounds from banks
+// https://github.com/SamboyCoding/Fmod5Sharp
+using Fmod5Sharp;
+using System.Text;
 
 namespace BankToFSPro
 {
     class Program
     {
+        #region Colored Text
+        // thank you https://stackoverflow.com/questions/2743260/is-it-possible-to-write-to-the-console-in-colour-in-net
+        public static string NL = Environment.NewLine; // shortcut
+        public static string NORMAL = Console.IsOutputRedirected ? "" : "\x1b[39m";
+        public static string RED = Console.IsOutputRedirected ? "" : "\x1b[91m";
+        public static string GREEN = Console.IsOutputRedirected ? "" : "\x1b[92m";
+        public static string YELLOW = Console.IsOutputRedirected ? "" : "\x1b[93m";
+        public static string BLUE = Console.IsOutputRedirected ? "" : "\x1b[94m";
+        public static string MAGENTA = Console.IsOutputRedirected ? "" : "\x1b[95m";
+        public static string CYAN = Console.IsOutputRedirected ? "" : "\x1b[96m";
+        public static string GREY = Console.IsOutputRedirected ? "" : "\x1b[97m";
+        public static string BOLD = Console.IsOutputRedirected ? "" : "\x1b[1m";
+        public static string NOBOLD = Console.IsOutputRedirected ? "" : "\x1b[22m";
+        public static string UNDERLINE = Console.IsOutputRedirected ? "" : "\x1b[4m";
+        public static string NOUNDERLINE = Console.IsOutputRedirected ? "" : "\x1b[24m";
+        public static string REVERSE = Console.IsOutputRedirected ? "" : "\x1b[7m";
+        public static string NOREVERSE = Console.IsOutputRedirected ? "" : "\x1b[27m";
+        #endregion
+
         static void Main(string[] args)
         {
             // initialize
-            Console.WriteLine("Welcome to the FMOD Bank Decompiler (WIP Version)"
-            + "\n\nby CatMateo"
-            + "\nand burnedpopcorn180"
+            Console.WriteLine($"Welcome to the FMOD Bank Decompiler {RED}(WIP Version){NORMAL}"
+            + $"\n\nby {CYAN}CatMateo{NORMAL}"
+            + $"\nand {GREY}burnedpopcorn180{NORMAL}"
 
-            + "\n\nTHIS IS STILL VERY WIP"
-            + "\nAND IS CURRENTLY NON-FUNCTIONAL"
+            + $"\n\n{RED}THIS IS STILL VERY WIP{NORMAL}"
+            + $"\n{RED}AND IS CURRENTLY NON-FUNCTIONAL AS A DECOMPILER{NORMAL}"
 
-            + "\n"
+            + $"\n"
             );
 
             string bankFolder = "";
@@ -45,23 +68,23 @@ namespace BankToFSPro
                         // if its missing tho, we move on to the next dll
                         if (File.Exists(@"C:\Windows\System32\fmodstudio.dll"))
                         {
-                            Console.WriteLine("fmod.dll was applied!\nPlease restart the program for changes to take effect");
+                            Console.WriteLine($"{GREEN}fmod.dll was applied!\nPlease restart the program for changes to take effect{NORMAL}");
                             return;
                         }
                         else 
                         {
-                            Console.WriteLine("fmod.dll was applied!");
+                            Console.WriteLine($"{GREEN}fmod.dll was applied!{NORMAL}");
                             // dont stop execution, since if we're here, the other one needs to be added
                         }
                     }
                     else
                     {
-                        Console.WriteLine("fmod.dll was not found in the /dlls folder.");
+                        Console.WriteLine($"{RED}fmod.dll was not found in the /dlls folder.{NORMAL}");
                     }
                 }
                 catch (UnauthorizedAccessException ex)
                 {
-                    Console.WriteLine("fmod.dll could not be copied to System\nPlease restart the program as an administrator");
+                    Console.WriteLine($"{RED}fmod.dll could not be copied to System\nPlease restart the program as an administrator{NORMAL}");
                     return;
                 }
             }
@@ -119,7 +142,7 @@ namespace BankToFSPro
                 else
                 {
                     // Handle missing arguments
-                    Console.WriteLine($"Missing argument: {args[i]}");
+                    Console.WriteLine($"{RED}Missing argument: {args[i]}{NORMAL}");
                     return;
                 }
             }
@@ -137,12 +160,12 @@ namespace BankToFSPro
             // If user input nothing
             if (bankFolder == "") 
             {
-                Console.WriteLine("No Bank file path provided\nQuitting...");
+                Console.WriteLine($"{RED}No Bank file path provided\nQuitting...{NORMAL}");
                 return;
             }
             if (outputProjectPath == "")
             {
-                Console.WriteLine("No Output file path provided\nQuitting...");
+                Console.WriteLine($"{RED}No Output file path provided\nQuitting...{NORMAL}");
                 return;
             }
 
@@ -153,13 +176,13 @@ namespace BankToFSPro
             // If bank folder doesn't exist
             if (!Directory.Exists(bankFolder)) 
             {
-                Console.WriteLine("Bank Folder does not exist\nQuitting...");
+                Console.WriteLine($"{RED}Bank Folder does not exist\nQuitting...{NORMAL}");
                 return;
             }
 
             // If output folder doesn't exist, warn user
             if (!Directory.Exists(bankFolder))
-                Console.WriteLine("Output Folder does not exist\nContinuing Anyways...");
+                Console.WriteLine($"{RED}Output Folder does not exist{NORMAL}\n{YELLOW}Continuing Anyways...{NORMAL}");
 
             #endregion
 
@@ -195,11 +218,14 @@ namespace BankToFSPro
                 FMOD.Studio.Bank bank;
                 studioSystem.loadBankFile(bankFilePath, FMOD.Studio.LOAD_BANK_FLAGS.NORMAL, out bank);
 
+                // just filename
+                string bankfilename = Path.GetFileName(bankFilePath);
+
                 // get the list of events in the bank
                 int eventCount;
                 bank.getEventCount(out eventCount);
                 if (verbose)
-                    Console.WriteLine($"\nEvents Found in {bankFilePath}: {eventCount}\n");
+                    Console.WriteLine($"\n{YELLOW}Events Found in {bankFilePath}: {eventCount}{NORMAL}\n");
 
                 FMOD.Studio.EventDescription[] eventDescriptions = new FMOD.Studio.EventDescription[eventCount];
                 bank.getEventList(out eventDescriptions);
@@ -218,9 +244,12 @@ namespace BankToFSPro
                         Console.WriteLine($"Saving Event: {eventname}");
                     SaveEventInstance(eventInstance, eventDescription, outputProjectPath);
                 }
+
+                // Extract Sounds to /Assets folder
+                ExtractSoundFiles(bankFilePath, outputProjectPath + "/Assets", bankfilename, verbose);
             }
 
-            Console.WriteLine("\nConversion complete!");
+            Console.WriteLine($"\n{GREEN}Conversion complete!{NORMAL}");
 
             // Clean up the FMOD Studio system
             studioSystem.release();
@@ -231,6 +260,44 @@ namespace BankToFSPro
             // implement the logic to save the event instance to the specified path
             // this is a placeholder implementation
             // example: Serialize event instance data to a file in the output project path
+        }
+
+        // from https://github.com/SamboyCoding/Fmod5Sharp/blob/master/BankExtractor/Program.cs
+        static void ExtractSoundFiles(string bankPath, string outPath, string bankfilename, bool verbose)
+        {
+            // if Master.bank or Master.strings.bank
+            if (bankPath.Contains("Master"))
+                return; // ignore because it causes the thing to fail
+
+            var bytes = File.ReadAllBytes(bankPath);
+            var index = bytes.AsSpan().IndexOf(Encoding.ASCII.GetBytes("FSB5"));
+            if (index > 0)
+            {
+                bytes = bytes.AsSpan(index).ToArray();
+            }
+            var bank = FsbLoader.LoadFsbFromByteArray(bytes);
+            var outDir = Directory.CreateDirectory(outPath + $"/{ bankfilename.Replace(".bank", "")}/");
+
+            if (verbose)
+                Console.WriteLine($"{YELLOW}Extracting Sound Files from {bankfilename}...{NORMAL}");
+
+            var i = 0;
+            foreach (var bankSample in bank.Samples)
+            {
+                i++;
+                var name = bankSample.Name ?? $"UnknownSound-{i}";
+
+                if (!bankSample.RebuildAsStandardFileFormat(out var data, out var extension))
+                {
+                    Console.WriteLine($"{RED}Failed to Extract Sound {name}{NORMAL}");
+                    continue;
+                }
+
+                var filePath = Path.Combine(outDir.FullName, $"{name}.{extension}");
+                File.WriteAllBytes(filePath, data);
+                if (verbose)
+                    Console.WriteLine($"{CYAN}Extracted Sound {name}.{extension}{NORMAL}");
+            }
         }
     }
 }
