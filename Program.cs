@@ -1,5 +1,6 @@
 ﻿using System;
 using System.ComponentModel;
+using System.Runtime.InteropServices;
 using System.Diagnostics.Tracing;
 using System.IO;
 using System.Reflection;
@@ -31,11 +32,24 @@ namespace BankToFSPro
         public static string NOUNDERLINE = Console.IsOutputRedirected ? "" : "\x1b[24m";
         public static string REVERSE = Console.IsOutputRedirected ? "" : "\x1b[7m";
         public static string NOREVERSE = Console.IsOutputRedirected ? "" : "\x1b[27m";
+
+        // and thank you https://stackoverflow.com/questions/7937256/custom-text-color-in-c-sharp-console-application
+        [DllImport("kernel32.dll", SetLastError = true)]
+        public static extern bool SetConsoleMode(IntPtr hConsoleHandle, int mode);
+        [DllImport("kernel32.dll", SetLastError = true)]
+        public static extern bool GetConsoleMode(IntPtr handle, out int mode);
+
+        [DllImport("kernel32.dll", SetLastError = true)]
+        public static extern IntPtr GetStdHandle(int handle);
         #endregion
 
         static void Main(string[] args)
         {
             // initialize
+            GetConsoleMode(GetStdHandle(-11), out int mode);
+            SetConsoleMode(GetStdHandle(-11), mode | 0x4);
+            Console.Clear();
+
             Console.WriteLine($"Welcome to the FMOD Bank Decompiler {RED}(WIP Version){NORMAL}"
             + $"\n\nby {CYAN}CatMateo{NORMAL}"
             + $"\nand {GREY}burnedpopcorn180{NORMAL}"
@@ -199,7 +213,7 @@ namespace BankToFSPro
             studioSystem.initialize(512, FMOD.Studio.INITFLAGS.NORMAL, FMOD.INITFLAGS.NORMAL, IntPtr.Zero);
 
             if (!verbose)
-                Console.WriteLine("Finding and Saving Events....");
+                Console.WriteLine($"{YELLOW}Finding and Saving Events...{NORMAL}");
 
             // load all the banks in the specified folder
             foreach (string bankFilePath in Directory.GetFiles(bankFolder, "*.bank"))
@@ -238,7 +252,8 @@ namespace BankToFSPro
                 ExtractSoundFiles(bankFilePath, outputProjectPath + "/Assets", bankfilename, verbose);
             }
 
-            Console.WriteLine($"\n{GREEN}Conversion complete!{NORMAL}");
+            Console.WriteLine($"\n{GREEN}Conversion Complete!{NORMAL}");
+            Console.WriteLine($"{GREEN}Exported Project is at {outputProjectPath}{NORMAL}");
 
             // Clean up the FMOD Studio system
             studioSystem.release();
@@ -268,7 +283,7 @@ namespace BankToFSPro
             var outDir = Directory.CreateDirectory(outPath + $"/{ bankfilename.Replace(".bank", "")}/");
 
             if (verbose)
-                Console.WriteLine($"{YELLOW}Extracting Sound Files from {bankfilename}...{NORMAL}");
+                Console.WriteLine($"\n{YELLOW}Extracting Sound Files from {bankfilename}...{NORMAL}\n");
 
             var i = 0;
             foreach (var bankSample in bank.Samples)
