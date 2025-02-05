@@ -54,28 +54,18 @@ namespace BankToFSPro
             #region DLLs
 
             // kinda shit way of doing it, but i really dont want to fuck with the FMOD code just to dynamically link it
-            if (!File.Exists(@"C:\Windows\System32\fmod.dll"))
+            if (!File.Exists(@"C:\fmod-decompiler\fmod.dll"))
             {
-                string backupfmodDLL = Path.GetDirectoryName(Environment.ProcessPath) + @"dlls\fmod.dll"; // Path to your DLL
+                string backupfmodDLL = Path.GetDirectoryName(Environment.ProcessPath) + @"\dlls\fmod.dll"; // Path to your DLL
                 try {
                     // Check if the fmod.dll exists
                     if (File.Exists(backupfmodDLL))
                     {
                         // Copy the file to System32
-                        File.Copy(backupfmodDLL, @"C:\Windows\System32\fmod.dll");
+                        Directory.CreateDirectory(@"C:\fmod-decompiler\");
+                        File.Copy(backupfmodDLL, @"C:\fmod-decompiler\fmod.dll");
 
-                        // check if this isn't is missing, so we can just end execution
-                        // if its missing tho, we move on to the next dll
-                        if (File.Exists(@"C:\Windows\System32\fmodstudio.dll"))
-                        {
-                            Console.WriteLine($"{GREEN}fmod.dll was applied!\nPlease restart the program for changes to take effect{NORMAL}");
-                            return;
-                        }
-                        else 
-                        {
-                            Console.WriteLine($"{GREEN}fmod.dll was applied!{NORMAL}");
-                            // dont stop execution, since if we're here, the other one needs to be added
-                        }
+                        Console.WriteLine($"{GREEN}fmod.dll was applied!{NORMAL}");
                     }
                     else
                     {
@@ -89,29 +79,28 @@ namespace BankToFSPro
                 }
             }
 
-            if (!File.Exists(@"C:\Windows\System32\fmodstudio.dll"))
+            if (!File.Exists(@"C:\fmod-decompiler\fmodstudio.dll"))
             {
-                string backupfmodstudioDLL = Path.GetDirectoryName(Environment.ProcessPath) + @"dlls\fmodstudio.dll"; // Path to your DLL
+                string backupfmodstudioDLL = Path.GetDirectoryName(Environment.ProcessPath) + @"\dlls\fmodstudio.dll"; // Path to your DLL
                 try
                 {
                     // Check if the fmod.dll exists
                     if (File.Exists(backupfmodstudioDLL))
                     {
                         // Copy the file to System32
-                        File.Copy(backupfmodstudioDLL, @"C:\Windows\System32\fmodstudio.dll");
+                        Directory.CreateDirectory(@"C:\fmod-decompiler\");
+                        File.Copy(backupfmodstudioDLL, @"C:\fmod-decompiler\fmodstudio.dll");
 
-                        // we can just end execution, since it was already checked above
-                        Console.WriteLine("fmodstudio.dll was applied!\nPlease restart the program for changes to take effect");
-                        return;
+                        Console.WriteLine($"{GREEN}fmodstudio.dll was applied!{NORMAL}");
                     }
                     else
                     {
-                        Console.WriteLine("fmodstudio.dll was not found in the /dlls folder.");
+                        Console.WriteLine($"{RED}fmodstudio.dll was not found in the /dlls folder.{NORMAL}");
                     }
                 }
                 catch (UnauthorizedAccessException ex)
                 {
-                    Console.WriteLine("fmodstudio.dll could not be copied to System\nPlease restart the program as an administrator");
+                    Console.WriteLine($"{RED}fmodstudio.dll could not be copied to System\nPlease restart the program as an administrator{NORMAL}");
                     return;
                 }
             }
@@ -241,7 +230,7 @@ namespace BankToFSPro
 
                     // save the event instance to the project (this is a placeholder, actual saving logic may vary)
                     if (verbose)
-                        Console.WriteLine($"Saving Event: {eventname}");
+                        Console.WriteLine($"{YELLOW}Saving Event: {eventname}{NORMAL}");
                     SaveEventInstance(eventInstance, eventDescription, outputProjectPath);
                 }
 

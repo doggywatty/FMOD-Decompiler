@@ -15,7 +15,7 @@ namespace FMOD.Studio
 {
     public partial class STUDIO_VERSION
     {
-        public const string dll     = "fmodstudio.dll";
+        public const string dll     = @"C:\fmod-decompiler\fmodstudio.dll";
     }
 
     public enum STOP_MODE : int
