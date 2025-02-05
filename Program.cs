@@ -163,6 +163,24 @@ namespace BankToFSPro
 
             #endregion
 
+            // Get Project Name
+            string projectname = "Generic-Project";
+            Console.Write("Enter the Project Name: ");
+            projectname = Console.ReadLine();
+
+            #region Setup Output Folders
+
+            // If output folder doesn't exist, make it
+            if (!Directory.Exists(outputProjectPath))
+                Directory.CreateDirectory(outputProjectPath);
+
+            Directory.CreateDirectory(outputProjectPath + "/Assets");
+            Directory.CreateDirectory(outputProjectPath + "/Metadata");
+            // because i can
+            File.AppendAllText(outputProjectPath + $"/{projectname}.fspro", "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<objects serializationModel=\"Studio.02.02.00\" />");
+
+            #endregion
+
             // create the FMOD Studio system
             FMOD.Studio.System studioSystem;
             FMOD.Studio.System.create(out studioSystem);
@@ -216,3 +234,46 @@ namespace BankToFSPro
         }
     }
 }
+
+/*
+
+SO
+notes by the burned shit
+and its probably shit
+
+the /Assets folder
+just contains all sound files
+kinda obvious, and seems to be in folders that have the same name as the event root
+
+so like (event:/music -> /music)
+so we could possibly just use the name of the .bank as the folder name
+or just get that part of the event using regex i guess
+
+the /Metadata folder
+the jouicy stuffs
+
+there ARE some folders that are empty sometimes, but FMOD just adds them if missing anyways
+
+the folders that hold the base info (as in this stuff you would see in a template) are:
+/Asset                          (Has all of the subdirectories in /Assets (with one for Main))
+/AudioFile                      (Has ALL Audio Files in /Assets listed (with settings like length listed))
+/Bank                           (Has all bank file names (ex: music and sfx))
+/BankFolder                     (Just links to master bank file i think)
+/EncodingSetting                (Audio Format and Quality settings for the entire project)
+/Event                          (Has EACH INDIVIDUAL EVENT and its settings)
+/EventFolder                    (Has the Event Folders (in this example its "w1": event:/music/w1/ruintitle)
+/Group                          (idk, this shit too dense for me)
+/Platform                       (just the output folder lmao)
+
+the rest seem to be bank specific
+
+also
+some lone .xml files are here as well
+these are pretty small tho
+
+Master.xml                      (its like /Group, kinda i guess)
+Mixer.xml                       (has masterbus and snapshotList (whatever that means))
+Tags.xml                        ()
+Workspace.xml
+
+*/
