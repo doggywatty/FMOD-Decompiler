@@ -23,6 +23,7 @@
   <ItemGroup>
     <PackageReference Include="Fmod5Sharp" Version="3.0.1" />
     <PackageReference Include="NAudio" Version="2.2.1" />
+    <PackageReference Include="NVorbis" Version="0.10.5" />
   </ItemGroup>
 
   <ItemGroup>

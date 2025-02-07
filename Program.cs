@@ -10,6 +10,7 @@ using FMOD.Studio;
 // https://github.com/SamboyCoding/Fmod5Sharp
 using Fmod5Sharp;
 using System.Text;
+using Fmod5Sharp.FmodTypes;
 
 namespace BankToFSPro
 {
@@ -52,7 +53,7 @@ namespace BankToFSPro
 
             Console.WriteLine($"Welcome to the FMOD Bank Decompiler {RED}(WIP Version){NORMAL}"
             + $"\n\nby {CYAN}CatMateo{NORMAL}"
-            + $"\nand {GREY}burnedpopcorn180{NORMAL}"
+            + $"\nand {RED}burnedpopcorn180{NORMAL}"
 
             + $"\n\n{RED}THIS IS STILL VERY WIP{NORMAL}"
             + $"\n{RED}AND IS CURRENTLY NON-FUNCTIONAL AS A DECOMPILER{NORMAL}"
@@ -194,6 +195,9 @@ namespace BankToFSPro
             Console.Write("Enter the Project Name: ");
             projectname = Console.ReadLine();
 
+            if (projectname == "") 
+                projectname = "Generic-Project";
+
             #region Setup Output Folders
 
             // If output folder doesn't exist, make it
@@ -202,6 +206,7 @@ namespace BankToFSPro
 
             Directory.CreateDirectory(outputProjectPath + "/Assets");
             Directory.CreateDirectory(outputProjectPath + "/Metadata");
+            Directory.CreateDirectory(outputProjectPath + "/Metadata/AudioFile");
             // because i can
             File.AppendAllText(outputProjectPath + $"/{projectname}.fspro", "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<objects serializationModel=\"Studio.02.02.00\" />");
 
@@ -301,6 +306,20 @@ namespace BankToFSPro
                 File.WriteAllBytes(filePath, data);
                 if (verbose)
                     Console.WriteLine($"{CYAN}Extracted Sound {name}.{extension}{NORMAL}");
+
+                // add to xml
+                List<FmodSample> samples = bank.Samples;
+                // because it sometimes fails idk why
+                try
+                {
+                    int frequency = samples[i].Metadata.Frequency; //E.g. 44100
+                    uint numChannels = samples[i].Metadata.Channels; //2 for stereo, 1 for mono.
+                    AudioFile.AudioFileXML(outPath, filePath, bankfilename, frequency, numChannels);
+                }
+                catch (Exception e)
+                {
+                    AudioFile.AudioFileXML(outPath, filePath, bankfilename, 44100, 2);
+                }
             }
         }
     }
