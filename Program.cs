@@ -321,6 +321,8 @@ namespace BankToFSPro
 
                     // get event name
                     eventDescription.getPath(out string eventname);
+                    // add event name to save later
+                    EventFolder.AllEvents.Add(eventname);
 
                     // save the event instance to the project (this is a placeholder, actual saving logic may vary)
                     if (verbose)
@@ -330,6 +332,8 @@ namespace BankToFSPro
 
                 // Extract Sounds to /Assets folder
                 ExtractSoundFiles(bankFilePath, outputProjectPath + "/Assets", bankfilename, verbose);
+                // Extract Event Folders
+                EventFolder.ExtractEventFolders();
             }
 
             Console.WriteLine($"\n{GREEN}Conversion Complete!{NORMAL}");
@@ -384,16 +388,33 @@ namespace BankToFSPro
 
                 // add to xml
                 List<FmodSample> samples = bank.Samples;
-                // because it sometimes fails idk why
+                // because it sometimes fails idk
+                // also DEAR GOD
                 try
                 {
                     int frequency = samples[i].Metadata.Frequency; //E.g. 44100
                     uint numChannels = samples[i].Metadata.Channels; //2 for stereo, 1 for mono.
                     AudioFile.AudioFileXML(outPath, filePath, bankfilename, frequency, numChannels);
                 }
-                catch (Exception e)
+                catch (Exception)
                 {
-                    AudioFile.AudioFileXML(outPath, filePath, bankfilename, 44100, 2);
+                    try 
+                    {
+                        int frequency = samples[i].Metadata.Frequency; //E.g. 44100
+                        AudioFile.AudioFileXML(outPath, filePath, bankfilename, frequency, 2);
+                    } 
+                    catch (Exception) 
+                    {
+                        try 
+                        {
+                            uint numChannels = samples[i].Metadata.Channels; //2 for stereo, 1 for mono.
+                            AudioFile.AudioFileXML(outPath, filePath, bankfilename, 44100, numChannels);
+                        } 
+                        catch (Exception) 
+                        {
+                            AudioFile.AudioFileXML(outPath, filePath, bankfilename, 44100, 2);
+                        }
+                    }
                 }
             }
         }
