@@ -44,6 +44,19 @@ namespace BankToFSPro
         public static extern IntPtr GetStdHandle(int handle);
         #endregion
 
+        // get random GUIDs for some stuff
+        static Guid GetRandomGUID()
+        {
+            // Generate a new GUID
+            Guid newGuid = Guid.NewGuid();
+            return newGuid;
+        }
+        // since they are static, it'll only run once, so they should stay the same
+        public static Guid MasterAssetsGUID = GetRandomGUID();
+        public static Guid MasterBankFolderGUID = GetRandomGUID();
+        // only temporary
+        public static string TEMP_GUID = "00000000-0000-0000-0000-000000000000";
+
         static void Main(string[] args)
         {
             // initialize
@@ -200,15 +213,24 @@ namespace BankToFSPro
 
             #region Setup Output Folders
 
-            // If output folder doesn't exist, make it
-            if (!Directory.Exists(outputProjectPath))
-                Directory.CreateDirectory(outputProjectPath);
+            // to ensure clean
+            // yes it's pretty dumb, but i want it clean
+            if (Directory.Exists(outputProjectPath))
+                Directory.Delete(outputProjectPath, true);
+            Directory.CreateDirectory(outputProjectPath);
 
             Directory.CreateDirectory(outputProjectPath + "/Assets");
             Directory.CreateDirectory(outputProjectPath + "/Metadata");
+
+            // Sub-Directories of /Metadata (ADD THE REST WHEN YOU FINISH THE XML ONES THAT NEED TO GO HERE)
             Directory.CreateDirectory(outputProjectPath + "/Metadata/AudioFile");
+            Directory.CreateDirectory(outputProjectPath + "/Metadata/Asset");
+            Directory.CreateDirectory(outputProjectPath + "/Metadata/Bank");
+            Directory.CreateDirectory(outputProjectPath + "/Metadata/BankFolder");
+
             // because i can
-            File.AppendAllText(outputProjectPath + $"/{projectname}.fspro", "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<objects serializationModel=\"Studio.02.02.00\" />");
+            File.AppendAllText(outputProjectPath + $"/{projectname}.fspro", ""
+                + "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<objects serializationModel=\"Studio.02.02.00\" />");
 
             #endregion
 
@@ -219,6 +241,37 @@ namespace BankToFSPro
 
             if (!verbose)
                 Console.WriteLine($"{YELLOW}Finding and Saving Events...{NORMAL}");
+
+            #region Built-in XML Files
+            // this is basically just stuff that is ALWAYS gonna be in a FSPro Project
+            // and needs to be set, because GUID reasons
+
+            // also this is more readable than trying any XML type shit LMAO
+
+            // For Master Asset XML
+            File.WriteAllText(outputProjectPath + $"/Metadata/Asset/{{{MasterAssetsGUID}}}.xml", ""
+                + "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\r"
+                + "\n<objects serializationModel=\"Studio.02.02.00\">\r"
+                + $"\n\t<object class=\"MasterAssetFolder\" id=\"{{{MasterAssetsGUID}}}\" />\r"
+                + "\n</objects>");
+
+            // For Master Bank XML (Bank Folders)
+            File.WriteAllText(outputProjectPath + $"/Metadata/BankFolder/{{{MasterBankFolderGUID}}}.xml", ""
+                + "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\r"
+                + "\n<objects serializationModel=\"Studio.02.02.00\">\r"
+                + $"\n\t<object class=\"MasterBankFolder\" id=\"{{{MasterBankFolderGUID}}}\" />\r\n</objects>");
+
+            // For Master Bank XML
+            File.WriteAllText(outputProjectPath + $"/Metadata/Bank/{{{TEMP_GUID}}}.xml", ""
+                + "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\r"
+                + "\n<objects serializationModel=\"Studio.02.02.00\">\r"
+                + $"\n\t<object class=\"Bank\" id=\"{{{TEMP_GUID}}}\">\r"
+                + "\n\t\t<property name=\"name\">\r\n\t\t\t<value>Master</value>\r\n\t\t</property>\r"
+                + "\n\t\t<property name=\"isMasterBank\">\r\n\t\t\t<value>true</value>\r\n\t\t</property>\r"
+                + $"\n\t\t<relationship name=\"folder\">\r\n\t\t\t<destination>{{{MasterBankFolderGUID}}}</destination>\r"
+                + "\n\t\t</relationship>\r\n\t</object>\r\n</objects>");
+
+            #endregion
 
             // load all the banks in the specified folder
             foreach (string bankFilePath in Directory.GetFiles(bankFolder, "*.bank"))
@@ -234,6 +287,28 @@ namespace BankToFSPro
                 bank.getEventCount(out eventCount);
                 if (verbose)
                     Console.WriteLine($"\n{YELLOW}Events Found in {bankFilePath}: {eventCount}{NORMAL}\n");
+
+                // if bank with events/music (music.bank and sfx.bank), then add reference to its assets
+                if (eventCount > 0) 
+                {
+                    // For Bank Asset XML
+                    File.WriteAllText(outputProjectPath + $"/Metadata/Asset/{{{TEMP_GUID}}}_{bankfilename}.xml", ""
+                        + "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\r"
+                        + "\n<objects serializationModel=\"Studio.02.02.00\">\r"
+                        + $"\n\t<object class=\"EncodableAsset\" id=\"{{{TEMP_GUID}}}\">\r"
+                        + "\n\t\t<property name=\"assetPath\">\r"
+                        + $"\n\t\t\t<value>{bankfilename.Replace(".bank","")}/</value>\r\n\t\t</property>\r"
+                        + "\n\t\t<relationship name=\"masterAssetFolder\">\r"
+                        + $"\n\t\t\t<destination>{{{MasterAssetsGUID}}}</destination>\r"
+                        + "\n\t\t</relationship>\r\n\t</object>\r\n</objects>");
+
+                    // For Bank XML
+                    File.WriteAllText(outputProjectPath + $"/Metadata/Bank/{{{TEMP_GUID}}}_{bankfilename}.xml", ""
+                        + "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\r\n<objects serializationModel=\"Studio.02.02.00\">\r"
+                        + $"\n\t<object class=\"Bank\" id=\"{{{TEMP_GUID}}}\">\r\n\t\t<property name=\"name\">\r"
+                        + $"\n\t\t\t<value>{bankfilename.Replace(".bank", "")}</value>\r\n\t\t</property>\r\n\t\t<relationship name=\"folder\">\r"
+                        + $"\n\t\t\t<destination>{{{MasterBankFolderGUID}}}</destination>\r\n\t\t</relationship>\r\n\t</object>\r\n</objects>");
+                }
 
                 FMOD.Studio.EventDescription[] eventDescriptions = new FMOD.Studio.EventDescription[eventCount];
                 bank.getEventList(out eventDescriptions);
