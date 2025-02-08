@@ -1,16 +1,4 @@
-﻿using System;
-using System.ComponentModel;
-using System.Runtime.InteropServices;
-using System.Diagnostics.Tracing;
-using System.IO;
-using System.Reflection;
-using FMOD;
-using FMOD.Studio;
-// shit that extracts sounds from banks
-// https://github.com/SamboyCoding/Fmod5Sharp
-using Fmod5Sharp;
-using System.Text;
-using Fmod5Sharp.FmodTypes;
+﻿using System.Runtime.InteropServices;
 
 namespace BankToFSPro
 {
@@ -45,7 +33,7 @@ namespace BankToFSPro
         #endregion
 
         // get random GUIDs for some stuff
-        static Guid GetRandomGUID()
+        public static Guid GetRandomGUID()
         {
             // Generate a new GUID
             Guid newGuid = Guid.NewGuid();
@@ -61,7 +49,7 @@ namespace BankToFSPro
         // If Master XML Files have been written already
         public static bool writeMasterXML_Done = false;
 
-        static void Main(string[] args)
+        public static void Main(string[] args)
         {
             // initialize
             GetConsoleMode(GetStdHandle(-11), out int mode);
@@ -351,7 +339,7 @@ namespace BankToFSPro
                 }
 
                 // Extract Sounds to /Assets folder
-                ExtractSoundFiles(bankFilePath, outputProjectPath + "/Assets", bankfilename, verbose);
+                ExtractSoundAssets.ExtractSoundFiles(bankFilePath, outputProjectPath + "/Assets", bankfilename, verbose);
 
                 // Extract Event Folders
                 EventFolder.ExtractEventFolders(outputProjectPath + "/Metadata/EventFolder");
@@ -364,80 +352,11 @@ namespace BankToFSPro
             studioSystem.release();
         }
 
-        static void SaveEventInstance(FMOD.Studio.EventInstance eventInstance, FMOD.Studio.EventDescription eventDescription, string outputProjectPath)
+        public static void SaveEventInstance(FMOD.Studio.EventInstance eventInstance, FMOD.Studio.EventDescription eventDescription, string outputProjectPath)
         {
             // implement the logic to save the event instance to the specified path
             // this is a placeholder implementation
             // example: Serialize event instance data to a file in the output project path
-        }
-
-        // from https://github.com/SamboyCoding/Fmod5Sharp/blob/master/BankExtractor/Program.cs
-        static void ExtractSoundFiles(string bankPath, string outPath, string bankfilename, bool verbose)
-        {
-            // if Master.bank or Master.strings.bank
-            if (bankPath.Contains("Master"))
-                return; // ignore because it causes the thing to fail
-
-            var bytes = File.ReadAllBytes(bankPath);
-            var index = bytes.AsSpan().IndexOf(Encoding.ASCII.GetBytes("FSB5"));
-            if (index > 0)
-            {
-                bytes = bytes.AsSpan(index).ToArray();
-            }
-            var bank = FsbLoader.LoadFsbFromByteArray(bytes);
-            var outDir = Directory.CreateDirectory(outPath + $"/{bankfilename.Replace(".bank", "")}/");
-
-            if (verbose)
-                Console.WriteLine($"\n{YELLOW}Extracting Sound Files from {bankfilename}...{NORMAL}\n");
-
-            var i = 0;
-            foreach (var bankSample in bank.Samples)
-            {
-                i++;
-                var name = bankSample.Name ?? $"UnknownSound-{i}";
-
-                if (!bankSample.RebuildAsStandardFileFormat(out var data, out var extension))
-                {
-                    Console.WriteLine($"{RED}Failed to Extract Sound {name}{NORMAL}");
-                    continue;
-                }
-
-                var filePath = Path.Combine(outDir.FullName, $"{name}.{extension}");
-                File.WriteAllBytes(filePath, data);
-                if (verbose)
-                    Console.WriteLine($"{CYAN}Extracted Sound {name}.{extension}{NORMAL}");
-
-                // add to xml
-                List<FmodSample> samples = bank.Samples;
-                // because it sometimes fails idk
-                // also DEAR GOD
-                try
-                {
-                    int frequency = samples[i].Metadata.Frequency; //E.g. 44100
-                    uint numChannels = samples[i].Metadata.Channels; //2 for stereo, 1 for mono.
-                    AudioFile.AudioFileXML(outPath, filePath, bankfilename, frequency, numChannels);
-                }
-                catch (Exception)
-                {
-                    try 
-                    {
-                        int frequency = samples[i].Metadata.Frequency; //E.g. 44100
-                        AudioFile.AudioFileXML(outPath, filePath, bankfilename, frequency, 2);
-                    } 
-                    catch (Exception) 
-                    {
-                        try 
-                        {
-                            uint numChannels = samples[i].Metadata.Channels; //2 for stereo, 1 for mono.
-                            AudioFile.AudioFileXML(outPath, filePath, bankfilename, 44100, numChannels);
-                        } 
-                        catch (Exception) 
-                        {
-                            AudioFile.AudioFileXML(outPath, filePath, bankfilename, 44100, 2);
-                        }
-                    }
-                }
-            }
         }
     }
 }
