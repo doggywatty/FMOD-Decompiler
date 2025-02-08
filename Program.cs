@@ -54,8 +54,12 @@ namespace BankToFSPro
         // since they are static, it'll only run once, so they should stay the same
         public static Guid MasterAssetsGUID = GetRandomGUID();
         public static Guid MasterBankFolderGUID = GetRandomGUID();
+        public static Guid MasterEventFolderGUID = GetRandomGUID();
         // only temporary
         public static string TEMP_GUID = "00000000-0000-0000-0000-000000000000";
+
+        // If Master XML Files have been written already
+        public static bool writeMasterXML_Done = false;
 
         static void Main(string[] args)
         {
@@ -228,6 +232,8 @@ namespace BankToFSPro
             Directory.CreateDirectory(outputProjectPath + "/Metadata/Bank");
             Directory.CreateDirectory(outputProjectPath + "/Metadata/BankFolder");
 
+            Directory.CreateDirectory(outputProjectPath + "/Metadata/EventFolder");
+
             // because i can
             File.AppendAllText(outputProjectPath + $"/{projectname}.fspro", ""
                 + "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<objects serializationModel=\"Studio.02.02.00\" />");
@@ -289,7 +295,8 @@ namespace BankToFSPro
                     Console.WriteLine($"\n{YELLOW}Events Found in {bankFilePath}: {eventCount}{NORMAL}\n");
 
                 // if bank with events/music (music.bank and sfx.bank), then add reference to its assets
-                if (eventCount > 0) 
+                // basically just the Master XML Files most assets reference
+                if (eventCount > 0)
                 {
                     // For Bank Asset XML
                     File.WriteAllText(outputProjectPath + $"/Metadata/Asset/{{{TEMP_GUID}}}_{bankfilename}.xml", ""
@@ -297,7 +304,7 @@ namespace BankToFSPro
                         + "\n<objects serializationModel=\"Studio.02.02.00\">\r"
                         + $"\n\t<object class=\"EncodableAsset\" id=\"{{{TEMP_GUID}}}\">\r"
                         + "\n\t\t<property name=\"assetPath\">\r"
-                        + $"\n\t\t\t<value>{bankfilename.Replace(".bank","")}/</value>\r\n\t\t</property>\r"
+                        + $"\n\t\t\t<value>{bankfilename.Replace(".bank", "")}/</value>\r\n\t\t</property>\r"
                         + "\n\t\t<relationship name=\"masterAssetFolder\">\r"
                         + $"\n\t\t\t<destination>{{{MasterAssetsGUID}}}</destination>\r"
                         + "\n\t\t</relationship>\r\n\t</object>\r\n</objects>");
@@ -308,6 +315,19 @@ namespace BankToFSPro
                         + $"\n\t<object class=\"Bank\" id=\"{{{TEMP_GUID}}}\">\r\n\t\t<property name=\"name\">\r"
                         + $"\n\t\t\t<value>{bankfilename.Replace(".bank", "")}</value>\r\n\t\t</property>\r\n\t\t<relationship name=\"folder\">\r"
                         + $"\n\t\t\t<destination>{{{MasterBankFolderGUID}}}</destination>\r\n\t\t</relationship>\r\n\t</object>\r\n</objects>");
+
+                    // For ones that should only run once
+                    if (writeMasterXML_Done == false) 
+                    {
+                        // For EventFolder XML (Master)
+                        File.WriteAllText(outputProjectPath + $"/Metadata/EventFolder/{{{TEMP_GUID}}}.xml", ""
+                            + "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\r\n<objects serializationModel=\"Studio.02.02.00\">\r"
+                            + $"\n\t<object class=\"MasterEventFolder\" id=\"{{{MasterEventFolderGUID}}}\">\r"
+                            + "\n\t\t<property name=\"name\">\r\n\t\t\t<value>Master</value>\r\n\t\t</property>\r\n\t</object>\r\n</objects>");
+                            
+                        // stop it from writing this shit again
+                        writeMasterXML_Done = true;
+                    }
                 }
 
                 FMOD.Studio.EventDescription[] eventDescriptions = new FMOD.Studio.EventDescription[eventCount];
@@ -332,8 +352,9 @@ namespace BankToFSPro
 
                 // Extract Sounds to /Assets folder
                 ExtractSoundFiles(bankFilePath, outputProjectPath + "/Assets", bankfilename, verbose);
+
                 // Extract Event Folders
-                EventFolder.ExtractEventFolders();
+                EventFolder.ExtractEventFolders(outputProjectPath + "/Metadata/EventFolder");
             }
 
             Console.WriteLine($"\n{GREEN}Conversion Complete!{NORMAL}");
@@ -364,7 +385,7 @@ namespace BankToFSPro
                 bytes = bytes.AsSpan(index).ToArray();
             }
             var bank = FsbLoader.LoadFsbFromByteArray(bytes);
-            var outDir = Directory.CreateDirectory(outPath + $"/{ bankfilename.Replace(".bank", "")}/");
+            var outDir = Directory.CreateDirectory(outPath + $"/{bankfilename.Replace(".bank", "")}/");
 
             if (verbose)
                 Console.WriteLine($"\n{YELLOW}Extracting Sound Files from {bankfilename}...{NORMAL}\n");
