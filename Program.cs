@@ -37,6 +37,8 @@ public class Program
         Guid newGuid = Guid.NewGuid();
         return newGuid;
     }
+
+    #region Static GUIDs
     // since they are static, it'll only run once, so they should stay the same
     public static Guid MasterAssetsGUID = GetRandomGUID();
     public static Guid MasterBankFolderGUID = GetRandomGUID();
@@ -49,10 +51,12 @@ public class Program
     public static Guid MasterProfilerFolderGUID = GetRandomGUID();
     public static Guid MasterSandboxFolderGUID = GetRandomGUID();
 
-    public static Dictionary<string, Guid> EventGUIDs = new Dictionary<string, Guid> { };
-
-    // only temporary
-    public static string TEMP_GUID = "00000000-0000-0000-0000-000000000000";
+    // these keep track of all randomly generated GUIDs, so we can call them back if needed elsewhere
+    public static Dictionary<string, Guid> EventGUIDs = new Dictionary<string, Guid> { };// not implimented yet
+    public static Dictionary<string, Guid> AudioFileGUIDs = new Dictionary<string, Guid> { };
+    public static Dictionary<string, Guid> EventFolderGUIDs = new Dictionary<string, Guid> { };
+    public static Dictionary<string, Guid> BankSpecificGUIDs = new Dictionary<string, Guid> { };
+    #endregion
 
     public static void Main(string[] args)
     {
@@ -221,7 +225,7 @@ public class Program
         Directory.CreateDirectory(outputProjectPath + "/Assets");
         Directory.CreateDirectory(outputProjectPath + "/Metadata");
 
-        // Sub-Directories of /Metadata (some of these have XML files that need finalized GUIDs)
+        // Sub-Directories of /Metadata
         Directory.CreateDirectory(outputProjectPath + "/Metadata/AudioFile");
         Directory.CreateDirectory(outputProjectPath + "/Metadata/Asset");
         Directory.CreateDirectory(outputProjectPath + "/Metadata/Bank");
@@ -237,7 +241,7 @@ public class Program
         // DEFINITELY UNFINISHED
         Directory.CreateDirectory(outputProjectPath + "/Metadata/Event");
 
-        // because i can
+        // Main FSPro File
         File.AppendAllText(outputProjectPath + $"/{projectname}.fspro", "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<objects serializationModel=\"Studio.02.02.00\" />");
 
         #endregion
@@ -252,7 +256,6 @@ public class Program
 
         #region Built-in XML Files
         // this is basically just stuff that is ALWAYS gonna be in a FSPro Project
-        // and needs to be set, because GUID reasons
 
         // also this is more readable than trying any XML type shit LMAO
 
@@ -341,15 +344,14 @@ public class Program
 
             // if bank with events/music (music.bank and sfx.bank), then add reference to its assets
             // basically just the Master XML Files most assets reference
-
-            // NAMING IS STILL WIP
             if (eventCount > 0)
             {
                 // For Bank Asset XML
-                File.WriteAllText(outputProjectPath + $"/Metadata/Asset/{bankfilename}.xml", ""
+                BankSpecificGUIDs.Add(bankfilename + "_Asset", GetRandomGUID());
+                File.WriteAllText(outputProjectPath + $"/Metadata/Asset/{{{BankSpecificGUIDs[bankfilename + "_Asset"]}}}.xml", ""
                     + "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\r"
                     + "\n<objects serializationModel=\"Studio.02.02.00\">\r"
-                    + $"\n\t<object class=\"EncodableAsset\" id=\"{{{TEMP_GUID}}}\">\r"
+                    + $"\n\t<object class=\"EncodableAsset\" id=\"{{{BankSpecificGUIDs[bankfilename + "_Asset"]}}}\">\r"
                     + "\n\t\t<property name=\"assetPath\">\r"
                     + $"\n\t\t\t<value>{bankfilename.Replace(".bank", "")}/</value>\r\n\t\t</property>\r"
                     + "\n\t\t<relationship name=\"masterAssetFolder\">\r"
@@ -357,9 +359,10 @@ public class Program
                     + "\n\t\t</relationship>\r\n\t</object>\r\n</objects>");
 
                 // For Bank XML
-                File.WriteAllText(outputProjectPath + $"/Metadata/Bank/{bankfilename}.xml", ""
+                BankSpecificGUIDs.Add(bankfilename + "_Bank", GetRandomGUID());
+                File.WriteAllText(outputProjectPath + $"/Metadata/Bank/{{{BankSpecificGUIDs[bankfilename + "_Bank"]}}}.xml", ""
                     + "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\r\n<objects serializationModel=\"Studio.02.02.00\">\r"
-                    + $"\n\t<object class=\"Bank\" id=\"{{{TEMP_GUID}}}\">\r\n\t\t<property name=\"name\">\r"
+                    + $"\n\t<object class=\"Bank\" id=\"{{{BankSpecificGUIDs[bankfilename + "_Bank"]}}}\">\r\n\t\t<property name=\"name\">\r"
                     + $"\n\t\t\t<value>{bankfilename.Replace(".bank", "")}</value>\r\n\t\t</property>\r\n\t\t<relationship name=\"folder\">\r"
                     + $"\n\t\t\t<destination>{{{MasterBankFolderGUID}}}</destination>\r\n\t\t</relationship>\r\n\t</object>\r\n</objects>");
             }

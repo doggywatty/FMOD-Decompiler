@@ -1,4 +1,5 @@
 ﻿using System.Xml;
+using static Program;
 
 public class EventFolder
 {
@@ -29,8 +30,11 @@ public class EventFolder
             {
                 if (!processedFolders.Contains(folder))
                 {
+                    // Create GUID for "folder"
+                    EventFolderGUIDs.TryAdd(folder, GetRandomGUID());
+
                     // Create XML
-                    CreateXmlFile(filePath, folder);
+                    CreateXmlFile(filePath, folder, folders);
 
                     // Mark this folder as processed
                     processedFolders.Add(folder);
@@ -39,10 +43,8 @@ public class EventFolder
         }
     }
     // Honestly I should have done this for AudioFile.cs ngl
-    static void CreateXmlFile(string filePath, string folderName)
+    static void CreateXmlFile(string filePath, string folderName, List<string> folders)
     {
-        string TEMP_GUID = "{00000000-0000-0000-0000-000000000000}";
-
         // Create XML document
         XmlDocument xmlDoc = new XmlDocument();
         XmlDeclaration declaration = xmlDoc.CreateXmlDeclaration("1.0", "UTF-8", null);
@@ -56,7 +58,7 @@ public class EventFolder
         // Create object element
         XmlElement objectElement = xmlDoc.CreateElement("object");
         objectElement.SetAttribute("class", "EventFolder");
-        objectElement.SetAttribute("id", TEMP_GUID);                                // TEMP
+        objectElement.SetAttribute("id", $"{{{EventFolderGUIDs[folderName]}}}");
         root.AppendChild(objectElement);
 
         // Create property element for the name
@@ -67,15 +69,24 @@ public class EventFolder
         propertyElement.AppendChild(valueElement);
         objectElement.AppendChild(propertyElement);
 
-        // GUID of the folder above it (TEMP IMPLIMENTATION)
+        // GUID of the folder above it
         XmlElement relationshipElement = xmlDoc.CreateElement("relationship");
         relationshipElement.SetAttribute("name", "folder");
         XmlElement destinationElement = xmlDoc.CreateElement("destination");
-        destinationElement.InnerText = TEMP_GUID;                                   // TEMP
+
+        // if event is in a folder, and isn't located in root
+        // aka you had this: event:/music/soundtest/pause
+        // and now its down to : /music/soundtest/
+        if (folders.Count >= 2)
+            destinationElement.InnerText = $"{{{EventFolderGUIDs[folders[folders.Count - 2]]}}}"; // from the example, you get /music's GUID
+        else if (folders.Count == 1)
+            destinationElement.InnerText = $"{{{MasterEventFolderGUID}}}";
+        // there should definitely not be 0
+
         relationshipElement.AppendChild(destinationElement);
         objectElement.AppendChild(relationshipElement);
 
-        // Save the XML document to a file (TEMP NAMING)
-        xmlDoc.Save(filePath + "/" + folderName + ".xml");
+        // Save the XML document to File
+        xmlDoc.Save(filePath + $"/{{{EventFolderGUIDs[folderName]}}}.xml");
     }
 }
