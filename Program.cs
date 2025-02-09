@@ -62,13 +62,18 @@ public class Program
     public static Guid Master3GUID = GetRandomGUID();// for Master.XML (effect)
 
     // these keep track of all randomly generated GUIDs, so we can call them back if needed elsewhere
-    public static Dictionary<string, Guid> EventGUIDs = new Dictionary<string, Guid> { };// not implimented yet
+    public static Dictionary<string, Guid> EventGUIDs = new Dictionary<string, Guid> { };// not fully implimented yet
     public static Dictionary<string, Guid> AudioFileGUIDs = new Dictionary<string, Guid> { };
     public static Dictionary<string, Guid> EventFolderGUIDs = new Dictionary<string, Guid> { };
     public static Dictionary<string, Guid> BankSpecificGUIDs = new Dictionary<string, Guid> { };
     #endregion
 
-    public static void Main(string[] args)
+    // For Spinner
+    public static CancellationTokenSource SpinnerKill = new CancellationTokenSource();
+    public static bool SpinnerInit = false;
+    public static int SpinnerPattern = new Random().Next(2);
+
+    public static async Task Main(string[] args)
     {
         // initialize
         GetConsoleMode(GetStdHandle(-11), out int mode);
@@ -80,7 +85,7 @@ public class Program
         + $"\nand {RED}burnedpopcorn180{NORMAL}"
 
         + $"\n\n{RED}THIS IS STILL VERY WIP{NORMAL}"
-        + $"\n{RED}AND IS CURRENTLY NON-FUNCTIONAL AS A DECOMPILER{NORMAL}"
+        + $"\n{RED}AS EVENTS CANNOT BE DECOMPILED YET{NORMAL}"
 
         + $"\n"
         );
@@ -262,8 +267,7 @@ public class Program
         FMOD.Studio.System.create(out studioSystem);
         studioSystem.initialize(512, FMOD.Studio.INITFLAGS.NORMAL, FMOD.INITFLAGS.NORMAL, IntPtr.Zero);
 
-        if (!verbose)
-            Console.WriteLine($"{YELLOW}Finding and Saving Events...{NORMAL}");
+        Console.WriteLine($"{YELLOW}Loading Banks...{NORMAL}");
 
         #region Built-in XML Files
         // this is basically just stuff that is ALWAYS gonna be in a FSPro Project
@@ -358,10 +362,13 @@ public class Program
             // just filename
             string bankfilename = Path.GetFileName(bankFilePath);
 
+            if (!bankfilename.Contains("Master"))
+                Console.WriteLine($"{GREEN}Loaded Bank: " + bankfilename + $"{NORMAL}                    ");//spaces for when not in verbose
+
             // get the list of events in the bank
             int eventCount;
             bank.getEventCount(out eventCount);
-            if (verbose)
+            if (verbose && eventCount > 0)
                 Console.WriteLine($"\n{YELLOW}Events Found in {bankFilePath}: {eventCount}{NORMAL}\n");
 
             // if bank with events/music (music.bank and sfx.bank), then add reference to its assets
@@ -404,15 +411,25 @@ public class Program
                 // add event name to save later
                 EventFolder.AllEvents.Add(eventname);
 
-                // save the event instance to the project (this is a placeholder, actual saving logic may vary)
                 if (verbose)
                     Console.WriteLine($"{YELLOW}Saving Event: {eventname}{NORMAL}");
 
                 // add GUID to event
-                EventGUIDs.Add(eventname, GetRandomGUID());
-                // you can get the GUID for a given event with EventGUIDs["event:/music/w2/graveyard"]
-                Console.WriteLine($"Event GUID for {eventname}: {EventGUIDs[eventname]}");
+                EventGUIDs.Add(eventname, GetRandomGUID()); // you can get the GUID for a given event with EventGUIDs["event:/music/w2/graveyard"]
 
+                if (verbose)
+                    Console.WriteLine($"Event GUID for {eventname}: {EventGUIDs[eventname]}");
+
+                // Spinner for when --verbose was not used
+                if (!verbose && SpinnerInit == false)
+                {
+                    // no await here, because we want it to continue
+                    StartSpinnerAsync("Saving Events...", SpinnerPattern, 1000, SpinnerKill.Token);
+                    // ensure it doesn't get called twice
+                    SpinnerInit = true;
+                }
+
+                // save event
                 SaveEventInstance(eventInstance, eventDescription, outputProjectPath);
             }
 
@@ -422,8 +439,16 @@ public class Program
             // Extract Event Folders
             EventFolder.ExtractEventFolders(outputProjectPath + "/Metadata/EventFolder");
         }
-
-        Console.WriteLine($"\n{GREEN}Conversion Complete!{NORMAL}");
+        // if not verbose, stop spinner
+        if (!verbose) 
+        {
+            SpinnerKill.Cancel();
+            // also write text in a way that will overwrite spinner text
+            Console.WriteLine($"\r                                            \n{GREEN}Conversion Complete!{NORMAL}");
+        }
+        // else if using sane code
+        else if (verbose)
+            Console.WriteLine($"\n{GREEN}Conversion Complete!{NORMAL}");
         Console.WriteLine($"{GREEN}Exported Project is at {outputProjectPath}{NORMAL}");
 
         // Clean up the FMOD Studio system
@@ -435,5 +460,50 @@ public class Program
         // implement the logic to save the event instance to the specified path
         // this is a placeholder implementation
         // example: Serialize event instance data to a file in the output project path
+    }
+
+    // If User is not using --verbose
+    public static async Task StartSpinnerAsync(string displayMsg = "", int sequenceCode = 0, int delay = 1000, CancellationToken cancellationToken = default)
+    {
+        int counter = 0;
+        string[,] sequence = new string[,] {
+            { "/", "-", "\\", "|" },
+            { ".   ", "..  ", "... ", "...." },
+            { "|=   |", "|==  |", "|=== |", "|====|" },
+        };
+
+        int totalSequences = sequence.GetLength(0);
+
+        try
+        {
+            while (true)
+            {
+                // check if spinner has been cancelled
+                cancellationToken.ThrowIfCancellationRequested();
+
+                // progress frame
+                counter++;
+
+                // Delay
+                await Task.Delay(delay, cancellationToken);
+
+                sequenceCode = sequenceCode > totalSequences - 1 ? 0 : sequenceCode;
+                int counterValue = counter % 4;
+
+                // make full spinner message
+                string fullMessage = displayMsg + "    " + sequence[sequenceCode, counterValue];
+
+                // ensure last line is clear
+                Console.Write("\r                                                    ");
+
+                // Write the new spinner message while clearing last line
+                Console.Write("\r" + fullMessage);
+
+                // Ensure the cursor is positioned at the start for the next loop
+                Console.SetCursorPosition(0, Console.CursorTop);
+            }
+        }
+        catch (OperationCanceledException)
+        { }
     }
 }
