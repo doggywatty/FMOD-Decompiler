@@ -49,6 +49,8 @@ public class Program
     public static Guid MasterProfilerFolderGUID = GetRandomGUID();
     public static Guid MasterSandboxFolderGUID = GetRandomGUID();
 
+    public static Dictionary<string, Guid> EventGUIDs = new Dictionary<string, Guid> { };
+
     // only temporary
     public static string TEMP_GUID = "00000000-0000-0000-0000-000000000000";
 
@@ -365,7 +367,7 @@ public class Program
             FMOD.Studio.EventDescription[] eventDescriptions = new FMOD.Studio.EventDescription[eventCount];
             bank.getEventList(out eventDescriptions);
 
-            // process each event in the bank (this is a placeholder, actual processing logic may vary)
+            // process each event in the bank
             foreach (var eventDescription in eventDescriptions)
             {
                 FMOD.Studio.EventInstance eventInstance;
@@ -373,12 +375,19 @@ public class Program
 
                 // get event name
                 eventDescription.getPath(out string eventname);
+
                 // add event name to save later
                 EventFolder.AllEvents.Add(eventname);
 
                 // save the event instance to the project (this is a placeholder, actual saving logic may vary)
                 if (verbose)
                     Console.WriteLine($"{YELLOW}Saving Event: {eventname}{NORMAL}");
+
+                // add GUID to event
+                EventGUIDs.Add(eventname, GetRandomGUID());
+                // you can get the GUID for a given event with EventGUIDs["event:/music/w2/graveyard"]
+                Console.WriteLine($"Event GUID for {eventname}: {EventGUIDs[eventname]}");
+
                 SaveEventInstance(eventInstance, eventDescription, outputProjectPath);
             }
 
