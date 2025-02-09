@@ -2,6 +2,7 @@
 using System.Xml.Serialization;
 using NAudio.Wave;
 using NVorbis;
+using static Program;
 # region Get Set
 public class objects
 {
@@ -48,10 +49,14 @@ public class Relationship
 
 public class AudioFile
 {
+    // NOTE
+    // GUIDs for these ones are only referenced by themselves, or in events
+    // but i doubt we can extract much from events, so yeah
+    // If we can extract what audio files are used in events tho, we can use AudioFileGUIDs
     public static void AudioFileXML(string outputpath, string soundfilepath, string bankfilename, int frequency, uint channels)
     {
-        // TODO, get GUIDs, and finalize where to save
-        string TEMP = "{00000000-0000-0000-0000-000000000000}";
+        // Save GUID for this File
+        AudioFileGUIDs.Add($"{Path.GetRelativePath(outputpath, soundfilepath)}", GetRandomGUID());
 
         // Create the XML structure
         var xml = new objects
@@ -63,7 +68,7 @@ public class AudioFile
                 {
                     Class = "AudioFile",
                     // Id = It's own GUID
-                    Id = $"{TEMP}",
+                    Id = $"{{{AudioFileGUIDs[$"{Path.GetRelativePath(outputpath, soundfilepath)}"]}}}",
                     Properties = new List<Property>
                     {
                         new Property { Name = "assetPath", Value = $"{Path.GetRelativePath(outputpath, soundfilepath)}" },
@@ -73,7 +78,7 @@ public class AudioFile
                     },
                     Relationships = new List<Relationship>
                     {
-                        new Relationship { Name = "masterAssetFolder", Destination = $"{TEMP}" }// = Master GUID in /Asset folder
+                        new Relationship { Name = "masterAssetFolder", Destination = $"{{{MasterAssetsGUID}}}" }// = Master GUID in /Asset folder
                     }
                 }
             }
@@ -81,8 +86,7 @@ public class AudioFile
 
         // XML File Path TEMP
         string filePath = outputpath.Replace("/Assets", "");// Go to root
-        //                                                  temp solution until we get GUIDs
-        filePath = filePath + "/Metadata/AudioFile/" + Path.GetFileNameWithoutExtension(soundfilepath) + ".xml";
+        filePath = filePath + "/Metadata/AudioFile/" + $"{{{AudioFileGUIDs[$"{Path.GetRelativePath(outputpath, soundfilepath)}"]}}}" + ".xml";
 
         // Export XML
         var serializer = new XmlSerializer(typeof(objects));
