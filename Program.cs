@@ -85,8 +85,9 @@ public class Program
         + $"\n\nby {CYAN}CatMateo{NORMAL}"
         + $"\nand {RED}burnedpopcorn180{NORMAL}"
 
-        + $"\n\n{RED}THIS IS STILL VERY WIP{NORMAL}"
-        + $"\n{RED}AS EVENTS CANNOT BE DECOMPILED YET{NORMAL}"
+        + $"\n\n{RED}Unfortunately, this Decompiler is pretty limited in what it can extract{NORMAL}"
+        + $"\n{RED}Most things, like Events, you WILL have to recreate by yourself{NORMAL}"
+        + $"\n{RED}But this Decompiler will at least give you a bare shell to work off of{NORMAL}"
 
         + $"\n"
         );
