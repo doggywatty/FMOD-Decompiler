@@ -1,5 +1,4 @@
-﻿using FMOD.Studio;
-using System.Runtime.InteropServices;
+﻿using System.Runtime.InteropServices;
 
 public class Program
 {

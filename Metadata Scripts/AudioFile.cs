@@ -1,51 +1,7 @@
 ﻿using System.Xml;
-using System.Xml.Serialization;
 using NAudio.Wave;
 using NVorbis;
 using static Program;
-# region Get Set
-public class objects
-{
-    [XmlAttribute("serializationModel")]
-    public string SerializationModel { get; set; }
-
-    [XmlElement("object")]
-    public List<ObjectData> ObjectList { get; set; }
-}
-
-public class ObjectData
-{
-    [XmlAttribute("class")]
-    public string Class { get; set; }
-
-    [XmlAttribute("id")]
-    public string Id { get; set; }
-
-    [XmlElement("property")]
-    public List<Property> Properties { get; set; }
-
-    [XmlElement("relationship")]
-    public List<Relationship> Relationships { get; set; }
-}
-
-public class Property
-{
-    [XmlAttribute("name")]
-    public string Name { get; set; }
-
-    [XmlElement("value")]
-    public string Value { get; set; }
-}
-
-public class Relationship
-{
-    [XmlAttribute("name")]
-    public string Name { get; set; }
-
-    [XmlElement("destination")]
-    public string Destination { get; set; }
-}
-#endregion
 
 public class AudioFile
 {
@@ -58,52 +14,50 @@ public class AudioFile
         // Save GUID for this File
         AudioFileGUIDs.Add($"{Path.GetRelativePath(outputpath, soundfilepath)}", GetRandomGUID());
 
-        // Create the XML structure
-        var xml = new objects
-        {
-            SerializationModel = "Studio.02.02.00",
-            ObjectList = new List<ObjectData>
-            {
-                new ObjectData
-                {
-                    Class = "AudioFile",
-                    // Id = It's own GUID
-                    Id = $"{{{AudioFileGUIDs[$"{Path.GetRelativePath(outputpath, soundfilepath)}"]}}}",
-                    Properties = new List<Property>
-                    {
-                        new Property { Name = "assetPath", Value = $"{Path.GetRelativePath(outputpath, soundfilepath)}" },
-                        new Property { Name = "frequencyInKHz", Value = $"{frequency / 1000}" },
-                        new Property { Name = "channelCount", Value = $"{channels}" },
-                        new Property { Name = "length", Value = $"{GetAudioLength(soundfilepath)}" }
-                    },
-                    Relationships = new List<Relationship>
-                    {
-                        new Relationship { Name = "masterAssetFolder", Destination = $"{{{MasterAssetsGUID}}}" }// = Master GUID in /Asset folder
-                    }
-                }
-            }
-        };
+        // Setup XML
+        var xmlDoc = new XmlDocument();
+        var xmlDeclaration = xmlDoc.CreateXmlDeclaration("1.0", "UTF-8", null);
+        xmlDoc.AppendChild(xmlDeclaration);
+        var root = xmlDoc.CreateElement("objects");
+        root.SetAttribute("serializationModel", "Studio.02.02.00");
 
-        // XML File Path TEMP
+        // Add GUID of Current AuidoFile XML
+        var objectElement = xmlDoc.CreateElement("object");
+        objectElement.SetAttribute("class", "AudioFile");
+        objectElement.SetAttribute("id", $"{{{AudioFileGUIDs[$"{Path.GetRelativePath(outputpath, soundfilepath)}"]}}}");
+        root.AppendChild(objectElement);
+
+        // Add <property> elements with nested <value> elements
+        AddPropertyElement(xmlDoc, objectElement, "assetPath", Path.GetRelativePath(outputpath, soundfilepath).Replace("\\","/"));// because it was backwards
+        AddPropertyElement(xmlDoc, objectElement, "frequencyInKHz", (frequency / 1000).ToString());
+        AddPropertyElement(xmlDoc, objectElement, "channelCount", channels.ToString());
+        AddPropertyElement(xmlDoc, objectElement, "length", GetAudioLength(soundfilepath).ToString());
+
+        var relationshipElement = xmlDoc.CreateElement("relationship");
+        relationshipElement.SetAttribute("name", "masterAssetFolder");
+        var destinationElement = xmlDoc.CreateElement("destination");
+        destinationElement.InnerText = $"{{{MasterAssetsGUID}}}";
+        relationshipElement.AppendChild(destinationElement);
+        objectElement.AppendChild(relationshipElement);
+        xmlDoc.AppendChild(root);
+
+        // XML File Path
         string filePath = outputpath.Replace("/Assets", "");// Go to root
         filePath = filePath + "/Metadata/AudioFile/" + $"{{{AudioFileGUIDs[$"{Path.GetRelativePath(outputpath, soundfilepath)}"]}}}" + ".xml";
 
-        // Export XML
-        var serializer = new XmlSerializer(typeof(objects));
-        var namespaces = new XmlSerializerNamespaces();
-        namespaces.Add("", "");
+        // Save
+        xmlDoc.Save(filePath);
+    }
+    private static void AddPropertyElement(XmlDocument xmlDoc, XmlElement parent, string propertyName, string value)
+    {
+        var propertyElement = xmlDoc.CreateElement("property");
+        propertyElement.SetAttribute("name", propertyName);
 
-        var settings = new XmlWriterSettings
-        {
-            Indent = true,
-            IndentChars = "    ", // 4 spaces indentation
-            Encoding = new System.Text.UTF8Encoding(false)
-        };
-        // Serialize to XML and write to file using XmlWriter with UTF-8 encoding
-        using (var writer = XmlWriter.Create(filePath, settings))
-        {
-            serializer.Serialize(writer, xml, namespaces);
-        }
+        var valueElement = xmlDoc.CreateElement("value");
+        valueElement.InnerText = value;
+
+        propertyElement.AppendChild(valueElement);
+        parent.AppendChild(propertyElement);
     }
 
     #region Find Sound Length
