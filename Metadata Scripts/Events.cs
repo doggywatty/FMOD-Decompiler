@@ -12,10 +12,9 @@ public class Events
     {
         // these change per XML, but not within the XML
         // so they should be here, and not public static
-        // TODO, fix it because they are still static
 
-        // also, some of them MIGHT be connected to other XML files
-        // didn't really check that well
+        // if they are all the same across all XML files
+        // try cleaning it
         Guid EventMixerGuid = GetRandomGUID();
         Guid MasterTrackGuid = GetRandomGUID();
         Guid MixerInputGuid = GetRandomGUID();
