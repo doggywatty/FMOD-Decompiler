@@ -1,4 +1,5 @@
-﻿using System.Runtime.InteropServices;
+﻿using FMOD.Studio;
+using System.Runtime.InteropServices;
 
 public class Program
 {
@@ -63,8 +64,8 @@ public class Program
 
     // these keep track of all randomly generated GUIDs, so we can call them back if needed elsewhere
     public static Dictionary<string, Guid> EventGUIDs = new Dictionary<string, Guid> { };// not fully implimented yet
-    public static Dictionary<string, Guid> AudioFileGUIDs = new Dictionary<string, Guid> { };
     public static Dictionary<string, Guid> EventFolderGUIDs = new Dictionary<string, Guid> { };
+    public static Dictionary<string, Guid> AudioFileGUIDs = new Dictionary<string, Guid> { };
     public static Dictionary<string, Guid> BankSpecificGUIDs = new Dictionary<string, Guid> { };
     #endregion
 
@@ -84,8 +85,9 @@ public class Program
         + $"\n\nby {CYAN}CatMateo{NORMAL}"
         + $"\nand {RED}burnedpopcorn180{NORMAL}"
 
-        + $"\n\n{RED}THIS IS STILL VERY WIP{NORMAL}"
-        + $"\n{RED}AS EVENTS CANNOT BE DECOMPILED YET{NORMAL}"
+        + $"\n\n{RED}Unfortunately, this Decompiler is pretty limited in what it can extract{NORMAL}"
+        + $"\n{RED}Most things, like Events, you WILL have to recreate by yourself{NORMAL}"
+        + $"\n{RED}But this Decompiler will at least give you a bare shell to work off of{NORMAL}"
 
         + $"\n"
         );
@@ -399,26 +401,15 @@ public class Program
             FMOD.Studio.EventDescription[] eventDescriptions = new FMOD.Studio.EventDescription[eventCount];
             bank.getEventList(out eventDescriptions);
 
-            // process each event in the bank
+            #region Event Folders
+            // to not be too wasteful
             foreach (var eventDescription in eventDescriptions)
             {
-                FMOD.Studio.EventInstance eventInstance;
-                eventDescription.createInstance(out eventInstance);
-
-                // get event name
+                // get event path
                 eventDescription.getPath(out string eventname);
 
-                // add event name to save later
-                EventFolder.AllEvents.Add(eventname);
-
                 if (verbose)
-                    Console.WriteLine($"{YELLOW}Saving Event: {eventname}{NORMAL}");
-
-                // add GUID to event
-                EventGUIDs.Add(eventname, GetRandomGUID()); // you can get the GUID for a given event with EventGUIDs["event:/music/w2/graveyard"]
-
-                if (verbose)
-                    Console.WriteLine($"Event GUID for {eventname}: {EventGUIDs[eventname]}");
+                    Console.WriteLine($"{MAGENTA}Saving Event Folder: {eventname}{NORMAL}");
 
                 // Spinner for when --verbose was not used
                 if (!verbose && SpinnerInit == false)
@@ -429,18 +420,40 @@ public class Program
                     SpinnerInit = true;
                 }
 
-                // save event
-                SaveEventInstance(eventInstance, eventDescription, outputProjectPath);
+                // add event name to save later
+                EventFolder.AllEvents.Add(eventname);
+            }
+            // Extract Event Folders
+            EventFolder.ExtractEventFolders(outputProjectPath + "/Metadata/EventFolder");
+            #endregion
+
+            // process each event in the bank
+            foreach (var eventDescription in eventDescriptions)
+            {
+                FMOD.Studio.EventInstance eventInstance;
+                eventDescription.createInstance(out eventInstance);
+
+                // get event path
+                eventDescription.getPath(out string eventname);
+
+                if (verbose)
+                    Console.WriteLine($"{YELLOW}Saving Event: {eventname}{NORMAL}");
+
+                // add GUID to event
+                EventGUIDs.Add(eventname, GetRandomGUID()); // you can get the GUID for a given event with EventGUIDs["event:/music/w2/graveyard"]
+
+                if (verbose)
+                    Console.WriteLine($"Event GUID for {eventname}: {EventGUIDs[eventname]}");
+
+                // save event                                   these two are currently unused
+                Events.SaveEvents(eventname, outputProjectPath, eventInstance, eventDescription);
             }
 
             // Extract Sounds to /Assets folder
             ExtractSoundAssets.ExtractSoundFiles(bankFilePath, outputProjectPath + "/Assets", bankfilename, verbose);
-
-            // Extract Event Folders
-            EventFolder.ExtractEventFolders(outputProjectPath + "/Metadata/EventFolder");
         }
         // if not verbose, stop spinner
-        if (!verbose) 
+        if (!verbose)
         {
             SpinnerKill.Cancel();
             // also write text in a way that will overwrite spinner text
@@ -453,13 +466,6 @@ public class Program
 
         // Clean up the FMOD Studio system
         studioSystem.release();
-    }
-
-    public static void SaveEventInstance(FMOD.Studio.EventInstance eventInstance, FMOD.Studio.EventDescription eventDescription, string outputProjectPath)
-    {
-        // implement the logic to save the event instance to the specified path
-        // this is a placeholder implementation
-        // example: Serialize event instance data to a file in the output project path
     }
 
     // If User is not using --verbose
