@@ -444,8 +444,8 @@ public class Program
                 if (verbose)
                     Console.WriteLine($"Event GUID for {eventname}: {EventGUIDs[eventname]}");
 
-                // save event
-                Events.SaveEvents(eventInstance, eventDescription, eventname, outputProjectPath);
+                // save event                                   these two are currently unused
+                Events.SaveEvents(eventname, outputProjectPath, eventInstance, eventDescription);
             }
 
             // Extract Sounds to /Assets folder
