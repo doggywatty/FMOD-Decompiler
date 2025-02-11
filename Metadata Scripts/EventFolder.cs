@@ -42,7 +42,6 @@ public class EventFolder
             }
         }
     }
-    // Honestly I should have done this for AudioFile.cs ngl
     static void CreateXmlFile(string filePath, string folderName, List<string> folders)
     {
         // Create XML document

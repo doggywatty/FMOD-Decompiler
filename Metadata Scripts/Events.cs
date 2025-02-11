@@ -111,8 +111,19 @@ public class Events
         root.AppendChild(CreateEmptyObjectElement(xmlDoc, "MixerBusFader", $"{{{MixerBusFaderGuid1}}}"));
         root.AppendChild(CreateEmptyObjectElement(xmlDoc, "MixerBusFader", $"{{{MixerBusFaderGuid2}}}"));
 
+        // Make Indentation Settings
+        XmlWriterSettings settings = new XmlWriterSettings
+        {
+            Indent = true,
+            IndentChars = "    ",  // Set 4 spaces for indentation
+            NewLineOnAttributes = false  // avoid new lines
+        };
+
         // Save the XML document to a file
-        xmlDoc.Save(outputProjectPath + $"/Metadata/Event/{{{EventGUIDs[eventname]}}}.xml");
+        using (XmlWriter writer = XmlWriter.Create(outputProjectPath + $"/Metadata/Event/{{{EventGUIDs[eventname]}}}.xml", settings))
+        {
+            xmlDoc.WriteTo(writer);
+        }
     }
 
     #region Get Event Names
