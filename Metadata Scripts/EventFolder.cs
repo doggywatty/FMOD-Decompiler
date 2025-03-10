@@ -42,7 +42,6 @@ public class EventFolder
             }
         }
     }
-    // Honestly I should have done this for AudioFile.cs ngl
     static void CreateXmlFile(string filePath, string folderName, List<string> folders)
     {
         // Create XML document
@@ -74,14 +73,12 @@ public class EventFolder
         relationshipElement.SetAttribute("name", "folder");
         XmlElement destinationElement = xmlDoc.CreateElement("destination");
 
-        // if event is in a folder, and isn't located in root
-        // aka you had this: event:/music/soundtest/pause
-        // and now its down to : /music/soundtest/
-        if (folders.Count >= 2)
-            destinationElement.InnerText = $"{{{EventFolderGUIDs[folders[folders.Count - 2]]}}}"; // from the example, you get /music's GUID
-        else if (folders.Count == 1)
+        // if root event folder
+        if (folders[0] == folderName)
             destinationElement.InnerText = $"{{{MasterEventFolderGUID}}}";
-        // there should definitely not be 0
+        // else if underneath another folder
+        else
+            destinationElement.InnerText = $"{{{EventFolderGUIDs[folders[folders.Count - 2]]}}}";
 
         relationshipElement.AppendChild(destinationElement);
         objectElement.AppendChild(relationshipElement);

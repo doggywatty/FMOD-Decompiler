@@ -38,6 +38,22 @@ public class Program
         return newGuid;
     }
 
+    // FMOD.GUID to System.Guid Converter
+    public static Guid FMODGUIDToSysGuid(FMOD.GUID fmodGuid)
+    {
+        // create byte array
+        byte[] bytes = new byte[16];
+
+        // copy FMOD.GUID Struct Data into the correct positions
+        BitConverter.GetBytes(fmodGuid.Data1).CopyTo(bytes, 0);   // Data1 goes into positions 0-3
+        BitConverter.GetBytes(fmodGuid.Data2).CopyTo(bytes, 4);   // Data2 goes into positions 4-7
+        BitConverter.GetBytes(fmodGuid.Data3).CopyTo(bytes, 8);   // Data3 goes into positions 8-11
+        BitConverter.GetBytes(fmodGuid.Data4).CopyTo(bytes, 12);  // Data4 goes into positions 12-15
+
+        // return output as System.Guid
+        return new Guid(bytes);
+    }
+
     #region Static GUIDs
     // since they are static, it'll only run once, so they should stay the same
     public static Guid MasterAssetsGUID = GetRandomGUID();
@@ -374,7 +390,7 @@ public class Program
 
             // if bank with events/music (music.bank and sfx.bank), then add reference to its assets
             // basically just the Master XML Files most assets reference
-            if (eventCount > 0)
+            if (eventCount > 0 && !bankfilename.Contains("Master"))
             {
                 // For Bank Asset XML
                 BankSpecificGUIDs.Add(bankfilename + "_Asset", GetRandomGUID());
@@ -402,54 +418,64 @@ public class Program
 
             #region Event Folders
             // to not be too wasteful
-            foreach (var eventDescription in eventDescriptions)
+            if (!bankfilename.Contains("Master"))
             {
-                // get event path
-                eventDescription.getPath(out string eventname);
-
-                if (verbose)
-                    Console.WriteLine($"{MAGENTA}Saving Event Folder: {eventname}{NORMAL}");
-
-                // Spinner for when --verbose was not used
-                if (!verbose && SpinnerInit == false)
+                foreach (var eventDescription in eventDescriptions)
                 {
-                    // no await here, because we want it to continue
-                    StartSpinnerAsync("Saving Events...", SpinnerPattern, 1000, SpinnerKill.Token);
-                    // ensure it doesn't get called twice
-                    SpinnerInit = true;
-                }
+                    // get event path
+                    eventDescription.getPath(out string eventname);
 
-                // add event name to save later
-                EventFolder.AllEvents.Add(eventname);
+                    if (verbose)
+                        Console.WriteLine($"{MAGENTA}Saving Event Folder: {eventname}{NORMAL}");
+
+                    // Spinner for when --verbose was not used
+                    if (!verbose && SpinnerInit == false)
+                    {
+                        // no await here, because we want it to continue
+                        StartSpinnerAsync("Saving Events...", SpinnerPattern, 1000, SpinnerKill.Token);
+                        // ensure it doesn't get called twice
+                        SpinnerInit = true;
+                    }
+
+                    // add event name to save later
+                    EventFolder.AllEvents.Add(eventname);
+                }
+                // Extract Event Folders
+                EventFolder.ExtractEventFolders(outputProjectPath + "/Metadata/EventFolder");
             }
-            // Extract Event Folders
-            EventFolder.ExtractEventFolders(outputProjectPath + "/Metadata/EventFolder");
             #endregion
 
             // process each event in the bank
-            foreach (var eventDescription in eventDescriptions)
+            if (!bankfilename.Contains("Master"))
             {
-                FMOD.Studio.EventInstance eventInstance;
-                eventDescription.createInstance(out eventInstance);
+                foreach (var eventDescription in eventDescriptions)
+                {
+                    FMOD.Studio.EventInstance eventInstance;
+                    eventDescription.createInstance(out eventInstance);
 
-                // get event path
-                eventDescription.getPath(out string eventname);
+                    // get event path
+                    eventDescription.getPath(out string eventname);
 
-                if (verbose)
-                    Console.WriteLine($"{YELLOW}Saving Event: {eventname}{NORMAL}");
+                    // get event GUID
+                    eventDescription.getID(out FMOD.GUID eventID);
+                    Guid clean_eventID = FMODGUIDToSysGuid(eventID);
 
-                // add GUID to event
-                EventGUIDs.Add(eventname, GetRandomGUID()); // you can get the GUID for a given event with EventGUIDs["event:/music/w2/graveyard"]
+                    if (verbose)
+                        Console.WriteLine($"{YELLOW}Saving Event: {eventname}{NORMAL}");
 
-                if (verbose)
-                    Console.WriteLine($"Event GUID for {eventname}: {EventGUIDs[eventname]}");
+                    // add GUID to event
+                    EventGUIDs.TryAdd(eventname, clean_eventID); // you can get the GUID for a given event with EventGUIDs["event:/music/w2/graveyard"]
 
-                // save event                                   these two are currently unused
-                Events.SaveEvents(eventname, outputProjectPath, eventInstance, eventDescription);
+                    if (verbose)
+                        Console.WriteLine($"Event GUID for {eventname}: {EventGUIDs[eventname]}");
+
+                    // save event                                   these two are currently unused
+                    Events.SaveEvents(eventname, outputProjectPath, eventInstance, eventDescription);
+                }
+
+                // Extract Sounds to /Assets folder
+                ExtractSoundAssets.ExtractSoundFiles(bankFilePath, outputProjectPath + "/Assets", bankfilename, verbose);
             }
-
-            // Extract Sounds to /Assets folder
-            ExtractSoundAssets.ExtractSoundFiles(bankFilePath, outputProjectPath + "/Assets", bankfilename, verbose);
         }
         // if not verbose, stop spinner
         if (!verbose)
