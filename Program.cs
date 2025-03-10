@@ -38,6 +38,22 @@ public class Program
         return newGuid;
     }
 
+    // FMOD.GUID to System.Guid Converter
+    public static Guid FMODGUIDToSysGuid(FMOD.GUID fmodGuid)
+    {
+        // create byte array
+        byte[] bytes = new byte[16];
+
+        // copy FMOD.GUID Struct Data into the correct positions
+        BitConverter.GetBytes(fmodGuid.Data1).CopyTo(bytes, 0);   // Data1 goes into positions 0-3
+        BitConverter.GetBytes(fmodGuid.Data2).CopyTo(bytes, 4);   // Data2 goes into positions 4-7
+        BitConverter.GetBytes(fmodGuid.Data3).CopyTo(bytes, 8);   // Data3 goes into positions 8-11
+        BitConverter.GetBytes(fmodGuid.Data4).CopyTo(bytes, 12);  // Data4 goes into positions 12-15
+
+        // return output as System.Guid
+        return new Guid(bytes);
+    }
+
     #region Static GUIDs
     // since they are static, it'll only run once, so they should stay the same
     public static Guid MasterAssetsGUID = GetRandomGUID();
@@ -440,11 +456,15 @@ public class Program
                     // get event path
                     eventDescription.getPath(out string eventname);
 
+                    // get event GUID
+                    eventDescription.getID(out FMOD.GUID eventID);
+                    Guid clean_eventID = FMODGUIDToSysGuid(eventID);
+
                     if (verbose)
                         Console.WriteLine($"{YELLOW}Saving Event: {eventname}{NORMAL}");
 
                     // add GUID to event
-                    EventGUIDs.TryAdd(eventname, GetRandomGUID()); // you can get the GUID for a given event with EventGUIDs["event:/music/w2/graveyard"]
+                    EventGUIDs.TryAdd(eventname, clean_eventID); // you can get the GUID for a given event with EventGUIDs["event:/music/w2/graveyard"]
 
                     if (verbose)
                         Console.WriteLine($"Event GUID for {eventname}: {EventGUIDs[eventname]}");
