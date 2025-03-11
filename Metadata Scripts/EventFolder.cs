@@ -73,10 +73,10 @@ public class EventFolder
         relationshipElement.SetAttribute("name", "folder");
         XmlElement destinationElement = xmlDoc.CreateElement("destination");
 
-        // if root event folder
+        // if root event folder (like event:/music/)
         if (folders[0] == folderName)
             destinationElement.InnerText = $"{{{MasterEventFolderGUID}}}";
-        // else if underneath another folder
+        // else if underneath another folder (like event:/music/soundtest)
         else
             destinationElement.InnerText = $"{{{EventFolderGUIDs[folders[folders.Count - 2]]}}}";
 
