@@ -1,4 +1,5 @@
 ﻿using System.Runtime.InteropServices;
+using System.Text.RegularExpressions;
 
 public class Program
 {
@@ -12,13 +13,13 @@ public class Program
     public static string BLUE = Console.IsOutputRedirected ? "" : "\x1b[94m";
     public static string MAGENTA = Console.IsOutputRedirected ? "" : "\x1b[95m";
     public static string CYAN = Console.IsOutputRedirected ? "" : "\x1b[96m";
-    public static string GREY = Console.IsOutputRedirected ? "" : "\x1b[97m";
     public static string BOLD = Console.IsOutputRedirected ? "" : "\x1b[1m";
     public static string NOBOLD = Console.IsOutputRedirected ? "" : "\x1b[22m";
     public static string UNDERLINE = Console.IsOutputRedirected ? "" : "\x1b[4m";
     public static string NOUNDERLINE = Console.IsOutputRedirected ? "" : "\x1b[24m";
     public static string REVERSE = Console.IsOutputRedirected ? "" : "\x1b[7m";
     public static string NOREVERSE = Console.IsOutputRedirected ? "" : "\x1b[27m";
+    public static string OTHERGRAY = Console.IsOutputRedirected ? "" : "\x1b[90m";
 
     // and thank you https://stackoverflow.com/questions/7937256/custom-text-color-in-c-sharp-console-application
     [DllImport("kernel32.dll", SetLastError = true)]
@@ -97,8 +98,8 @@ public class Program
         Console.Clear();
 
         Console.WriteLine($"Welcome to the FMOD Bank Decompiler {RED}(WIP Version){NORMAL}"
-        + $"\n\nby {CYAN}CatMateo{NORMAL}"
-        + $"\nand {RED}burnedpopcorn180{NORMAL}"
+        + $"\n\nby {YELLOW}CatMateo{NORMAL}"
+        + $"\nand {OTHERGRAY}burnedpopcorn180{NORMAL}"
 
         + $"\n\n{RED}Unfortunately, this Decompiler is pretty limited in what it can extract{NORMAL}"
         + $"\n{RED}Most things, like Events, you WILL have to recreate by yourself{NORMAL}"
@@ -379,7 +380,10 @@ public class Program
             // just filename
             string bankfilename = Path.GetFileName(bankFilePath);
 
-            if (!bankfilename.Contains("Master"))
+            // regex pattern to match filenames with any uppercase letters or entirely uppercase
+            Regex uppercasePattern = new Regex(@"[A-Z]");
+
+            if ((!bankfilename.Contains("Master")) && (uppercasePattern.IsMatch(bankfilename) || bankfilename.All(char.IsUpper)))
                 Console.WriteLine($"{GREEN}Loaded Bank: " + bankfilename + $"{NORMAL}                    ");//spaces for when not in verbose
 
             // get the list of events in the bank
@@ -390,7 +394,7 @@ public class Program
 
             // if bank with events/music (music.bank and sfx.bank), then add reference to its assets
             // basically just the Master XML Files most assets reference
-            if (eventCount > 0 && !bankfilename.Contains("Master"))
+            if ((eventCount > 0 && !bankfilename.Contains("Master")) && (uppercasePattern.IsMatch(bankfilename) || bankfilename.All(char.IsUpper)))
             {
                 // For Bank Asset XML
                 BankSpecificGUIDs.Add(bankfilename + "_Asset", GetRandomGUID());
@@ -418,7 +422,7 @@ public class Program
 
             #region Event Folders
             // to not be too wasteful
-            if (!bankfilename.Contains("Master"))
+            if ((!bankfilename.Contains("Master")) && (uppercasePattern.IsMatch(bankfilename) || bankfilename.All(char.IsUpper)))
             {
                 foreach (var eventDescription in eventDescriptions)
                 {
@@ -446,7 +450,7 @@ public class Program
             #endregion
 
             // process each event in the bank
-            if (!bankfilename.Contains("Master"))
+            if ((!bankfilename.Contains("Master")) && (uppercasePattern.IsMatch(bankfilename) || bankfilename.All(char.IsUpper)))
             {
                 foreach (var eventDescription in eventDescriptions)
                 {
