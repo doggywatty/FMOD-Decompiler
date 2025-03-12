@@ -138,10 +138,10 @@ public class Events
         folders.RemoveAt(0); // Remove "event:"
         folders.RemoveAt(folders.Count - 1); // Remove the last part (it's not a folder)
 
-        // event:/music/soundtest/pause
-        // after that
-        if (folders.Count >= 2)
+        // if like event:/music/soundtest/pause, or event:/soundtest/pause, get /soundtest
+        if (folders.Count >= 1)
             return $"{EventFolderGUIDs[folders[folders.Count - 1]]}";
+        // else if like event:/sound, get Master Folder
         else
             return $"{MasterEventFolderGUID}";
     }
