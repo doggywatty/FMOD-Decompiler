@@ -34,7 +34,7 @@ public class EventFolder
                     EventFolderGUIDs.TryAdd(folder, GetRandomGUID());
 
                     // Create XML
-                    CreateXmlFile(filePath, folder, folders);
+                    CreateXmlFile(filePath, folder, folders, path);
 
                     // Mark this folder as processed
                     processedFolders.Add(folder);
@@ -42,7 +42,7 @@ public class EventFolder
             }
         }
     }
-    static void CreateXmlFile(string filePath, string folderName, List<string> folders)
+    static void CreateXmlFile(string filePath, string folderName, List<string> folders, string fullpath)
     {
         // Create XML document
         XmlDocument xmlDoc = new XmlDocument();
@@ -85,8 +85,22 @@ public class EventFolder
                 // find position 
                 if (folders[i] == folderName)
                 {
-                    destinationElement.InnerText = $"{{{EventFolderGUIDs[folders[folders.Count - 1 - i]]}}}";
-                    break;
+                    // make sure GUID doesn't reference itself
+                    if (EventFolderGUIDs[folders[folders.Count - 1 - i]] != EventFolderGUIDs[folderName])
+                    {
+                        destinationElement.InnerText = $"{{{EventFolderGUIDs[folders[folders.Count - 1 - i]]}}}";
+                        break;
+                    }
+                    // but if it does, set to Master and notify user
+                    else if (EventFolderGUIDs[folders[folders.Count - 1 - i]] == EventFolderGUIDs[folderName])
+                    {
+                        OrganizeError = true;
+                        Console.WriteLine($"{RED}Event Folder Missmatch!{NORMAL}");
+                        Console.WriteLine($"{RED}Event Folder \"{folderName}\" from event \"{fullpath}\"{NORMAL}");
+                        Console.WriteLine($"{RED}Setting Folder to Master as fallback...{NORMAL}");
+                        destinationElement.InnerText = $"{{{MasterEventFolderGUID}}}";
+                        break;
+                    }
                 }
 
                 // if none, add to check and repeat the loop

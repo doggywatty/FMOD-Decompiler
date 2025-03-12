@@ -90,6 +90,8 @@ public class Program
 
     // Organize Project Bool for Argument 4
     public static bool OrganizeProject = true;
+    // If Error while Organizing
+    public static bool OrganizeError = false;
 
     public static async Task Main(string[] args)
     {
@@ -486,6 +488,10 @@ public class Program
                 ExtractSoundAssets.ExtractSoundFiles(bankFilePath, outputProjectPath + "/Assets", bankfilename, verbose);
             }
         }
+
+        // make txt of all events
+        File.AppendAllLines(outputProjectPath + "/eventpaths.txt", EventFolder.AllEvents);
+
         // if not verbose, stop spinner
         if (!verbose)
         {
@@ -497,6 +503,12 @@ public class Program
         else if (verbose)
             Console.WriteLine($"\n{GREEN}Conversion Complete!{NORMAL}");
         Console.WriteLine($"{GREEN}Exported Project is at {outputProjectPath}{NORMAL}");
+        if (OrganizeError)
+        {
+            Console.WriteLine($"{RED}There were some errors while organizing{NORMAL}");
+            Console.WriteLine($"{RED}While the project is still organized, some folders have been moved to root{NORMAL}");
+            Console.WriteLine($"{RED}YOU WILL HAVE TO MANUALLY MOVE THEM IN THE CORRECT PLACES INCLUDING EVENTS{NORMAL}");
+        }
 
         // Clean up the FMOD Studio system
         studioSystem.release();
