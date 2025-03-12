@@ -1,6 +1,4 @@
 ﻿using System.Runtime.InteropServices;
-using System.Text.RegularExpressions;
-
 public class Program
 {
     #region Colored Text
@@ -380,10 +378,7 @@ public class Program
             // just filename
             string bankfilename = Path.GetFileName(bankFilePath);
 
-            // regex pattern to match filenames with any uppercase letters or entirely uppercase
-            Regex uppercasePattern = new Regex(@"[A-Z]");
-
-            if ((!bankfilename.Contains("Master")) && (uppercasePattern.IsMatch(bankfilename) || bankfilename.All(char.IsUpper)))
+            if (!bankfilename.Contains("Master"))
                 Console.WriteLine($"{GREEN}Loaded Bank: " + bankfilename + $"{NORMAL}                    ");//spaces for when not in verbose
 
             // get the list of events in the bank
@@ -394,7 +389,7 @@ public class Program
 
             // if bank with events/music (music.bank and sfx.bank), then add reference to its assets
             // basically just the Master XML Files most assets reference
-            if ((eventCount > 0 && !bankfilename.Contains("Master")) && (uppercasePattern.IsMatch(bankfilename) || bankfilename.All(char.IsUpper)))
+            if (eventCount > 0 && !bankfilename.Contains("Master"))
             {
                 // For Bank Asset XML
                 BankSpecificGUIDs.Add(bankfilename + "_Asset", GetRandomGUID());
@@ -422,7 +417,7 @@ public class Program
 
             #region Event Folders
             // to not be too wasteful
-            if ((!bankfilename.Contains("Master")) && (uppercasePattern.IsMatch(bankfilename) || bankfilename.All(char.IsUpper)))
+            if (!bankfilename.Contains("Master"))
             {
                 foreach (var eventDescription in eventDescriptions)
                 {
@@ -450,7 +445,7 @@ public class Program
             #endregion
 
             // process each event in the bank
-            if ((!bankfilename.Contains("Master")) && (uppercasePattern.IsMatch(bankfilename) || bankfilename.All(char.IsUpper)))
+            if (!bankfilename.Contains("Master"))
             {
                 foreach (var eventDescription in eventDescriptions)
                 {
