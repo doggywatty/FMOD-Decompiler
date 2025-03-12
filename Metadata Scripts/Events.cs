@@ -45,7 +45,7 @@ public class Events
             new string[] { $"{GetName(eventname)}", "0" }, new (string, string)[]
             {
                 // get name of folder containing the event
-            ("folder", $"{{{GetHigherEventFolder(eventname)}}}"),
+            ("folder", $"{{{(OrganizeProject ? GetHigherEventFolder(eventname) : MasterEventFolderGUID)}}}"),
             ("mixer", $"{{{EventMixerGuid}}}"),
             ("masterTrack", $"{{{MasterTrackGuid}}}"),
 

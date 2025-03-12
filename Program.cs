@@ -88,6 +88,9 @@ public class Program
     public static bool SpinnerInit = false;
     public static int SpinnerPattern = new Random().Next(2);
 
+    // Organize Project Bool for Argument 4
+    public static bool OrganizeProject = true;
+
     public static async Task Main(string[] args)
     {
         // initialize
@@ -188,6 +191,11 @@ public class Program
             else if (args[i] == "--verbose")
             {
                 verbose = true;
+            }
+            // check the --noorg flag
+            else if (args[i] == "--noorg")
+            {
+                OrganizeProject = false;
             }
             else
             {
@@ -424,7 +432,7 @@ public class Program
                     // get event path
                     eventDescription.getPath(out string eventname);
 
-                    if (verbose)
+                    if (verbose && OrganizeProject)
                         Console.WriteLine($"{MAGENTA}Saving Event Folder: {eventname}{NORMAL}");
 
                     // Spinner for when --verbose was not used
@@ -437,10 +445,12 @@ public class Program
                     }
 
                     // add event name to save later
-                    EventFolder.AllEvents.Add(eventname);
+                    if (OrganizeProject)
+                        EventFolder.AllEvents.Add(eventname);
                 }
                 // Extract Event Folders
-                EventFolder.ExtractEventFolders(outputProjectPath + "/Metadata/EventFolder");
+                if (OrganizeProject)
+                    EventFolder.ExtractEventFolders(outputProjectPath + "/Metadata/EventFolder");
             }
             #endregion
 
