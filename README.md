@@ -22,10 +22,15 @@ This uses DLLs from the [FMOD Studio API](https://fmod.com/download#fmodengine).
    ```
 
 ## Usage
-Run the executable with the necessary arguments:
+1. Run the executable with the necessary arguments:
 ```sh
 FMOD-Decompiler --input "path/to/bank/folder" --output "path/to/output/project"
 ```
+2. Wait for the Program to finish, then open the Project in FMOD Studio
+
+3. Then once the project loads, go to File -> Validate Project...
+
+4. Validate the entire project and Save the project
 
 ### Arguments:
 - `--input`: Path to the folder containing FMOD bank files.
