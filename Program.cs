@@ -88,8 +88,8 @@ public class Program
     public static bool SpinnerInit = false;
     public static int SpinnerPattern = new Random().Next(2);
 
-    // Organize Project Bool for Argument 4
-    public static bool OrganizeProject = true;
+    // Organize Project Level for Arg4
+    public static int SafeOrgLevel = 0;
     // If Error while Organizing
     public static bool OrganizeError = false;
 
@@ -194,10 +194,14 @@ public class Program
             {
                 verbose = true;
             }
-            // check the --noorg flag
-            else if (args[i] == "--noorg")
+            // check the --safeorglevel flag
+            else if (args[i] == "--safeorglevel1")
             {
-                OrganizeProject = false;
+                SafeOrgLevel = 1;
+            }
+            else if (args[i] == "--safeorglevel2")
+            {
+                SafeOrgLevel = 2;
             }
             else
             {
@@ -434,7 +438,7 @@ public class Program
                     // get event path
                     eventDescription.getPath(out string eventname);
 
-                    if (verbose && OrganizeProject)
+                    if (verbose && SafeOrgLevel < 2)
                         Console.WriteLine($"{MAGENTA}Saving Event Folder: {eventname}{NORMAL}");
 
                     // Spinner for when --verbose was not used
@@ -447,12 +451,12 @@ public class Program
                     }
 
                     // add event name to save later
-                    if (OrganizeProject)
+                    if (SafeOrgLevel < 2)
                         EventFolder.AllEvents.Add(eventname);
                 }
                 // Extract Event Folders
-                if (OrganizeProject)
-                    EventFolder.ExtractEventFolders(outputProjectPath + "/Metadata/EventFolder");
+                if (SafeOrgLevel < 2)
+                    EventFolder.ExtractEventFolders(outputProjectPath + "/Metadata/EventFolder", verbose);
             }
             #endregion
 

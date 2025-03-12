@@ -6,7 +6,7 @@ public class EventFolder
     // used in main
     public static List<string> AllEvents = new List<string> { };
 
-    public static void ExtractEventFolders(string filePath) 
+    public static void ExtractEventFolders(string filePath, bool verbose) 
     {
         // figure out all subfolders from an event path and make an XML for each subfolder
         // aka event:/music/soundtest/pause
@@ -34,7 +34,7 @@ public class EventFolder
                     EventFolderGUIDs.TryAdd(folder, GetRandomGUID());
 
                     // Create XML
-                    CreateXmlFile(filePath, folder, folders, path);
+                    CreateXmlFile(filePath, folder, folders, path, verbose);
 
                     // Mark this folder as processed
                     processedFolders.Add(folder);
@@ -42,7 +42,7 @@ public class EventFolder
             }
         }
     }
-    static void CreateXmlFile(string filePath, string folderName, List<string> folders, string fullpath)
+    static void CreateXmlFile(string filePath, string folderName, List<string> folders, string fullpath, bool verbose)
     {
         // Create XML document
         XmlDocument xmlDoc = new XmlDocument();
@@ -95,10 +95,20 @@ public class EventFolder
                     else if (EventFolderGUIDs[folders[folders.Count - 1 - i]] == EventFolderGUIDs[folderName])
                     {
                         OrganizeError = true;
-                        Console.WriteLine($"{RED}Event Folder Missmatch!{NORMAL}");
-                        Console.WriteLine($"{RED}Event Folder \"{folderName}\" from event \"{fullpath}\"{NORMAL}");
-                        Console.WriteLine($"{RED}Setting Folder to Master as fallback...{NORMAL}");
-                        destinationElement.InnerText = $"{{{MasterEventFolderGUID}}}";
+                        if (verbose)
+                        {
+                            Console.WriteLine($"{RED}Event Folder Missmatch!{NORMAL}");
+                            Console.WriteLine($"{RED}Event Folder \"{folderName}\" from event \"{fullpath}\"{NORMAL}");
+                            if (SafeOrgLevel == 1)
+                                Console.WriteLine($"{RED}Trying Experimental Folder Placement...{NORMAL}");
+                            else
+                                Console.WriteLine($"{RED}Setting Folder to Master as fallback...{NORMAL}");
+                        }
+                        // SafeOrgLevel is never 2 here
+                        if (SafeOrgLevel == 1)
+                            destinationElement.InnerText = $"{{{EventFolderGUIDs[folders[folders.Count - 2 - i]]}}}";
+                        else
+                            destinationElement.InnerText = $"{{{MasterEventFolderGUID}}}";
                         break;
                     }
                 }
