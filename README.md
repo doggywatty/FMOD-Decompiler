@@ -30,12 +30,14 @@ FMOD-Decompiler --input "path/to/bank/folder" --output "path/to/output/project"
 ### Arguments:
 - `--input`: Path to the folder containing FMOD bank files.
 - `--output`: Destination folder for the generated `.fspro` project.
-- `--verbose`: (Optional) Enable detailed logging.
+- `--verbose`: (Optional) Enables detailed logging.
+- `--noorg`: (Optional) Disables Automatic Project Organization (Resolves some Issues).
 
 ## Limitations
 - The tool is an attempt to reconstruct `.fspro` projects and may not be fully accurate.
 - Some metadata or complex FMOD features may not be fully recovered.
 - Compatibility with newer versions of FMOD Studio is not guaranteed.
+- Argument `-noorg` is required for Bank files that have event subfolders with the same name under different folders.
 
 ## Contributing
 Pull requests and issue reports are welcome! Feel free to contribute improvements or report bugs.
