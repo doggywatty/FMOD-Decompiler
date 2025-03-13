@@ -26,23 +26,26 @@ public class EventFolder
             folders.RemoveAt(folders.Count - 1); // Remove the last part (it's not a folder)
 
             // goes through every subfolder in cleansed path (ex: /music and /soundtest)
+            int folder_level = 0;
             foreach (var folder in folders)
             {
-                if (!processedFolders.Contains(folder))
+                if (!processedFolders.Contains(folder + $"{folder_level}"))
                 {
                     // Create GUID for "folder"
-                    EventFolderGUIDs.TryAdd(folder, GetRandomGUID());
+                    EventFolderGUIDs.TryAdd(folder + $"{folder_level}", GetRandomGUID());
 
                     // Create XML
-                    CreateXmlFile(filePath, folder, folders, path, verbose);
+                    CreateXmlFile(filePath, folder, folders, folder_level, path, verbose);
 
                     // Mark this folder as processed
-                    processedFolders.Add(folder);
+                    processedFolders.Add(folder + $"{folder_level}");
                 }
+                // increase after every folder
+                folder_level++;
             }
         }
     }
-    static void CreateXmlFile(string filePath, string folderName, List<string> folders, string fullpath, bool verbose)
+    static void CreateXmlFile(string filePath, string folderName, List<string> folders, int folder_level, string fullpath, bool verbose)
     {
         // Create XML document
         XmlDocument xmlDoc = new XmlDocument();
@@ -57,7 +60,7 @@ public class EventFolder
         // Create object element
         XmlElement objectElement = xmlDoc.CreateElement("object");
         objectElement.SetAttribute("class", "EventFolder");
-        objectElement.SetAttribute("id", $"{{{EventFolderGUIDs[folderName]}}}");
+        objectElement.SetAttribute("id", $"{{{EventFolderGUIDs[folderName + $"{folder_level}"]}}}");
         root.AppendChild(objectElement);
 
         // Create property element for the name
@@ -85,14 +88,18 @@ public class EventFolder
                 // find position 
                 if (folders[i] == folderName)
                 {
+                    // bro EVEN I DONT KNOW WHAT I DID
+                    // this crackhead code might have to be revised the more subfolders there are, but idk
+                    int find_folder_level = folder_level > folders.Count - 2 ? folder_level - 1 : folder_level;
+
                     // make sure GUID doesn't reference itself
-                    if (EventFolderGUIDs[folders[folders.Count - 1 - i]] != EventFolderGUIDs[folderName])
+                    if (EventFolderGUIDs[folders[folders.Count - 2] + $"{find_folder_level}"] != EventFolderGUIDs[folderName + $"{folder_level}"])
                     {
-                        destinationElement.InnerText = $"{{{EventFolderGUIDs[folders[folders.Count - 1 - i]]}}}";
+                        destinationElement.InnerText = $"{{{EventFolderGUIDs[folders[folders.Count - 2] + $"{find_folder_level}"]}}}";
                         break;
                     }
-                    // but if it does, set to Master and notify user
-                    else if (EventFolderGUIDs[folders[folders.Count - 1 - i]] == EventFolderGUIDs[folderName])
+                    // but if it does, set to something else and notify user
+                    else if (EventFolderGUIDs[folders[folders.Count - 2] + $"{find_folder_level}"] == EventFolderGUIDs[folderName + $"{folder_level}"])
                     {
                         OrganizeError = true;
                         if (verbose)
@@ -100,14 +107,14 @@ public class EventFolder
                             Console.WriteLine($"{RED}Event Folder Missmatch!{NORMAL}");
                             Console.WriteLine($"{RED}Event Folder \"{folderName}\" from event \"{fullpath}\"{NORMAL}");
                             if (SafeOrgLevel == 1)
-                                Console.WriteLine($"{RED}Trying Experimental Folder Placement...{NORMAL}");
+                                Console.WriteLine($"{GREEN}Trying Experimental Folder Placement...{NORMAL}");
                             else
                                 Console.WriteLine($"{RED}Setting Folder to Master as fallback...{NORMAL}");
                         }
                         // SafeOrgLevel is never 2 here
-                        if (SafeOrgLevel == 1)
-                            destinationElement.InnerText = $"{{{EventFolderGUIDs[folders[folders.Count - 2 - i]]}}}";
-                        else
+                        if (SafeOrgLevel == 1) // if experimental, send it to the first root folder
+                            destinationElement.InnerText = $"{{{EventFolderGUIDs[folders[0] + $"{0}"]}}}";
+                        else // else just set it to Master and call it a day
                             destinationElement.InnerText = $"{{{MasterEventFolderGUID}}}";
                         break;
                     }
@@ -122,6 +129,6 @@ public class EventFolder
         objectElement.AppendChild(relationshipElement);
 
         // Save the XML document to File
-        xmlDoc.Save(filePath + $"/{{{EventFolderGUIDs[folderName]}}}.xml");
+        xmlDoc.Save(filePath + $"/{{{EventFolderGUIDs[folderName + $"{folder_level}"]}}}.xml");
     }
 }

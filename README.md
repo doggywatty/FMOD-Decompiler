@@ -43,7 +43,9 @@ FMOD-Decompiler --input "path/to/bank/folder" --output "path/to/output/project"
 - The tool is an attempt to reconstruct `.fspro` projects and may not be fully accurate.
 - Some metadata or complex FMOD features may not be fully recovered.
 - Compatibility with newer versions of FMOD Studio is not guaranteed.
-- Bank files that have event subfolders with the same name under different folders are not fully supported (Consider using `--experimentalorg` or `--noorg`).
+
+## Notes
+Bank files that have event subfolders with the same name under different folders can have issues (Consider using `--experimentalorg` or `--noorg` to fix any issues).
 
 ## Contributing
 Pull requests and issue reports are welcome! Feel free to contribute improvements or report bugs.

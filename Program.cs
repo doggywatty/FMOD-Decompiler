@@ -508,7 +508,7 @@ public class Program
         else if (verbose)
             Console.WriteLine($"\n{GREEN}Conversion Complete!{NORMAL}");
         Console.WriteLine($"{GREEN}Exported Project is at {outputProjectPath}{NORMAL}");
-        if (OrganizeError)
+        if (OrganizeError && SafeOrgLevel < 1)
         {
             Console.WriteLine($"{RED}There were some errors while organizing{NORMAL}");
             Console.WriteLine($"{RED}While the project is still organized, some folders have been moved to root{NORMAL}");

@@ -140,10 +140,7 @@ public class Events
 
         // if like event:/music/soundtest/pause, or event:/soundtest/pause, get /soundtest
         if (folders.Count >= 1)
-            // THIS IS A WIP PROGRESS IDEA THAT MANY OR MAY NOT HAPPEN
-            // probably not
-            // return SafeOrgLevel == 1 ? $"{EventFolderGUIDs[folders[folders.Count - 1 - (folders.Contains(folders[folders.Count - 2]) ? 1 : 0)]]}" : $"{EventFolderGUIDs[folders[folders.Count - 1]]}";
-            return $"{EventFolderGUIDs[folders[folders.Count - 1]]}";
+            return $"{EventFolderGUIDs[folders[folders.Count - 1] + $"{folders.Count - 1}"]}";
         // else if like event:/sound, get Master Folder
         else
             return $"{MasterEventFolderGUID}";
