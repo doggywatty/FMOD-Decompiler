@@ -194,12 +194,13 @@ public class Program
             {
                 verbose = true;
             }
-            // check the --safeorglevel flag
-            else if (args[i] == "--safeorglevel1")
+            // check the --experimentalorg flag
+            else if (args[i] == "--experimentalorg")
             {
                 SafeOrgLevel = 1;
             }
-            else if (args[i] == "--safeorglevel2")
+            // check the --noorg flag
+            else if (args[i] == "--noorg")
             {
                 SafeOrgLevel = 2;
             }

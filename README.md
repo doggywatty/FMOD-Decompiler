@@ -36,14 +36,14 @@ FMOD-Decompiler --input "path/to/bank/folder" --output "path/to/output/project"
 - `--input`: Path to the folder containing FMOD bank files.
 - `--output`: Destination folder for the generated `.fspro` project.
 - `--verbose`: (Optional) Enables detailed logging.
-- `--safeorglevel1`: (Optional) Enables Experimental Automatic Project Organization. (Only use when Organization issues arise)
-- `--safeorglevel2`: (Optional) Disables Automatic Project Organization.
+- `--experimentalorg`: (Optional) Enables Experimental Automatic Project Organization. (Only use when Organization issues arise)
+- `--noorg`: (Optional) Disables Automatic Project Organization.
 
 ## Limitations
 - The tool is an attempt to reconstruct `.fspro` projects and may not be fully accurate.
 - Some metadata or complex FMOD features may not be fully recovered.
 - Compatibility with newer versions of FMOD Studio is not guaranteed.
-- Bank files that have event subfolders with the same name under different folders are not fully supported (Consider using `--safeorglevel1` or `--safeorglevel2`).
+- Bank files that have event subfolders with the same name under different folders are not fully supported (Consider using `--experimentalorg` or `--noorg`).
 
 ## Contributing
 Pull requests and issue reports are welcome! Feel free to contribute improvements or report bugs.
