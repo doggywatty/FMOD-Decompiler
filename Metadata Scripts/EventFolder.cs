@@ -112,8 +112,8 @@ public class EventFolder
                                 Console.WriteLine($"{RED}Setting Folder to Master as fallback...{NORMAL}");
                         }
                         // SafeOrgLevel is never 2 here
-                        if (SafeOrgLevel == 1) // if experimental, send it to the first root folder
-                            destinationElement.InnerText = $"{{{EventFolderGUIDs[folders[0] + $"{0}"]}}}";
+                        if (SafeOrgLevel == 1) // if experimental, send it to the higher folder
+                            destinationElement.InnerText = $"{{{EventFolderGUIDs[folders[folders.Count - 3] + $"{find_folder_level - 1}"]}}}";
                         else // else just set it to Master and call it a day
                             destinationElement.InnerText = $"{{{MasterEventFolderGUID}}}";
                         break;
