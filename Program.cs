@@ -430,6 +430,17 @@ public class Program
             FMOD.Studio.EventDescription[] eventDescriptions = new FMOD.Studio.EventDescription[eventCount];
             bank.getEventList(out eventDescriptions);
 
+            // clear organization everytime a bank file is loaded
+            // so event:/music/folder and event:/sfx/folder dont merge to /music
+            if (SafeOrgLevel == 1)
+            {
+                EventFolder.AllEvents.Clear();
+                EventFolder.processedFolders.Clear();
+                // yeah even this
+                // should be fine
+                EventFolderGUIDs.Clear();
+            }
+
             #region Event Folders
             // to not be too wasteful
             if (!bankfilename.Contains("Master"))
@@ -438,9 +449,6 @@ public class Program
                 {
                     // get event path
                     eventDescription.getPath(out string eventname);
-
-                    if (verbose && SafeOrgLevel < 2)
-                        Console.WriteLine($"{MAGENTA}Saving Event Folder: {eventname}{NORMAL}");
 
                     // Spinner for when --verbose was not used
                     if (!verbose && SpinnerInit == false)
@@ -458,6 +466,9 @@ public class Program
                 // Extract Event Folders
                 if (SafeOrgLevel < 2)
                     EventFolder.ExtractEventFolders(outputProjectPath + "/Metadata/EventFolder", verbose);
+
+                // Add all events to txt
+                File.AppendAllLines(outputProjectPath + "/eventpaths.txt", EventFolder.AllEvents);
             }
             #endregion
 
@@ -493,9 +504,6 @@ public class Program
                 ExtractSoundAssets.ExtractSoundFiles(bankFilePath, outputProjectPath + "/Assets", bankfilename, verbose);
             }
         }
-
-        // make txt of all events
-        File.AppendAllLines(outputProjectPath + "/eventpaths.txt", EventFolder.AllEvents);
 
         // if not verbose, stop spinner
         if (!verbose)
