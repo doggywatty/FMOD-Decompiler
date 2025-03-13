@@ -88,6 +88,8 @@ public class EventFolder
         // else if underneath another folder (like /music/soundtest/ or /music/soundtest/bgmusic/)
         else
         {
+            // i remember when this used to be readable...
+
             var i = 1; // set to one to skip a useless loop
             while (true)
             {
@@ -96,6 +98,8 @@ public class EventFolder
                 {
                     // bro EVEN I DONT KNOW WHAT I DID
                     // this crackhead code might have to be revised the more subfolders there are, but idk
+
+                    // IM SO SORRY ANYONE THAT IS READING THIS CODE :((((((
                     int find_folder_level = folder_level > folders.Count - 2 ? folder_level - 1 : folder_level;
 
                     // make sure GUID doesn't reference itself
