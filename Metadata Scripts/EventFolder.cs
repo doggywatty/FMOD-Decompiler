@@ -31,7 +31,7 @@ public class EventFolder
             {
                 if (!processedFolders.Contains(folder + $"{folder_level}"))
                 {
-                    if (verbose && SafeOrgLevel < 2)
+                    if (verbose && !No_Org)
                     {
                         Console.WriteLine($"{MAGENTA}Saving Event Folder: \\{folder}{NORMAL}");
                         Console.WriteLine($"{MAGENTA}    From : \"{path}\"{NORMAL}");
@@ -111,21 +111,27 @@ public class EventFolder
                     // but if it does, set to something else and notify user
                     else if (EventFolderGUIDs[folders[folders.Count - 2] + $"{find_folder_level}"] == EventFolderGUIDs[folderName + $"{folder_level}"])
                     {
-                        OrganizeError = true;
                         if (verbose)
                         {
                             Console.WriteLine($"{RED}Event Folder Missmatch!{NORMAL}");
                             Console.WriteLine($"{RED}Event Folder \"{folderName}\" from event \"{fullpath}\"{NORMAL}");
-                            if (SafeOrgLevel == 1)
-                                Console.WriteLine($"{GREEN}Trying Experimental Folder Placement...{NORMAL}");
-                            else
-                                Console.WriteLine($"{RED}Setting Folder to Master as fallback...{NORMAL}");
+                            Console.WriteLine($"{YELLOW}Trying Experimental Folder Placement...{NORMAL}");
                         }
-                        // SafeOrgLevel is never 2 here
-                        if (SafeOrgLevel == 1) // if experimental, send it to the higher folder
+                        // try to set it to higher folder
+                        try
+                        {
                             destinationElement.InnerText = $"{{{EventFolderGUIDs[folders[folders.Count - 3] + $"{find_folder_level - 1}"]}}}";
-                        else // else just set it to Master and call it a day
+                            if (verbose)
+                                Console.WriteLine($"{GREEN}SUCCESS!{NORMAL}");
+                        }
+                        catch (Exception e)
+                        {
+                            OrganizeError = true;
+                            // if it fails, just set it to Master and call it a day
+                            Console.WriteLine($"{RED}ERROR: NO HIGHER FOLDER FOUND!!!{NORMAL}");
+                            Console.WriteLine($"{RED}Setting Folder to Master as fallback...{NORMAL}");
                             destinationElement.InnerText = $"{{{MasterEventFolderGUID}}}";
+                        }
                         break;
                     }
                 }

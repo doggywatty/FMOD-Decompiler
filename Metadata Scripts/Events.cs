@@ -43,7 +43,7 @@ public class Events
             new string[] { $"{GetName(eventname)}", "0" }, new (string, string)[]
             {
                 // get name of folder containing the event
-            ("folder", $"{{{(SafeOrgLevel < 2 ? GetHigherEventFolder(eventname) : MasterEventFolderGUID)}}}"),
+            ("folder", $"{{{(No_Org == false ? GetHigherEventFolder(eventname) : MasterEventFolderGUID)}}}"),
             ("mixer", $"{{{EventMixerGuid}}}"),
             ("masterTrack", $"{{{MasterTrackGuid}}}"),
 

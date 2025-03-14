@@ -89,7 +89,7 @@ public class Program
     public static int SpinnerPattern = new Random().Next(2);
 
     // Organize Project Level for Arg4
-    public static int SafeOrgLevel = 0;
+    public static bool No_Org = false;
     // If Error while Organizing
     public static bool OrganizeError = false;
 
@@ -100,7 +100,7 @@ public class Program
         SetConsoleMode(GetStdHandle(-11), mode | 0x4);
         Console.Clear();
 
-        Console.WriteLine($"Welcome to the FMOD Bank Decompiler {GREEN}(Version 1.0){NORMAL}"
+        Console.WriteLine($"Welcome to the FMOD Bank Decompiler {GREEN}(Version 1.0.1){NORMAL}"
         + $"\n\nby {YELLOW}CatMateo{NORMAL}"
         + $"\nand {OTHERGRAY}burnedpopcorn180{NORMAL}"
 
@@ -194,15 +194,10 @@ public class Program
             {
                 verbose = true;
             }
-            // check the --experimentalorg flag
-            else if (args[i] == "--experimentalorg")
-            {
-                SafeOrgLevel = 1;
-            }
             // check the --noorg flag
             else if (args[i] == "--noorg")
             {
-                SafeOrgLevel = 2;
+                No_Org = true;
             }
             else
             {
@@ -432,14 +427,11 @@ public class Program
 
             // clear organization everytime a bank file is loaded
             // so event:/music/folder and event:/sfx/folder dont merge to /music
-            if (SafeOrgLevel == 1)
-            {
-                EventFolder.AllEvents.Clear();
-                EventFolder.processedFolders.Clear();
-                // yeah even this
-                // should be fine
-                EventFolderGUIDs.Clear();
-            }
+            EventFolder.AllEvents.Clear();
+            EventFolder.processedFolders.Clear();
+            // yeah even this
+            // should be fine
+            EventFolderGUIDs.Clear();
 
             #region Event Folders
             // to not be too wasteful
@@ -460,11 +452,11 @@ public class Program
                     }
 
                     // add event name to save later
-                    if (SafeOrgLevel < 2)
+                    if (No_Org == false)
                         EventFolder.AllEvents.Add(eventname);
                 }
                 // Extract Event Folders
-                if (SafeOrgLevel < 2)
+                if (No_Org == false)
                     EventFolder.ExtractEventFolders(outputProjectPath + "/Metadata/EventFolder", verbose);
 
                 // Add all events to txt
@@ -516,7 +508,7 @@ public class Program
         else if (verbose)
             Console.WriteLine($"\n{GREEN}Conversion Complete!{NORMAL}");
         Console.WriteLine($"{GREEN}Exported Project is at {outputProjectPath}{NORMAL}");
-        if (OrganizeError && SafeOrgLevel < 1)
+        if (OrganizeError && No_Org == false)
         {
             Console.WriteLine($"{RED}There were some errors while organizing{NORMAL}");
             Console.WriteLine($"{RED}While the project is still organized, some folders have been moved to root{NORMAL}");
