@@ -66,35 +66,26 @@ public class AudioFile
     {
         string fileExtension = Path.GetExtension(filePath).ToLower();
 
+        // Handle WAV file
         if (fileExtension == ".wav")
-        {
-            // Handle WAV file
             return GetWavDuration(filePath);
-        }
+        // Handle OGG file
         else if (fileExtension == ".ogg")
-        {
-            // Handle OGG file
             return GetOggDuration(filePath);
-        }
+        // Unsupported format     uh no
         else
-        {
             throw new NotSupportedException("Unsupported file format.");
-        }
     }
 
     static float GetWavDuration(string filePath)
     {
         using (var reader = new WaveFileReader(filePath))
-        {
             return (float)reader.TotalTime.TotalSeconds;
-        }
     }
     static float GetOggDuration(string filePath)
     {
         using (var vorbis = new VorbisReader(filePath))
-        {
             return (float)vorbis.TotalTime.TotalSeconds;
-        }
     }
 }
 #endregion

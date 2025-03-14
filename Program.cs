@@ -33,8 +33,7 @@ public class Program
     public static Guid GetRandomGUID()
     {
         // Generate a new GUID
-        Guid newGuid = Guid.NewGuid();
-        return newGuid;
+        return Guid.NewGuid();
     }
 
     // FMOD.GUID to System.Guid Converter
@@ -427,8 +426,6 @@ public class Program
             // so event:/music/folder and event:/sfx/folder dont merge to /music
             EventFolder.AllEvents.Clear();
             EventFolder.processedFolders.Clear();
-            // yeah even this
-            // should be fine
             EventFolderGUIDs.Clear();
 
             #region Event Folders
@@ -467,10 +464,6 @@ public class Program
             {
                 foreach (var eventDescription in eventDescriptions)
                 {
-                    // unused for now...
-                    //FMOD.Studio.EventInstance eventInstance;
-                    //eventDescription.createInstance(out eventInstance);
-
                     // get event path
                     eventDescription.getPath(out string eventname);
 
@@ -487,8 +480,8 @@ public class Program
                     if (verbose)
                         Console.WriteLine($"Event GUID for {eventname}: {EventGUIDs[eventname]}");
 
-                    // save event                                                   these two are currently unused
-                    Events.SaveEvents(eventname, outputProjectPath, bankfilename);//, eventInstance, eventDescription);
+                    // Save Event XML
+                    Events.SaveEvents(eventname, outputProjectPath, bankfilename);
                 }
 
                 // Extract Sounds to /Assets folder

@@ -3,26 +3,10 @@
 using Fmod5Sharp.FmodTypes;
 using Fmod5Sharp;
 using System.Text;
+using static Program;
 
 public class ExtractSoundAssets
 {
-    #region Colors because idk how to get it from the other thing
-    public static string NL = Environment.NewLine; // shortcut
-    public static string NORMAL = Console.IsOutputRedirected ? "" : "\x1b[39m";
-    public static string RED = Console.IsOutputRedirected ? "" : "\x1b[91m";
-    public static string GREEN = Console.IsOutputRedirected ? "" : "\x1b[92m";
-    public static string YELLOW = Console.IsOutputRedirected ? "" : "\x1b[93m";
-    public static string BLUE = Console.IsOutputRedirected ? "" : "\x1b[94m";
-    public static string MAGENTA = Console.IsOutputRedirected ? "" : "\x1b[95m";
-    public static string CYAN = Console.IsOutputRedirected ? "" : "\x1b[96m";
-    public static string BOLD = Console.IsOutputRedirected ? "" : "\x1b[1m";
-    public static string NOBOLD = Console.IsOutputRedirected ? "" : "\x1b[22m";
-    public static string UNDERLINE = Console.IsOutputRedirected ? "" : "\x1b[4m";
-    public static string NOUNDERLINE = Console.IsOutputRedirected ? "" : "\x1b[24m";
-    public static string REVERSE = Console.IsOutputRedirected ? "" : "\x1b[7m";
-    public static string NOREVERSE = Console.IsOutputRedirected ? "" : "\x1b[27m";
-    #endregion
-
     // originally from https://github.com/SamboyCoding/Fmod5Sharp/blob/master/BankExtractor/Program.cs
     public static void ExtractSoundFiles(string bankPath, string outPath, string bankfilename, bool verbose)
     {
@@ -32,10 +16,10 @@ public class ExtractSoundAssets
 
         var bytes = File.ReadAllBytes(bankPath);
         var index = bytes.AsSpan().IndexOf(Encoding.ASCII.GetBytes("FSB5"));
+
         if (index > 0)
-        {
             bytes = bytes.AsSpan(index).ToArray();
-        }
+
         var bank = FsbLoader.LoadFsbFromByteArray(bytes);
         var outDir = Directory.CreateDirectory(outPath + $"/{bankfilename.Replace(".bank", "")}/");
 
@@ -59,10 +43,10 @@ public class ExtractSoundAssets
             if (verbose)
                 Console.WriteLine($"{CYAN}Extracted Sound {name}.{extension}{NORMAL}");
 
-            // add to xml
             List<FmodSample> samples = bank.Samples;
-            // because it sometimes fails idk
-            // also DEAR GOD
+
+            // add to xml
+            // also try catches because it sometimes fails idk
             try
             {
                 int frequency = samples[i].Metadata.Frequency; //E.g. 44100

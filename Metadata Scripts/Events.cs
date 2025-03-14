@@ -8,13 +8,13 @@ using System.Xml;
 using static Program;
 public class Events
 {
-    public static void SaveEvents(string eventname, string outputProjectPath, string bankfilename)//, FMOD.Studio.EventInstance eventInstance, FMOD.Studio.EventDescription eventDescription)
+    public static void SaveEvents(string eventname, string outputProjectPath, string bankfilename)
     {
         // these change per XML, but not within the XML
         // so they should be here, and not public static
 
         // if they are all the same across all XML files
-        // try cleaning it
+        // try cleaning the project
         Guid EventMixerGuid = GetRandomGUID();
         Guid MasterTrackGuid = GetRandomGUID();
         Guid MixerInputGuid = GetRandomGUID();
