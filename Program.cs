@@ -279,8 +279,6 @@ public class Program
         Directory.CreateDirectory(outputProjectPath + "/Metadata/ProfilerFolder");
         Directory.CreateDirectory(outputProjectPath + "/Metadata/SandboxFolder");
         Directory.CreateDirectory(outputProjectPath + "/Metadata/SnapshotGroup");
-
-        // DEFINITELY UNFINISHED
         Directory.CreateDirectory(outputProjectPath + "/Metadata/Event");
 
         // Main FSPro File
