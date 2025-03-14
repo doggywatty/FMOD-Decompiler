@@ -28,8 +28,6 @@ public class Events
         Guid MixerBusPannerGuid2 = GetRandomGUID();
         Guid MixerBusFaderGuid1 = GetRandomGUID();
         Guid MixerBusFaderGuid2 = GetRandomGUID();
-        Guid EventEffectsGuid1 = GetRandomGUID();
-        Guid EventEffectsGuid2 = GetRandomGUID();
 
         // starter code
         XmlDocument xmlDoc = new XmlDocument();
@@ -95,7 +93,7 @@ public class Events
         root.AppendChild(CreateObjectElement(xmlDoc, "MixerBusEffectChain", $"{{{MixerBusEffectChainGuid1}}}", new string[] { },
             new string[] { }, new (string, string)[]
             {
-            ("effects", $"{{{EventEffectsGuid1}}}")
+            ("effects", $"{{{MixerBusFaderGuid1}}}")
             })
         );
 
@@ -103,7 +101,7 @@ public class Events
         root.AppendChild(CreateObjectElement(xmlDoc, "MixerBusEffectChain", $"{{{MixerBusEffectChainGuid2}}}", new string[] { },
             new string[] { }, new (string, string)[]
             {
-            ("effects", $"{{{EventEffectsGuid2}}}")
+            ("effects", $"{{{MixerBusFaderGuid2}}}")
             })
         );
 
