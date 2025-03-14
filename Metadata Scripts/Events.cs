@@ -8,7 +8,7 @@ using System.Xml;
 using static Program;
 public class Events
 {
-    public static void SaveEvents(string eventname, string outputProjectPath, FMOD.Studio.EventInstance eventInstance, FMOD.Studio.EventDescription eventDescription)
+    public static void SaveEvents(string eventname, string outputProjectPath, string bankfilename)//, FMOD.Studio.EventInstance eventInstance, FMOD.Studio.EventDescription eventDescription)
     {
         // these change per XML, but not within the XML
         // so they should be here, and not public static
@@ -50,7 +50,9 @@ public class Events
             ("mixerInput", $"{{{MixerInputGuid}}}"),
             ("automatableProperties", $"{{{EventAutomatablePropertiesGuid}}}"),
             ("markerTracks", $"{{{MarkerTrackGuid}}}"),
-            ("timeline", $"{{{TimelineGuid}}}")
+            ("timeline", $"{{{TimelineGuid}}}"),
+            // connects event to its original bank file
+            ("banks", $"{{{BankSpecificGUIDs[bankfilename + "_Bank"]}}}")
             })
         );
 

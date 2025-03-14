@@ -100,7 +100,7 @@ public class Program
         SetConsoleMode(GetStdHandle(-11), mode | 0x4);
         Console.Clear();
 
-        Console.WriteLine($"Welcome to the FMOD Bank Decompiler {GREEN}(Version 1.0.1){NORMAL}"
+        Console.WriteLine($"Welcome to the FMOD Bank Decompiler {GREEN}(Version 1.0.2){NORMAL}"
         + $"\n\nby {YELLOW}CatMateo{NORMAL}"
         + $"\nand {OTHERGRAY}burnedpopcorn180{NORMAL}"
 
@@ -469,8 +469,9 @@ public class Program
             {
                 foreach (var eventDescription in eventDescriptions)
                 {
-                    FMOD.Studio.EventInstance eventInstance;
-                    eventDescription.createInstance(out eventInstance);
+                    // unused for now...
+                    //FMOD.Studio.EventInstance eventInstance;
+                    //eventDescription.createInstance(out eventInstance);
 
                     // get event path
                     eventDescription.getPath(out string eventname);
@@ -488,8 +489,8 @@ public class Program
                     if (verbose)
                         Console.WriteLine($"Event GUID for {eventname}: {EventGUIDs[eventname]}");
 
-                    // save event                                   these two are currently unused
-                    Events.SaveEvents(eventname, outputProjectPath, eventInstance, eventDescription);
+                    // save event                                                   these two are currently unused
+                    Events.SaveEvents(eventname, outputProjectPath, bankfilename);//, eventInstance, eventDescription);
                 }
 
                 // Extract Sounds to /Assets folder
