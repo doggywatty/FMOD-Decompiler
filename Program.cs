@@ -1,4 +1,5 @@
 ﻿using System.Runtime.InteropServices;
+using FMOD.Studio;
 public class Program
 {
     #region Colored Text
@@ -464,6 +465,9 @@ public class Program
             {
                 foreach (var eventDescription in eventDescriptions)
                 {
+                    // create event instance
+                    eventDescription.createInstance(out EventInstance eventInstance);
+
                     // get event path
                     eventDescription.getPath(out string eventname);
 
@@ -478,7 +482,17 @@ public class Program
                     EventGUIDs.TryAdd(eventname, clean_eventID); // you can get the GUID for a given event with EventGUIDs["event:/music/w2/graveyard"]
 
                     if (verbose)
+                    {
                         Console.WriteLine($"Event GUID for {eventname}: {EventGUIDs[eventname]}");
+
+                        // event types (only for testing at the moment)
+                        if (FindEventType.EventisParameter(eventDescription))
+                            Console.WriteLine($"{OTHERGRAY}Event Sheet Type: Parameter\n    Parameter Amount: {FindEventType.GetParameterNum(eventDescription)}{NORMAL}");
+                        else if (FindEventType.EventisTimeline(eventInstance))
+                            Console.WriteLine($"{OTHERGRAY}Event Sheet Type: Timeline{NORMAL}");
+                        else
+                            Console.WriteLine($"{OTHERGRAY}Event Sheet Type: Action{NORMAL}");
+                    }
 
                     // Save Event XML
                     Events.SaveEvents(eventname, outputProjectPath, bankfilename);
