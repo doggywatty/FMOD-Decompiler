@@ -100,7 +100,7 @@ public class Program
         SetConsoleMode(GetStdHandle(-11), mode | 0x4);
         Console.Clear();
 
-        Console.WriteLine($"Welcome to the FMOD Bank Decompiler {GREEN}(Version 1.0.2){NORMAL}"
+        Console.WriteLine($"Welcome to the FMOD Bank Decompiler {GREEN}(Version 1.0.3){NORMAL}"
         + $"\n\nby {YELLOW}CatMateo{NORMAL}"
         + $"\nand {OTHERGRAY}burnedpopcorn180{NORMAL}"
 
@@ -454,9 +454,6 @@ public class Program
                 // Extract Event Folders
                 if (No_Org == false)
                     EventFolder.ExtractEventFolders(outputProjectPath + "/Metadata/EventFolder", verbose);
-
-                // Add all events to txt
-                File.AppendAllLines(outputProjectPath + "/eventpaths.txt", EventFolder.AllEvents);
             }
             #endregion
 
@@ -481,15 +478,24 @@ public class Program
                     // add GUID to event
                     EventGUIDs.TryAdd(eventname, clean_eventID); // you can get the GUID for a given event with EventGUIDs["event:/music/w2/graveyard"]
 
+                    // Add all events to txt
+                    File.AppendAllText(outputProjectPath + "/EventGUIDs.txt", $"\n{{{EventGUIDs[eventname]}}} {eventname}");
+
                     if (verbose)
                     {
                         Console.WriteLine($"Event GUID for {eventname}: {EventGUIDs[eventname]}");
 
                         // event types (only for testing at the moment)
                         if (FindEventType.EventisParameter(eventDescription))
-                            Console.WriteLine($"{OTHERGRAY}Event Sheet Type: Parameter\n    Parameter Amount: {FindEventType.GetParameterNum(eventDescription)}{NORMAL}");
+                        {
+                            Console.WriteLine($"{OTHERGRAY}Event Sheet Type: Parameter\n{FindEventType.DisplayParameterInfo(eventDescription)}{NORMAL}");
+                            File.AppendAllText(outputProjectPath + "/EventGUIDs.txt", $"\nEvent Sheet Type: Parameter\n{FindEventType.DisplayParameterInfo(eventDescription)}");
+                        }
                         else if (FindEventType.EventisTimeline(eventInstance))
+                        {
                             Console.WriteLine($"{OTHERGRAY}Event Sheet Type: Timeline{NORMAL}");
+                            File.AppendAllText(outputProjectPath + "/EventGUIDs.txt", "\nEvent Sheet Type: Timeline");
+                        }
                         else
                             Console.WriteLine($"{OTHERGRAY}Event Sheet Type: Action{NORMAL}");
                     }

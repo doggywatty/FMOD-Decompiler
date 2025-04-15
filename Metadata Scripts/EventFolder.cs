@@ -32,10 +32,7 @@ public class EventFolder
                 if (!processedFolders.Contains(folder + $"{folder_level}"))
                 {
                     if (verbose && !No_Org)
-                    {
                         Console.WriteLine($"{MAGENTA}Saving Event Folder: /{folder}{NORMAL}");
-                        Console.WriteLine($"{MAGENTA}    From: \"{path}\"{NORMAL}");
-                    }
 
                     // Create GUID for "folder"
                     EventFolderGUIDs.TryAdd(folder + $"{folder_level}", GetRandomGUID());

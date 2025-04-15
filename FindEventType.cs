@@ -1,4 +1,5 @@
-﻿using FMOD.Studio;
+﻿using System;
+using FMOD.Studio;
 
 // Finds out what Sheet Type an Event uses
 
@@ -29,9 +30,17 @@ public class FindEventType
             return false;
     }
 
-    public static int GetParameterNum(EventDescription eventDescription)
+    public static string DisplayParameterInfo(EventDescription eventDescription)
     {
         eventDescription.getParameterDescriptionCount(out int parameterCount);
-        return parameterCount;
+        eventDescription.getParameterDescriptionByIndex(parameterCount, out PARAMETER_DESCRIPTION parameter);
+
+        return $"\tParameter Name: {parameter.name}"
+           + $"\n\tParameter ID: {parameter.id}"
+           + $"\n\tParameter Min Value: {parameter.minimum}"
+           + $"\n\tParameter Max Value: {parameter.maximum}"
+           + $"\n\tParameter Default Value: {parameter.defaultvalue}"
+           + $"\n\tParameter Type: {parameter.type}"
+           + $"\n\tParameter Flags: {parameter.flags}";
     }
 }
