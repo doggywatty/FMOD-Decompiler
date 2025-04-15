@@ -33,15 +33,15 @@ public class EventFolder
                 {
                     if (verbose && !No_Org)
                     {
-                        Console.WriteLine($"{MAGENTA}Saving Event Folder: \\{folder}{NORMAL}");
-                        Console.WriteLine($"{MAGENTA}    From : \"{path}\"{NORMAL}");
+                        Console.WriteLine($"{MAGENTA}Saving Event Folder: /{folder}{NORMAL}");
+                        Console.WriteLine($"{MAGENTA}    From: \"{path}\"{NORMAL}");
                     }
 
                     // Create GUID for "folder"
                     EventFolderGUIDs.TryAdd(folder + $"{folder_level}", GetRandomGUID());
 
                     // Create XML
-                    CreateXmlFile(filePath, folder, folders, folder_level, path, verbose);
+                    CreateXmlFile(filePath, folder, folders, folder_level);
 
                     // Mark this folder as processed
                     processedFolders.Add(folder + $"{folder_level}");
@@ -51,7 +51,7 @@ public class EventFolder
             }
         }
     }
-    static void CreateXmlFile(string filePath, string folderName, List<string> folders, int folder_level, string fullpath, bool verbose)
+    static void CreateXmlFile(string filePath, string folderName, List<string> folders, int folder_level)
     {
         // Create XML document
         XmlDocument xmlDoc = new XmlDocument();
@@ -88,56 +88,15 @@ public class EventFolder
         // else if underneath another folder (like /music/soundtest/ or /music/soundtest/bgmusic/)
         else
         {
-            // i remember when this used to be readable...
-
-            var i = 1; // set to one to skip a useless loop
-            while (true)
+            // set to one to skip a useless loop
+            for (var i = 1; ; i++)// very scuffed for loop idk better than a while (true)
             {
                 // find position 
                 if (folders[i] == folderName)
                 {
-                    // bro EVEN I DONT KNOW WHAT I DID
-                    // this crackhead code might have to be revised the more subfolders there are, but idk
-
-                    // IM SO SORRY ANYONE THAT IS READING THIS CODE :((((((
-                    int find_folder_level = folder_level > folders.Count - 2 ? folder_level - 1 : folder_level;
-
-                    // make sure GUID doesn't reference itself
-                    if (EventFolderGUIDs[folders[folders.Count - 2] + $"{find_folder_level}"] != EventFolderGUIDs[folderName + $"{folder_level}"])
-                    {
-                        destinationElement.InnerText = $"{{{EventFolderGUIDs[folders[folders.Count - 2] + $"{find_folder_level}"]}}}";
-                        break;
-                    }
-                    // but if it does, set to something else and notify user
-                    else if (EventFolderGUIDs[folders[folders.Count - 2] + $"{find_folder_level}"] == EventFolderGUIDs[folderName + $"{folder_level}"])
-                    {
-                        if (verbose)
-                        {
-                            Console.WriteLine($"{RED}Event Folder Missmatch!{NORMAL}");
-                            Console.WriteLine($"{RED}Event Folder \"{folderName}\" from event \"{fullpath}\"{NORMAL}");
-                            Console.WriteLine($"{YELLOW}Trying Experimental Folder Placement...{NORMAL}");
-                        }
-                        // try to set it to higher folder
-                        try
-                        {
-                            destinationElement.InnerText = $"{{{EventFolderGUIDs[folders[folders.Count - 3] + $"{find_folder_level - 1}"]}}}";
-                            if (verbose)
-                                Console.WriteLine($"{GREEN}SUCCESS!{NORMAL}");
-                        }
-                        catch (Exception e)
-                        {
-                            OrganizeError = true;
-                            // if it fails, just set it to Master and call it a day
-                            Console.WriteLine($"{RED}ERROR: NO HIGHER FOLDER FOUND!!!{NORMAL}");
-                            Console.WriteLine($"{RED}Setting Folder to Master as fallback...{NORMAL}");
-                            destinationElement.InnerText = $"{{{MasterEventFolderGUID}}}";
-                        }
-                        break;
-                    }
+                    destinationElement.InnerText = $"{{{EventFolderGUIDs[folders[i - 1] + $"{folder_level - 1}"]}}}";
+                    break;
                 }
-
-                // if none, add to check and repeat the loop
-                i++;
             }
         }
 
