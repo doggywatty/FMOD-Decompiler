@@ -15,7 +15,9 @@ namespace FMOD.Studio
 {
     public partial class STUDIO_VERSION
     {
+#if !UNITY_2019_4_OR_NEWER
         public const string dll     = @"C:\fmod-decompiler\fmodstudio.dll";
+#endif
     }
 
     public enum STOP_MODE : int
