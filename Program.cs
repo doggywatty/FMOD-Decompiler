@@ -19,6 +19,7 @@ public class Program
     public static string REVERSE = Console.IsOutputRedirected ? "" : "\x1b[7m";
     public static string NOREVERSE = Console.IsOutputRedirected ? "" : "\x1b[27m";
     public static string OTHERGRAY = Console.IsOutputRedirected ? "" : "\x1b[90m";
+    public static string BROWN = Console.IsOutputRedirected ? "" : "\x1b[38;5;94m";
 
     // and thank you https://stackoverflow.com/questions/7937256/custom-text-color-in-c-sharp-console-application
     [DllImport("kernel32.dll", SetLastError = true)]
@@ -101,7 +102,7 @@ public class Program
         Console.Clear();
 
         Console.WriteLine($"Welcome to the FMOD Bank Decompiler {GREEN}(Version 1.0.3){NORMAL}"
-        + $"\n\nby {YELLOW}CatMateo{NORMAL}"
+        + $"\n\nby {BROWN}DogMatt{NORMAL}"
         + $"\nand {OTHERGRAY}burnedpopcorn180{NORMAL}"
 
         + $"\n\n{RED}Unfortunately, this Decompiler is pretty limited in what it can extract{NORMAL}"
