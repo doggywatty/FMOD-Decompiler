@@ -13,7 +13,7 @@ This uses DLLs from the [FMOD Studio/Core API](https://fmod.com/download#fmodeng
 ## Installation
 1. Clone this repository:
    ```sh
-   git clone https://github.com/stuttermess/FMOD-Decompiler.git
+   git clone https://github.com/doggywatty/FMOD-Decompiler.git
    cd FMOD-Decompiler
    ```
 2. Build the project using .NET (if applicable):
