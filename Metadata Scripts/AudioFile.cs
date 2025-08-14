@@ -9,7 +9,7 @@ public class AudioFile
     // GUIDs for these ones are only referenced by themselves, or in events
     // but i doubt we can extract much from events, so yeah
     // If we can extract what audio files are used in events tho, we can use AudioFileGUIDs
-    public static void AudioFileXML(string outputpath, string soundfilepath, string bankfilename, int frequency, uint channels)
+    public static void AudioFileXML(string outputpath, string soundfilepath, int frequency, uint channels)
     {
         // Save GUID for this File
         AudioFileGUIDs.Add($"{Path.GetRelativePath(outputpath, soundfilepath)}", GetRandomGUID());

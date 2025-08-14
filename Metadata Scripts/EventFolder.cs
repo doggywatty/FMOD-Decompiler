@@ -85,16 +85,12 @@ public class EventFolder
         // else if underneath another folder (like /music/soundtest/ or /music/soundtest/bgmusic/)
         else
         {
-            // set to one to skip a useless loop
-            for (var i = 1; ; i++)// very scuffed for loop idk better than a while (true)
-            {
-                // find position 
-                if (folders[i] == folderName)
-                {
-                    destinationElement.InnerText = $"{{{EventFolderGUIDs[folders[i - 1] + $"{folder_level - 1}"]}}}";
-                    break;
-                }
-            }
+            // check position 
+            var higher_folder = folder_level - 1;
+            if (folders[folder_level] == folderName)//get guid of higher folder 
+                destinationElement.InnerText = $"{{{EventFolderGUIDs[folders[higher_folder] + $"{higher_folder}"]}}}";
+            else // shouldn't happen, but just in case
+                destinationElement.InnerText = $"{{{MasterEventFolderGUID}}}";
         }
 
         relationshipElement.AppendChild(destinationElement);

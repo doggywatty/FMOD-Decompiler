@@ -398,7 +398,7 @@ public class Program
 
             // if bank with events/music (music.bank and sfx.bank), then add reference to its assets
             // basically just the Master XML Files most assets reference
-            if (eventCount > 0 && !bankfilename.Contains("Master"))
+            if (eventCount > 0)
             {
                 // For Bank Asset XML
                 BankSpecificGUIDs.Add(bankfilename + "_Asset", GetRandomGUID());
@@ -431,83 +431,81 @@ public class Program
             EventFolderGUIDs.Clear();
 
             #region Event Folders
-            // to not be too wasteful
-            if (!bankfilename.Contains("Master"))
+            foreach (var eventDescription in eventDescriptions)
             {
-                foreach (var eventDescription in eventDescriptions)
+                // get event path
+                if (eventDescription.getPath(out string eventname) != FMOD.RESULT.OK)
+                    continue;
+
+                // Spinner for when --verbose was not used
+                if (!verbose && SpinnerInit == false)
                 {
-                    // get event path
-                    eventDescription.getPath(out string eventname);
-
-                    // Spinner for when --verbose was not used
-                    if (!verbose && SpinnerInit == false)
-                    {
-                        // no await here, because we want it to continue
-                        StartSpinnerAsync("Saving Events...", SpinnerPattern, 1000, SpinnerKill.Token);
-                        // ensure it doesn't get called twice
-                        SpinnerInit = true;
-                    }
-
-                    // add event name to save later
-                    if (No_Org == false)
-                        EventFolder.AllEvents.Add(eventname);
+                    // no await here, because we want it to continue
+                    StartSpinnerAsync("Saving Events...", SpinnerPattern, 1000, SpinnerKill.Token);
+                    // ensure it doesn't get called twice
+                    SpinnerInit = true;
                 }
-                // Extract Event Folders
+
+                // add event name to save later
                 if (No_Org == false)
-                    EventFolder.ExtractEventFolders(outputProjectPath + "/Metadata/EventFolder", verbose);
+                    EventFolder.AllEvents.Add(eventname);
             }
+            // Extract Event Folders
+            if (No_Org == false && EventFolder.AllEvents.Count != 0)
+                EventFolder.ExtractEventFolders(outputProjectPath + "/Metadata/EventFolder", verbose);
             #endregion
 
             // process each event in the bank
-            if (!bankfilename.Contains("Master"))
+            foreach (var eventDescription in eventDescriptions)
             {
-                foreach (var eventDescription in eventDescriptions)
+                // create event instance
+                if (eventDescription.createInstance(out EventInstance eventInstance) != FMOD.RESULT.OK)
+                    continue;
+
+                // get event path
+                if (eventDescription.getPath(out string eventname) != FMOD.RESULT.OK)
+                    continue;
+
+                // get event GUID
+                if (eventDescription.getID(out FMOD.GUID eventID) != FMOD.RESULT.OK) 
+                    continue;
+                // make guid into a guid we can actually use, not fmod's bullshit
+                Guid clean_eventID = FMODGUIDToSysGuid(eventID);
+
+                if (verbose)
+                    Console.WriteLine($"{YELLOW}Saving Event: {eventname}{NORMAL}");
+
+                // add GUID to event
+                EventGUIDs.TryAdd(eventname, clean_eventID); // you can get the GUID for a given event with EventGUIDs["event:/music/w2/graveyard"]
+
+                // Add all events to txt
+                File.AppendAllText(outputProjectPath + "/EventGUIDs.txt", $"\n{{{EventGUIDs[eventname]}}} {eventname}");
+
+                if (verbose)
                 {
-                    // create event instance
-                    eventDescription.createInstance(out EventInstance eventInstance);
+                    Console.WriteLine($"Event GUID for {eventname}: {EventGUIDs[eventname]}");
 
-                    // get event path
-                    eventDescription.getPath(out string eventname);
-
-                    // get event GUID
-                    eventDescription.getID(out FMOD.GUID eventID);
-                    Guid clean_eventID = FMODGUIDToSysGuid(eventID);
-
-                    if (verbose)
-                        Console.WriteLine($"{YELLOW}Saving Event: {eventname}{NORMAL}");
-
-                    // add GUID to event
-                    EventGUIDs.TryAdd(eventname, clean_eventID); // you can get the GUID for a given event with EventGUIDs["event:/music/w2/graveyard"]
-
-                    // Add all events to txt
-                    File.AppendAllText(outputProjectPath + "/EventGUIDs.txt", $"\n{{{EventGUIDs[eventname]}}} {eventname}");
-
-                    if (verbose)
+                    // event types (only for testing at the moment)
+                    if (FindEventType.EventisParameter(eventDescription))
                     {
-                        Console.WriteLine($"Event GUID for {eventname}: {EventGUIDs[eventname]}");
-
-                        // event types (only for testing at the moment)
-                        if (FindEventType.EventisParameter(eventDescription))
-                        {
-                            Console.WriteLine($"{OTHERGRAY}Event Sheet Type: Parameter\n{FindEventType.DisplayParameterInfo(eventDescription)}{NORMAL}");
-                            File.AppendAllText(outputProjectPath + "/EventGUIDs.txt", $"\nEvent Sheet Type: Parameter\n{FindEventType.DisplayParameterInfo(eventDescription)}");
-                        }
-                        else if (FindEventType.EventisTimeline(eventInstance))
-                        {
-                            Console.WriteLine($"{OTHERGRAY}Event Sheet Type: Timeline{NORMAL}");
-                            File.AppendAllText(outputProjectPath + "/EventGUIDs.txt", "\nEvent Sheet Type: Timeline");
-                        }
-                        else
-                            Console.WriteLine($"{OTHERGRAY}Event Sheet Type: Action{NORMAL}");
+                        Console.WriteLine($"{OTHERGRAY}Event Sheet Type: Parameter\n{FindEventType.DisplayParameterInfo(eventDescription)}{NORMAL}");
+                        File.AppendAllText(outputProjectPath + "/EventGUIDs.txt", $"\nEvent Sheet Type: Parameter\n{FindEventType.DisplayParameterInfo(eventDescription)}");
                     }
-
-                    // Save Event XML
-                    Events.SaveEvents(eventname, outputProjectPath, bankfilename);
+                    else if (FindEventType.EventisTimeline(eventInstance))
+                    {
+                        Console.WriteLine($"{OTHERGRAY}Event Sheet Type: Timeline{NORMAL}");
+                        File.AppendAllText(outputProjectPath + "/EventGUIDs.txt", "\nEvent Sheet Type: Timeline");
+                    }
+                    else
+                        Console.WriteLine($"{OTHERGRAY}Event Sheet Type: Action{NORMAL}");
                 }
 
-                // Extract Sounds to /Assets folder
-                ExtractSoundAssets.ExtractSoundFiles(bankFilePath, outputProjectPath + "/Assets", bankfilename, verbose);
+                // Save Event XML
+                Events.SaveEvents(eventname, outputProjectPath, bankfilename);
             }
+
+            // Extract Sounds to /Assets folder
+            ExtractSoundAssets.ExtractSoundFiles(bankFilePath, outputProjectPath + "/Assets", bankfilename, verbose);
         }
 
         // if not verbose, stop spinner

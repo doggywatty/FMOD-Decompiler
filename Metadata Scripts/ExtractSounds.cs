@@ -45,34 +45,16 @@ public class ExtractSoundAssets
 
             List<FmodSample> samples = bank.Samples;
 
+            // set defaults for frequnecy and channels
+            int frequency = 44100; // default frequnecy value
+            uint numChannels = 2; // 2 for stereo, 1 for mono.
+
+            // try to get real values from bank files if possible
+            try { frequency = samples[i].Metadata.Frequency; } catch (Exception) { }
+            try { numChannels = samples[i].Metadata.Channels; } catch (Exception) { }
+
             // add to xml
-            // also try catches because it sometimes fails idk
-            try
-            {
-                int frequency = samples[i].Metadata.Frequency; //E.g. 44100
-                uint numChannels = samples[i].Metadata.Channels; //2 for stereo, 1 for mono.
-                AudioFile.AudioFileXML(outPath, filePath, bankfilename, frequency, numChannels);
-            }
-            catch (Exception)
-            {
-                try
-                {
-                    int frequency = samples[i].Metadata.Frequency; //E.g. 44100
-                    AudioFile.AudioFileXML(outPath, filePath, bankfilename, frequency, 2);
-                }
-                catch (Exception)
-                {
-                    try
-                    {
-                        uint numChannels = samples[i].Metadata.Channels; //2 for stereo, 1 for mono.
-                        AudioFile.AudioFileXML(outPath, filePath, bankfilename, 44100, numChannels);
-                    }
-                    catch (Exception)
-                    {
-                        AudioFile.AudioFileXML(outPath, filePath, bankfilename, 44100, 2);
-                    }
-                }
-            }
+            AudioFile.AudioFileXML(outPath, filePath, frequency, numChannels);
         }
     }
 }

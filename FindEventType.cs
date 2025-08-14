@@ -1,5 +1,4 @@
-﻿using System;
-using FMOD.Studio;
+﻿using FMOD.Studio;
 
 // Finds out what Sheet Type an Event uses
 
