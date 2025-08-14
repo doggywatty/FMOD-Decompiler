@@ -50,6 +50,7 @@ public class ExtractSoundAssets
             uint numChannels = 2; // 2 for stereo, 1 for mono.
 
             // try to get real values from bank files if possible
+            // probably could've optimized this better, but idk if it's returning null or just flat out failing
             try { frequency = samples[i].Metadata.Frequency; } catch (Exception) { }
             try { numChannels = samples[i].Metadata.Channels; } catch (Exception) { }
 

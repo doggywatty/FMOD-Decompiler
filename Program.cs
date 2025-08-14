@@ -91,8 +91,6 @@ public class Program
 
     // Organize Project Level for Arg4
     public static bool No_Org = false;
-    // If Error while Organizing
-    public static bool OrganizeError = false;
 
     public static async Task Main(string[] args)
     {
@@ -101,7 +99,7 @@ public class Program
         SetConsoleMode(GetStdHandle(-11), mode | 0x4);
         Console.Clear();
 
-        Console.WriteLine($"Welcome to the FMOD Bank Decompiler {GREEN}(Version 1.0.3){NORMAL}"
+        Console.WriteLine($"Welcome to the FMOD Bank Decompiler {GREEN}(Version 1.0.4){NORMAL}"
         + $"\n\nby {BROWN}DogMatt{NORMAL}"
         + $"\nand {OTHERGRAY}burnedpopcorn180{NORMAL}"
 
@@ -386,14 +384,12 @@ public class Program
 
             // just filename
             string bankfilename = Path.GetFileName(bankFilePath);
-
-            if (!bankfilename.Contains("Master"))
-                Console.WriteLine($"{GREEN}Loaded Bank: " + bankfilename + $"{NORMAL}                    ");//spaces for when not in verbose
+            Console.WriteLine($"{GREEN}Loaded Bank: " + bankfilename + $"{NORMAL}                    ");//spaces for when not in verbose
 
             // get the list of events in the bank
             int eventCount;
             bank.getEventCount(out eventCount);
-            if (verbose && eventCount > 0)
+            if (verbose)
                 Console.WriteLine($"\n{YELLOW}Events Found in {bankFilePath}: {eventCount}{NORMAL}\n");
 
             // if bank with events/music (music.bank and sfx.bank), then add reference to its assets
@@ -518,13 +514,8 @@ public class Program
         // else if using sane code
         else if (verbose)
             Console.WriteLine($"\n{GREEN}Conversion Complete!{NORMAL}");
+
         Console.WriteLine($"{GREEN}Exported Project is at {outputProjectPath}{NORMAL}");
-        if (OrganizeError && No_Org == false)
-        {
-            Console.WriteLine($"{RED}There were some errors while organizing{NORMAL}");
-            Console.WriteLine($"{RED}While the project is still organized, some folders have been moved to root{NORMAL}");
-            Console.WriteLine($"{RED}YOU WILL HAVE TO MANUALLY MOVE THEM IN THE CORRECT PLACES INCLUDING EVENTS{NORMAL}");
-        }
 
         // Clean up the FMOD Studio system
         studioSystem.release();
