@@ -78,7 +78,7 @@ public class Program
     public static Guid Master3GUID = GetRandomGUID();// for Master.XML (effect)
 
     // these keep track of all randomly generated GUIDs, so we can call them back if needed elsewhere
-    public static Dictionary<string, Guid> EventGUIDs = new Dictionary<string, Guid> { };// not fully implimented yet
+    public static Dictionary<string, Guid> EventGUIDs = new Dictionary<string, Guid> { };
     public static Dictionary<string, Guid> EventFolderGUIDs = new Dictionary<string, Guid> { };
     public static Dictionary<string, Guid> AudioFileGUIDs = new Dictionary<string, Guid> { };
     public static Dictionary<string, Guid> BankSpecificGUIDs = new Dictionary<string, Guid> { };
@@ -325,7 +325,7 @@ public class Program
             + $"\n\t<object class=\"MasterEventFolder\" id=\"{{{MasterEventFolderGUID}}}\">\r"
             + "\n\t\t<property name=\"name\">\r\n\t\t\t<value>Master</value>\r\n\t\t</property>\r\n\t</object>\r\n</objects>");
 
-        // For Platform XML (just hardcode it, because it doesn't matter)
+        // For Platform XML
         File.WriteAllText(outputProjectPath + $"/Metadata/Platform/{{{MasterPlatformGUID}}}.xml", ""
             + "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\r\n<objects serializationModel=\"Studio.02.02.00\">\r"
             + $"\n\t<object class=\"Platform\" id=\"{{{MasterPlatformGUID}}}\">\r\n\t\t<property name=\"hardwareType\">\r"
@@ -333,7 +333,7 @@ public class Program
             + "\n\t\t<property name=\"subDirectory\">\r\n\t\t\t<value>Desktop</value>\r\n\t\t</property>\r\n\t\t<property name=\"speakerFormat\">\r"
             + "\n\t\t\t<value>5</value>\r\n\t\t</property>\r\n\t</object>\r\n</objects>");
 
-        // For EncodingSetting XML (just hardcode it, because it doesn't matter)
+        // For EncodingSetting XML
         File.WriteAllText(outputProjectPath + $"/Metadata/EncodingSetting/{{{MasterEncodingSettingGUID}}}.xml", ""
             + "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\r\n<objects serializationModel=\"Studio.02.02.00\">\r"
             + $"\n\t<object class=\"EncodingSetting\" id=\"{{{MasterEncodingSettingGUID}}}\">\r\n\t\t<property name=\"encodingFormat\">\r"
@@ -342,27 +342,27 @@ public class Program
             + $"\n\t\t<relationship name=\"encodable\">\r\n\t\t\t<destination>{{{MasterPlatformGUID}}}</destination>\r\n\t\t</relationship>\r"
             + "\n\t</object>\r\n</objects>");
 
-        // For EffectPresetFolder XML (just hardcode it, because it doesn't matter)
+        // For EffectPresetFolder XML
         File.WriteAllText(outputProjectPath + $"/Metadata/EffectPresetFolder/{{{MasterEffectPresetGUID}}}.xml", ""
             + "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\r\n<objects serializationModel=\"Studio.02.02.00\">\r"
             + $"\n\t<object class=\"MasterEffectPresetFolder\" id=\"{{{MasterEffectPresetGUID}}}\" />\r\n</objects>");
 
-        // For ParameterPresetFolder XML (just hardcode it, because it doesn't matter)
+        // For ParameterPresetFolder XML
         File.WriteAllText(outputProjectPath + $"/Metadata/ParameterPresetFolder/{{{MasterParameterPresetGUID}}}.xml", ""
             + "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\r\n<objects serializationModel=\"Studio.02.02.00\">\r"
             + $"\n\t<object class=\"MasterParameterPresetFolder\" id=\"{{{MasterParameterPresetGUID}}}\" />\r\n</objects>");
 
-        // For ProfilerFolder XML (just hardcode it, because it doesn't matter)
+        // For ProfilerFolder XML
         File.WriteAllText(outputProjectPath + $"/Metadata/ProfilerFolder/{{{MasterProfilerFolderGUID}}}.xml", ""
             + "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\r\n<objects serializationModel=\"Studio.02.02.00\">\r"
             + $"\n\t<object class=\"ProfilerSessionFolder\" id=\"{{{MasterProfilerFolderGUID}}}\" />\r\n</objects>");
 
-        // For SandboxFolder XML (just hardcode it, because it doesn't matter)
+        // For SandboxFolder XML
         File.WriteAllText(outputProjectPath + $"/Metadata/SandboxFolder/{{{MasterSandboxFolderGUID}}}.xml", ""
             + "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\r\n<objects serializationModel=\"Studio.02.02.00\">\r"
             + $"\n\t<object class=\"MasterSandboxFolder\" id=\"{{{MasterSandboxFolderGUID}}}\" />\r\n</objects>");
 
-        // For SnapshotGroup XML (just hardcode it, because it doesn't matter)
+        // For SnapshotGroup XML
         File.WriteAllText(outputProjectPath + $"/Metadata/SnapshotGroup/{{{MasterSandboxFolderGUID}}}.xml", ""
             + "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\r\n<objects serializationModel=\"Studio.02.02.00\">\r"
             + $"\n\t<object class=\"SnapshotList\" id=\"{{{MasterSnapshotGUID}}}\">\r\n\t\t<relationship name=\"mixer\">\r"
@@ -386,15 +386,20 @@ public class Program
             string bankfilename = Path.GetFileName(bankFilePath);
             Console.WriteLine($"{GREEN}Loaded Bank: " + bankfilename + $"{NORMAL}                    ");//spaces for when not in verbose
 
+            // if bank loaded is Master.strings.bank, stop and continue to next bank
+            // as it never has anything useful to extract
+            if (bankfilename == "Master.strings.bank")
+                continue;
+
             // get the list of events in the bank
             int eventCount;
             bank.getEventCount(out eventCount);
             if (verbose)
                 Console.WriteLine($"\n{YELLOW}Events Found in {bankFilePath}: {eventCount}{NORMAL}\n");
 
-            // if bank with events/music (music.bank and sfx.bank), then add reference to its assets
-            // basically just the Master XML Files most assets reference
-            if (eventCount > 0)
+            // basically just the XML Files for most assets that references their given bank file
+            #region Bank Specific XMLs
+            if (bankfilename != "Master.bank")// Master.bank has already been added, so skip it
             {
                 // For Bank Asset XML
                 BankSpecificGUIDs.Add(bankfilename + "_Asset", GetRandomGUID());
@@ -416,7 +421,9 @@ public class Program
                     + $"\n\t\t\t<value>{bankfilename.Replace(".bank", "")}</value>\r\n\t\t</property>\r\n\t\t<relationship name=\"folder\">\r"
                     + $"\n\t\t\t<destination>{{{MasterBankFolderGUID}}}</destination>\r\n\t\t</relationship>\r\n\t</object>\r\n</objects>");
             }
+            #endregion
 
+            // Start doing the actual extraction parts
             FMOD.Studio.EventDescription[] eventDescriptions = new FMOD.Studio.EventDescription[eventCount];
             bank.getEventList(out eventDescriptions);
 
@@ -426,7 +433,7 @@ public class Program
             EventFolder.processedFolders.Clear();
             EventFolderGUIDs.Clear();
 
-            #region Event Folders
+            #region Get Event Folders
             foreach (var eventDescription in eventDescriptions)
             {
                 // get event path
@@ -465,6 +472,7 @@ public class Program
                 // get event GUID
                 if (eventDescription.getID(out FMOD.GUID eventID) != FMOD.RESULT.OK) 
                     continue;
+
                 // make guid into a guid we can actually use, not fmod's bullshit
                 Guid clean_eventID = FMODGUIDToSysGuid(eventID);
 
@@ -522,6 +530,7 @@ public class Program
     }
 
     // If User is not using --verbose
+    #region Spinner
     public static async Task StartSpinnerAsync(string displayMsg = "", int sequenceCode = 0, int delay = 1000, CancellationToken cancellationToken = default)
     {
         int counter = 0;
@@ -565,4 +574,5 @@ public class Program
         catch (OperationCanceledException)
         { }
     }
+    #endregion
 }

@@ -12,9 +12,6 @@ public class Events
     {
         // these change per XML, but not within the XML
         // so they should be here, and not public static
-
-        // if they are all the same across all XML files
-        // try cleaning the project
         Guid EventMixerGuid = GetRandomGUID();
         Guid MasterTrackGuid = GetRandomGUID();
         Guid MixerInputGuid = GetRandomGUID();
