@@ -92,6 +92,9 @@ public class Program
     // Organize Project Level for Arg4
     public static bool No_Org = false;
 
+    // disable warning that complains that Main is an unawaited async task
+    // main is this way because of the spinner btw
+    #pragma warning disable CS1998
     public static async Task Main(string[] args)
     {
         // initialize
@@ -137,7 +140,7 @@ public class Program
                     Console.WriteLine($"{RED}fmod.dll was not found in the /dlls folder.{NORMAL}");
                 }
             }
-            catch (UnauthorizedAccessException ex)
+            catch (UnauthorizedAccessException)
             {
                 Console.WriteLine($"{RED}fmod.dll could not be copied to System\nPlease restart the program as an administrator{NORMAL}");
                 return;
@@ -163,7 +166,7 @@ public class Program
                     Console.WriteLine($"{RED}fmodstudio.dll was not found in the /dlls folder.{NORMAL}");
                 }
             }
-            catch (UnauthorizedAccessException ex)
+            catch (UnauthorizedAccessException)
             {
                 Console.WriteLine($"{RED}fmodstudio.dll could not be copied to System\nPlease restart the program as an administrator{NORMAL}");
                 return;
@@ -444,8 +447,13 @@ public class Program
                 if (!verbose && SpinnerInit == false)
                 {
                     // no await here, because we want it to continue
+                    #pragma warning disable CS4014//stop compiler from bitching about it not being awaited
                     StartSpinnerAsync("Saving Events...", SpinnerPattern, 1000, SpinnerKill.Token);
-                    // ensure it doesn't get called twice
+                    #pragma warning restore CS4014
+                    // i remember some bitch saying that compiler warnings meant absolute shit code
+                    // what a retard, literally just do this ... and your point's now invalid
+
+                    // ensure this doesn't get called twice
                     SpinnerInit = true;
                 }
 
@@ -528,6 +536,7 @@ public class Program
         // Clean up the FMOD Studio system
         studioSystem.release();
     }
+    #pragma warning restore CS1998
 
     // If User is not using --verbose
     #region Spinner
@@ -571,8 +580,7 @@ public class Program
                 Console.SetCursorPosition(0, Console.CursorTop);
             }
         }
-        catch (OperationCanceledException)
-        { }
+        catch (OperationCanceledException) { }
     }
     #endregion
 }

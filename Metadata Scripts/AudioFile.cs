@@ -12,7 +12,14 @@ public class AudioFile
     public static void AudioFileXML(string outputpath, string soundfilepath, int frequency, uint channels)
     {
         // Save GUID for this File
-        AudioFileGUIDs.Add($"{Path.GetRelativePath(outputpath, soundfilepath)}", GetRandomGUID());
+        var relativepath = Path.GetRelativePath(outputpath, soundfilepath);
+        if (!AudioFileGUIDs.ContainsKey(relativepath))
+            AudioFileGUIDs.Add(relativepath, GetRandomGUID());
+        else //just in case there's a duplicate, ignore
+        {
+            Console.WriteLine($"WARNING! - Duplicate Sound file found: " + relativepath + "\nSkipping...");
+            return;
+        }
 
         // Setup XML
         var xmlDoc = new XmlDocument();
@@ -24,11 +31,11 @@ public class AudioFile
         // Add GUID of Current AuidoFile XML
         var objectElement = xmlDoc.CreateElement("object");
         objectElement.SetAttribute("class", "AudioFile");
-        objectElement.SetAttribute("id", $"{{{AudioFileGUIDs[$"{Path.GetRelativePath(outputpath, soundfilepath)}"]}}}");
+        objectElement.SetAttribute("id", $"{{{AudioFileGUIDs[relativepath]}}}");
         root.AppendChild(objectElement);
 
         // Add <property> elements with nested <value> elements
-        AddPropertyElement(xmlDoc, objectElement, "assetPath", Path.GetRelativePath(outputpath, soundfilepath).Replace("\\","/"));// because it was backwards
+        AddPropertyElement(xmlDoc, objectElement, "assetPath", relativepath.Replace("\\","/"));// because it was backwards
         AddPropertyElement(xmlDoc, objectElement, "frequencyInKHz", (frequency / 1000).ToString());
         AddPropertyElement(xmlDoc, objectElement, "channelCount", channels.ToString());
         AddPropertyElement(xmlDoc, objectElement, "length", GetAudioLength(soundfilepath).ToString());
@@ -43,7 +50,7 @@ public class AudioFile
 
         // XML File Path
         string filePath = outputpath.Replace("/Assets", "");// Go to root
-        filePath = filePath + "/Metadata/AudioFile/" + $"{{{AudioFileGUIDs[$"{Path.GetRelativePath(outputpath, soundfilepath)}"]}}}" + ".xml";
+        filePath = filePath + "/Metadata/AudioFile/" + $"{{{AudioFileGUIDs[relativepath]}}}" + ".xml";
 
         // Save
         xmlDoc.Save(filePath);
