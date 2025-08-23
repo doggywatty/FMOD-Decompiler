@@ -1,5 +1,5 @@
-﻿using System.Runtime.InteropServices;
-using FMOD.Studio;
+﻿using FMOD.Studio;
+using System.Runtime.InteropServices;
 public class Program
 {
     #region Colored Text
@@ -486,6 +486,41 @@ public class Program
 
                 if (verbose)
                     Console.WriteLine($"{YELLOW}Saving Event: {eventname}{NORMAL}");
+
+                // idea
+
+                /*
+                #region Get Sound Info
+                // force it to wait until callback returns
+                var tcs = new TaskCompletionSource<bool>();
+
+                FMOD.RESULT GetSoundNameCallback(EVENT_CALLBACK_TYPE type, IntPtr _unusedlmao, IntPtr parameterPtr)
+                {
+                    if (type == EVENT_CALLBACK_TYPE.SOUND_PLAYED)
+                    {
+                        FMOD.Sound sound = new(parameterPtr);
+                        sound.getName(out string name, 1024);
+                        Console.WriteLine($"{RED}Sound Used: {name}{NORMAL}");
+
+                        // Stop sound when this runs
+                        eventInstance.stop(STOP_MODE.IMMEDIATE);
+                        eventInstance.release();
+
+                        // tells await task is complete
+                        tcs.TrySetResult(true);
+                    }
+                    return FMOD.RESULT.OK;
+                }
+
+                // Play Sound
+                eventInstance.setCallback(GetSoundNameCallback, EVENT_CALLBACK_TYPE.SOUND_PLAYED);
+                eventInstance.start();
+                // Stops when callback runs
+
+                // Await until callback completes
+                await tcs.Task;
+                #endregion
+                */
 
                 // add GUID to event
                 EventGUIDs.TryAdd(eventname, clean_eventID); // you can get the GUID for a given event with EventGUIDs["event:/music/w2/graveyard"]
