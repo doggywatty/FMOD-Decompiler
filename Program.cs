@@ -1,5 +1,6 @@
 ﻿using FMOD.Studio;
 using System.Runtime.InteropServices;
+using System.Xml.Linq;
 public class Program
 {
     #region Colored Text
@@ -487,27 +488,30 @@ public class Program
                 if (verbose)
                     Console.WriteLine($"{YELLOW}Saving Event: {eventname}{NORMAL}");
 
-                // idea
-
-                /*
-                #region Get Sound Info
+                // HOLY SHIT THIS WORKS
+                // THE FLOOD GATES HAVE OPENED
+                #region Get Internal Event MetaData
                 // force it to wait until callback returns
-                var tcs = new TaskCompletionSource<bool>();
+                bool GetSound_IsDone = false;
+                // just in case it gets stuck
+                int timeout = 0;
 
                 FMOD.RESULT GetSoundNameCallback(EVENT_CALLBACK_TYPE type, IntPtr _unusedlmao, IntPtr parameterPtr)
                 {
                     if (type == EVENT_CALLBACK_TYPE.SOUND_PLAYED)
                     {
+                        // Here's basically all the Functions we can use now
+                        // https://www.fmod.com/docs/2.01/api/core-api-sound.html
+
                         FMOD.Sound sound = new(parameterPtr);
                         sound.getName(out string name, 1024);
-                        Console.WriteLine($"{RED}Sound Used: {name}{NORMAL}");
 
-                        // Stop sound when this runs
-                        eventInstance.stop(STOP_MODE.IMMEDIATE);
-                        eventInstance.release();
+                        // Get Sound File used in Event
+                        // TODO - Events with many sound files being used aren't accounted for here, so fix that
+                        Console.WriteLine($"{GREEN}Sound Used: {name}{NORMAL}");
 
-                        // tells await task is complete
-                        tcs.TrySetResult(true);
+                        // tells task is complete
+                        GetSound_IsDone = true;
                     }
                     return FMOD.RESULT.OK;
                 }
@@ -515,12 +519,27 @@ public class Program
                 // Play Sound
                 eventInstance.setCallback(GetSoundNameCallback, EVENT_CALLBACK_TYPE.SOUND_PLAYED);
                 eventInstance.start();
-                // Stops when callback runs
 
-                // Await until callback completes
-                await tcs.Task;
+                // Updates FMOD System until thing is done
+                while (!GetSound_IsDone)
+                {
+                    studioSystem.update();
+
+                    // Just in case it get stuck, give up and show error message
+                    // 10000000 is about a second, so its decently good
+                    if (timeout == 10000000)
+                    {
+                        Console.WriteLine($"{RED}ERROR! - Internal Event Metadata failed to be Extracted!{NORMAL}");
+                        break;
+                    }
+                    timeout++;
+                }
+
+                // Stop sound if the while loop condition is met
+                // aka if it finishes extracting shit
+                eventInstance.stop(STOP_MODE.IMMEDIATE);
+                eventInstance.release();
                 #endregion
-                */
 
                 // add GUID to event
                 EventGUIDs.TryAdd(eventname, clean_eventID); // you can get the GUID for a given event with EventGUIDs["event:/music/w2/graveyard"]
