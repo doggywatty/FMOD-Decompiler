@@ -296,16 +296,33 @@ public class Program
 
         Console.WriteLine($"{YELLOW}Loading Banks...{NORMAL}");
 
+        #region Push to Console/Log Func
+        void PushToConsoleLog(string message, string color = "NONE", bool toLog = false)
+        {
+            // for some reason I can't just string color = NORMAL at the beginning because compiler cries
+            var truecolor = (color == "NONE") ? NORMAL : color;
+
+            // Show Message on Console
+            // Only if verbose is enabled or overridden
+            if (verbose)
+                Console.WriteLine($"{truecolor}{message}{NORMAL}");
+
+            // If also saving to log
+            if (toLog)
+                File.AppendAllText(outputProjectPath + "/EventGUIDs.txt", "\n" + message);
+        }
+        #endregion
+
         #region Built-in XML Files
         // this is basically just stuff that is ALWAYS gonna be in a FSPro Project
         // also this is more readable than trying any XML type shit LMAO
 
         // For Master Asset XML
         File.WriteAllText(outputProjectPath + $"/Metadata/Asset/{{{MasterAssetsGUID}}}.xml", ""
-            + "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\r"
-            + "\n<objects serializationModel=\"Studio.02.02.00\">\r"
-            + $"\n\t<object class=\"MasterAssetFolder\" id=\"{{{MasterAssetsGUID}}}\" />\r"
-            + "\n</objects>");
+                + "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\r"
+                + "\n<objects serializationModel=\"Studio.02.02.00\">\r"
+                + $"\n\t<object class=\"MasterAssetFolder\" id=\"{{{MasterAssetsGUID}}}\" />\r"
+                + "\n</objects>");
 
         // For Master Bank XML (Bank Folders)
         File.WriteAllText(outputProjectPath + $"/Metadata/BankFolder/{{{MasterBankFolderGUID}}}.xml", ""
@@ -388,7 +405,7 @@ public class Program
 
             // just filename
             string bankfilename = Path.GetFileName(bankFilePath);
-            Console.WriteLine($"{GREEN}Loaded Bank: " + bankfilename + $"{NORMAL}                    ");//spaces for when not in verbose
+            Console.WriteLine($"{GREEN}Loaded Bank: {bankfilename}{NORMAL}                    ");//spaces for when not in verbose
 
             // if bank loaded is Master.strings.bank, stop and continue to next bank
             // as it never has anything useful to extract
@@ -398,8 +415,7 @@ public class Program
             // get the list of events in the bank
             int eventCount;
             bank.getEventCount(out eventCount);
-            if (verbose)
-                Console.WriteLine($"\n{YELLOW}Events Found in {bankFilePath}: {eventCount}{NORMAL}\n");
+            PushToConsoleLog($"\nEvents Found in {bankFilePath}: {eventCount}\n", YELLOW);
 
             // basically just the XML Files for most assets that references their given bank file
             #region Bank Specific XMLs
@@ -485,16 +501,13 @@ public class Program
                 // make guid into a guid we can actually use, not fmod's bullshit
                 Guid clean_eventID = FMODGUIDToSysGuid(eventID);
 
-                if (verbose)
-                    Console.WriteLine($"{YELLOW}Saving Event: {eventname}{NORMAL}");
+                PushToConsoleLog($"Saving Event: {eventname}", YELLOW);
 
                 // HOLY SHIT THIS WORKS
                 // THE FLOOD GATES HAVE OPENED
                 #region Get Internal Event MetaData
                 // force it to wait until callback returns
                 bool GetSound_IsDone = false;
-                // just in case it gets stuck
-                int timeout = 0;
 
                 FMOD.RESULT GetSoundNameCallback(EVENT_CALLBACK_TYPE type, IntPtr _unusedlmao, IntPtr parameterPtr)
                 {
@@ -508,7 +521,7 @@ public class Program
 
                         // Get Sound File used in Event
                         // TODO - Events with many sound files being used aren't accounted for here, so fix that
-                        Console.WriteLine($"{GREEN}Sound Used: {name}{NORMAL}");
+                        PushToConsoleLog($"Sound Used: {name}", GREEN, true);
 
                         // tells task is complete
                         GetSound_IsDone = true;
@@ -520,6 +533,9 @@ public class Program
                 eventInstance.setCallback(GetSoundNameCallback, EVENT_CALLBACK_TYPE.SOUND_PLAYED);
                 eventInstance.start();
 
+                // just in case it gets stuck
+                int timeout = 0;
+
                 // Updates FMOD System until thing is done
                 while (!GetSound_IsDone)
                 {
@@ -529,7 +545,7 @@ public class Program
                     // 10000000 is about a second, so its decently good
                     if (timeout == 10000000)
                     {
-                        Console.WriteLine($"{RED}ERROR! - Internal Event Metadata failed to be Extracted!{NORMAL}");
+                        PushToConsoleLog($"ERROR! - Internal Event Metadata failed to be Extracted!", RED, true);
                         break;
                     }
                     timeout++;
@@ -549,21 +565,15 @@ public class Program
 
                 if (verbose)
                 {
-                    Console.WriteLine($"Event GUID for {eventname}: {EventGUIDs[eventname]}");
+                    PushToConsoleLog($"Event GUID for {eventname}: {EventGUIDs[eventname]}");
 
                     // event types (only for testing at the moment)
                     if (FindEventType.EventisParameter(eventDescription))
-                    {
-                        Console.WriteLine($"{OTHERGRAY}Event Sheet Type: Parameter\n{FindEventType.DisplayParameterInfo(eventDescription)}{NORMAL}");
-                        File.AppendAllText(outputProjectPath + "/EventGUIDs.txt", $"\nEvent Sheet Type: Parameter\n{FindEventType.DisplayParameterInfo(eventDescription)}");
-                    }
+                        PushToConsoleLog($"Event Sheet Type: Parameter\n{FindEventType.DisplayParameterInfo(eventDescription)}", OTHERGRAY, true);
                     else if (FindEventType.EventisTimeline(eventInstance))
-                    {
-                        Console.WriteLine($"{OTHERGRAY}Event Sheet Type: Timeline{NORMAL}");
-                        File.AppendAllText(outputProjectPath + "/EventGUIDs.txt", "\nEvent Sheet Type: Timeline");
-                    }
+                        PushToConsoleLog($"Event Sheet Type: Timeline", OTHERGRAY, true);
                     else
-                        Console.WriteLine($"{OTHERGRAY}Event Sheet Type: Action{NORMAL}");
+                        PushToConsoleLog($"Event Sheet Type: Action", OTHERGRAY, true);
                 }
 
                 // Save Event XML
@@ -583,9 +593,9 @@ public class Program
         }
         // else if using sane code
         else if (verbose)
-            Console.WriteLine($"\n{GREEN}Conversion Complete!{NORMAL}");
+            PushToConsoleLog($"\nConversion Complete!", GREEN);
 
-        Console.WriteLine($"{GREEN}Exported Project is at {outputProjectPath}{NORMAL}");
+        PushToConsoleLog($"Exported Project is at {outputProjectPath}", GREEN);
 
         // Clean up the FMOD Studio system
         studioSystem.release();
