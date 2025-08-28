@@ -42,7 +42,7 @@ public class ExtractSoundAssets
 
             if (!bankSample.RebuildAsStandardFileFormat(out var data, out var extension))
             {
-                PushToConsoleLog($"Failed to Extract Sound {name}", RED);
+                PushToConsoleLog($"ERROR! - Failed to Extract Sound {name}!", RED);
                 continue;
             }
 

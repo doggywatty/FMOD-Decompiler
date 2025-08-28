@@ -1,9 +1,17 @@
-﻿using FMOD;
-using FMOD.Studio;
+﻿using FMOD.Studio;
 using System.Runtime.InteropServices;
-using System.Xml.Linq;
 public class Program
 {
+    #region Compiler Warning bullshit
+
+    #pragma warning disable CS1998
+    #pragma warning disable CS4014
+    #pragma warning disable CS8600
+    #pragma warning disable CS8601
+    #pragma warning disable CS8602
+
+    #endregion
+
     #region Colored Text
     // thank you https://stackoverflow.com/questions/2743260/is-it-possible-to-write-to-the-console-in-colour-in-net
     public static string NL = Environment.NewLine; // shortcut
@@ -109,14 +117,11 @@ public class Program
 
         // If also saving to log
         if (toLog)
-            File.AppendAllTextAsync(outputProjectPath + "/EventGUIDs.txt", "\n" + message);
+            File.AppendAllTextAsync(outputProjectPath + "/log.txt", "\n" + message);
  
     }
     #endregion
 
-    // disable warning that complains that Main is an unawaited async task
-    // main is this way because of the spinner btw
-    #pragma warning disable CS1998
     public static async Task Main(string[] args)
     {
         // initialize
@@ -416,7 +421,7 @@ public class Program
             // get the list of events in the bank
             int eventCount;
             bank.getEventCount(out eventCount);
-            PushToConsoleLog($"\nEvents Found in {bankFilePath}: {eventCount}\n", YELLOW);
+            PushToConsoleLog($"\nEvents Found in {bankFilePath}: {eventCount}\n", YELLOW, true);
 
             // basically just the XML Files for most assets that references their given bank file
             #region Bank Specific XMLs
@@ -465,11 +470,7 @@ public class Program
                 if (!verbose && SpinnerInit == false)
                 {
                     // no await here, because we want it to continue
-                    #pragma warning disable CS4014//stop compiler from bitching about it not being awaited
                     StartSpinnerAsync("Saving Events...", SpinnerPattern, 1000, SpinnerKill.Token);
-                    #pragma warning restore CS4014
-                    // i remember some bitch saying that compiler warnings meant absolute shit code
-                    // what a retard, literally just do this ... and your point's now invalid
 
                     // ensure this doesn't get called twice
                     SpinnerInit = true;
@@ -501,7 +502,7 @@ public class Program
                 // make guid into a guid we can actually use, not fmod's bullshit
                 Guid clean_eventID = FMODGUIDToSysGuid(eventID);
 
-                PushToConsoleLog($"Saving Event: {eventname}", YELLOW);
+                PushToConsoleLog($"\nSaving Event: {eventname}", YELLOW, true);
 
                 // add GUID to event
                 EventGUIDs.TryAdd(eventname, clean_eventID); // you can get the GUID for a given event with EventGUIDs["event:/music/w2/graveyard"]
@@ -549,7 +550,7 @@ public class Program
                             FMOD.Sound sound = new(parameterPtr);
                             if (sound.getName(out string name, 1024) != FMOD.RESULT.OK)
                             {
-                                PushToConsoleLog($"ERROR! - Failed to get Sound Name!", RED);
+                                PushToConsoleLog($"ERROR! - Failed to get Sound Name!", RED, true);
                                 break;
                             }
 
@@ -559,13 +560,13 @@ public class Program
                             Dictionary<string, string> SoundNameExt = ExtractSoundAssets.SoundsinBanks[bankfilename];
                             // if sound was extracted and exists, get its extension
                             if (SoundNameExt.ContainsKey(name))
-                                fileExtension = SoundNameExt[name];
+                                fileExtension = "." + SoundNameExt[name];
 
                             // If Sound hasn't been played yet
                             if (!SoundsinEvent.Contains(name))
                             {
                                 // Get Sound File used in Event
-                                PushToConsoleLog($"Sound Used: {name}.{fileExtension}", GREEN, true);
+                                PushToConsoleLog($"Sound Used: {name}{fileExtension}", GREEN, true);
                                 // Flag as played
                                 SoundsinEvent.Add(name);
                             }
@@ -603,8 +604,8 @@ public class Program
                     studioSystem.update();
 
                     // Timeout, that triggers when the event should've ended (accounting for speedup as well)
-                    // plus about like 5 seconds
-                    if (timeout == (EventLength / playbackSpeed) + 50000000)
+                    // plus about a second
+                    if (timeout == (EventLength / playbackSpeed) + 10000000)
                     {
                         // if event just had no audio files in it
                         if (EventLength == 0 && SoundsinEvent.Count == 0)
@@ -612,6 +613,9 @@ public class Program
                         // if no sounds played at all, but the event still has length
                         else if (SoundsinEvent.Count == 0 && EventLength != 0)
                             PushToConsoleLog($"ERROR! - Internal Event Metadata failed to load!", RED, true);
+                        else
+                            PushToConsoleLog($"Internal Event Checking Timed Out...\n(Likely a Looping Event)", NORMAL, true);
+
                         break;
                     }
                     timeout++;

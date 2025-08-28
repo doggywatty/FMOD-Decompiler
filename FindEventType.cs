@@ -1,4 +1,5 @@
 ﻿using FMOD.Studio;
+using static Program;
 
 // Finds out what Sheet Type an Event uses
 
@@ -39,8 +40,13 @@ public class FindEventType
         {
             if (evDesc.getParameterDescriptionByIndex(i, out PARAMETER_DESCRIPTION parameter) == FMOD.RESULT.OK)
             {
-                parameterInfo += $"\tParameter Name: {parameter.name}" +
-                                 $"\n\tParameter ID: {parameter.id}" +
+                var parmName = parameter.name.ToString();
+                var parmID = parameter.id.data1 + parameter.id.data2;
+                var parmGUID = FMODGUIDToSysGuid(parameter.guid);
+
+                parameterInfo += $"\tParameter Name: {parmName}" +
+                                 $"\n\tParameter ID: {parmID}" +
+                                 $"\n\tParameter GUID: {parmGUID}" +
                                  $"\n\tParameter Min Value: {parameter.minimum}" +
                                  $"\n\tParameter Max Value: {parameter.maximum}" +
                                  $"\n\tParameter Default Value: {parameter.defaultvalue}" +
