@@ -44,7 +44,7 @@ public class FindEventType
                 // Make XML of the Parameter (if it wasn't made already)
                 if (!Parameters.ParameterList.Contains(parameter))
                 {
-                    Parameters.ParmeterXML(parameter);
+                    Parameters.ParmeterXML(parameter, evDesc);
                     Parameters.ParameterList.Add(parameter);
                 }
 

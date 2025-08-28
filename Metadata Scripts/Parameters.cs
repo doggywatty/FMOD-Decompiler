@@ -1,11 +1,12 @@
-﻿using System.Xml;
+﻿using System.ComponentModel;
+using System.Xml;
 using FMOD.Studio;
 using static Program;
 
 public class Parameters
 {
     public static List<PARAMETER_DESCRIPTION> ParameterList = new List<PARAMETER_DESCRIPTION>();
-    public static void ParmeterXML(PARAMETER_DESCRIPTION parameter)
+    public static void ParmeterXML(PARAMETER_DESCRIPTION parameter, EventDescription evDesc)
     {
         Guid XMLGUID = FMODGUIDToSysGuid(parameter.guid);
         Guid ParameterSettings = GetRandomGUID();
@@ -41,21 +42,61 @@ public class Parameters
         root.AppendChild(objectElement2);
 
         // Add Settings Elements
+        // Initial Value is always there
         AddPropertyElement(xmlDoc, objectElement2, "initialValue", parameter.defaultvalue.ToString());
-        AddPropertyElement(xmlDoc, objectElement2, "minimum", parameter.minimum.ToString());
-        AddPropertyElement(xmlDoc, objectElement2, "maximum", parameter.maximum.ToString());
 
-        // Check if isGlobal
-        if (parameter.flags == PARAMETER_FLAGS.GLOBAL)
-            AddPropertyElement(xmlDoc, objectElement2, "isGlobal", "true");//can be missing
+        // Minium Value
+        // 0 is Default
+        if (parameter.minimum != 0)
+            AddPropertyElement(xmlDoc, objectElement2, "minimum", parameter.minimum.ToString());
+
+        // Maximum Value
+        // 1 is Default
+        if (parameter.maximum != 1)
+            AddPropertyElement(xmlDoc, objectElement2, "maximum", parameter.maximum.ToString());
+
+        // Check if isGlobal | 0x00000004
+        var flags = (uint)parameter.flags;
+        if (flags == (uint)PARAMETER_FLAGS.GLOBAL)
+            AddPropertyElement(xmlDoc, objectElement2, "isGlobal", "true");
+
+        // Check if ReadOnly | 0x00000001
+        if (flags == (uint)PARAMETER_FLAGS.READONLY)
+            AddPropertyElement(xmlDoc, objectElement2, "isReadOnly", "true");
 
         // Since this property takes only integers
         // cast enum as int first so we don't get enum name
+        // "0" == Continuious (is missing in XML)
+        // "1" == Discrete
+        // "2" == Labeled (requires some more stuff)
         int parmType = (int)parameter.type;
-        AddPropertyElement(xmlDoc, objectElement2, "parameterType", parmType.ToString());
+        if (parmType != 0)// If Discrete or Labeled
+            AddPropertyElement(xmlDoc, objectElement2, "parameterType", parmType.ToString());
+        else if (parmType == 2)// If Labeled
+        {
+            // add labels
+            var propElement = xmlDoc.CreateElement("property");
+            propElement.SetAttribute("name", "enumerationLabels");
+
+            // Add Label Names of all values
+            for (var i = 0; i < parameter.maximum; i++)
+            {
+                // Get Label Name
+                evDesc.getParameterLabelByID(parameter.id, i, out string labelName);
+
+                // Add to XML
+                var labelElement = xmlDoc.CreateElement("value");
+                labelElement.InnerText = labelName;
+                propElement.AppendChild(labelElement);
+            }
+
+            objectElement2.AppendChild(propElement);
+        }
 
         // idk what this is
         //AddPropertyElement(xmlDoc, objectElement2, "isExposedRecursively", "false");
+
+        //AddPropertyElement(xmlDoc, objectElement2, "isReadOnly", "true");
 
         // probably not gonna be added
         //AddPropertyElement(xmlDoc, objectElement2, "seekSpeed", "1");

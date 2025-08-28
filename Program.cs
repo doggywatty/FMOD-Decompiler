@@ -298,6 +298,7 @@ public class Program
         Directory.CreateDirectory(outputProjectPath + "/Metadata/Platform");
         Directory.CreateDirectory(outputProjectPath + "/Metadata/EncodingSetting");
         Directory.CreateDirectory(outputProjectPath + "/Metadata/EffectPresetFolder");
+        Directory.CreateDirectory(outputProjectPath + "/Metadata/ParameterPreset");
         Directory.CreateDirectory(outputProjectPath + "/Metadata/ParameterPresetFolder");
         Directory.CreateDirectory(outputProjectPath + "/Metadata/ProfilerFolder");
         Directory.CreateDirectory(outputProjectPath + "/Metadata/SandboxFolder");
