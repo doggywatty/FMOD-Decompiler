@@ -7,6 +7,10 @@ using static Program;
 
 public class ExtractSoundAssets
 {
+    // Dictionary to hold all sounds and their names and extensions
+    // and also check what bankfile they belong to
+    public static Dictionary<string, Dictionary<string, string>> SoundsinBanks = new Dictionary<string, Dictionary<string, string>> { };
+
     // originally from https://github.com/SamboyCoding/Fmod5Sharp/blob/master/BankExtractor/Program.cs
     public static void ExtractSoundFiles(string bankPath, string bankfilename)
     {
@@ -28,6 +32,9 @@ public class ExtractSoundAssets
         PushToConsoleLog($"\nExtracting Sound Files from {bankfilename}...\n", YELLOW);
 
         var i = 0;
+        // Set up dictionary
+        Dictionary<string, string> SoundNameExt = new Dictionary<string, string>();
+
         foreach (var bankSample in bank.Samples)
         {
             i++;
@@ -38,6 +45,11 @@ public class ExtractSoundAssets
                 PushToConsoleLog($"Failed to Extract Sound {name}", RED);
                 continue;
             }
+
+            // Add Sound Name and Extension to dictionary
+            SoundNameExt[name] = extension;
+            // add dictionary to another dictionary specific to current bankfile
+            SoundsinBanks[bankfilename] = SoundNameExt;
 
             var filePath = Path.Combine(outDir.FullName, $"{name}.{extension}");
             File.WriteAllBytes(filePath, data);

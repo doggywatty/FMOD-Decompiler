@@ -1,4 +1,5 @@
-﻿using FMOD.Studio;
+﻿using FMOD;
+using FMOD.Studio;
 using System.Runtime.InteropServices;
 using System.Xml.Linq;
 public class Program
@@ -402,12 +403,15 @@ public class Program
 
             // just filename
             string bankfilename = Path.GetFileName(bankFilePath);
-            Console.WriteLine($"{GREEN}Loaded Bank: {bankfilename}{NORMAL}                    ");//spaces for when not in verbose
+            Console.WriteLine($"{GREEN}\nLoaded Bank: {bankfilename}{NORMAL}                    ");//spaces for when not in verbose
 
             // if bank loaded is Master.strings.bank, stop and continue to next bank
             // as it never has anything useful to extract
             if (bankfilename == "Master.strings.bank")
                 continue;
+
+            // Extract Sounds to /Assets folder
+            ExtractSoundAssets.ExtractSoundFiles(bankFilePath, bankfilename);
 
             // get the list of events in the bank
             int eventCount;
@@ -521,46 +525,93 @@ public class Program
                 // HOLY SHIT THIS WORKS
                 // THE FLOOD GATES HAVE OPENED
                 #region Get Internal Event MetaData
-                // force it to wait until callback returns
-                bool GetSound_IsDone = false;
+                // So basically what this is doing is that it's playing every sound in the event
+                // so we can retrieve info on the sound such as sound file names
+                // becase that's the only other way to extract this info for some reason
 
-                FMOD.RESULT GetSoundNameCallback(EVENT_CALLBACK_TYPE type, IntPtr _unusedlmao, IntPtr parameterPtr)
+                // force it to wait until event end callback returns
+                bool Event_IsDone = false;
+
+                // List that holds all names of sounds that have already been played
+                List<string> SoundsinEvent = new List<string> { };
+
+                #region Callbacks
+                // Here's basically all the Functions we can use now
+                // https://www.fmod.com/docs/2.01/api/core-api-sound.html
+                FMOD.RESULT EventCallback(EVENT_CALLBACK_TYPE type, IntPtr _unusedlmao, IntPtr parameterPtr)
                 {
-                    if (type == EVENT_CALLBACK_TYPE.SOUND_PLAYED)
+                    switch (type)
                     {
-                        // Here's basically all the Functions we can use now
-                        // https://www.fmod.com/docs/2.01/api/core-api-sound.html
+                        // Callback that triggers once a single sound is played in the event
+                        // (Can trigger many times depending on how many sounds there are)
+                        case EVENT_CALLBACK_TYPE.SOUND_PLAYED:
 
-                        FMOD.Sound sound = new(parameterPtr);
-                        sound.getName(out string name, 1024);
+                            FMOD.Sound sound = new(parameterPtr);
+                            if (sound.getName(out string name, 1024) != FMOD.RESULT.OK)
+                            {
+                                PushToConsoleLog($"ERROR! - Failed to get Sound Name!", RED);
+                                break;
+                            }
 
-                        // Get Sound File used in Event
-                        // TODO - Events with many sound files being used aren't accounted for here, so fix that
-                        PushToConsoleLog($"Sound Used: {name}", GREEN, true);
+                            // Get File Extension (from ExtractSounds.cs)
+                            var fileExtension = "";
+                            // get sound names and their extensions from the current bank file
+                            Dictionary<string, string> SoundNameExt = ExtractSoundAssets.SoundsinBanks[bankfilename];
+                            // if sound was extracted and exists, get its extension
+                            if (SoundNameExt.ContainsKey(name))
+                                fileExtension = SoundNameExt[name];
 
-                        // tells task is complete
-                        GetSound_IsDone = true;
+                            // If Sound hasn't been played yet
+                            if (!SoundsinEvent.Contains(name))
+                            {
+                                // Get Sound File used in Event
+                                PushToConsoleLog($"Sound Used: {name}.{fileExtension}", GREEN, true);
+                                // Flag as played
+                                SoundsinEvent.Add(name);
+                            }
+                            // Just leave if it has already been played
+                            break;
+
+                        // Callback that triggers if the event has ended entirely (no more sounds have played)
+                        case EVENT_CALLBACK_TYPE.STOPPED:
+                            // Mark as done
+                            Event_IsDone = true;
+                            break;
                     }
                     return FMOD.RESULT.OK;
                 }
+                #endregion
 
-                // Play Sound
-                eventInstance.setCallback(GetSoundNameCallback, EVENT_CALLBACK_TYPE.SOUND_PLAYED);
-                eventInstance.start();
+                // Set Callback (Unified, because otherwise one of them wouldn't run)
+                eventInstance.setCallback(EventCallback, EVENT_CALLBACK_TYPE.SOUND_PLAYED | EVENT_CALLBACK_TYPE.STOPPED);
+                eventInstance.start();// Play Sound
+
+                // Set volume to 0, because the following will kill your ears
+                eventInstance.setVolume(0f);
+                // Speed up Playback, because we don't care about actually listening to it
+                var playbackSpeed = 100f;// should be 100x speed, thank god we aren't listening to it
+                eventInstance.setPitch(playbackSpeed);
 
                 // just in case it gets stuck
                 int timeout = 0;
+                // Get length of All of the Event's Audio
+                eventDescription.getLength(out int EventLength);
 
-                // Updates FMOD System until thing is done
-                while (!GetSound_IsDone)
+                // Updates FMOD System until event has ended
+                while (!Event_IsDone)
                 {
                     studioSystem.update();
 
-                    // Just in case it get stuck, give up and show error message
-                    // 50000000 is about 5 seconds, which is long enough
-                    if (timeout == 50000000)
+                    // Timeout, that triggers when the event should've ended (accounting for speedup as well)
+                    // plus about like 5 seconds
+                    if (timeout == (EventLength / playbackSpeed) + 50000000)
                     {
-                        PushToConsoleLog($"ERROR! - Internal Event Metadata failed to be Extracted!", RED, true);
+                        // if event just had no audio files in it
+                        if (EventLength == 0 && SoundsinEvent.Count == 0)
+                            PushToConsoleLog($"ERROR! - Event has no audio!", RED, true);
+                        // if no sounds played at all, but the event still has length
+                        else if (SoundsinEvent.Count == 0 && EventLength != 0)
+                            PushToConsoleLog($"ERROR! - Internal Event Metadata failed to load!", RED, true);
                         break;
                     }
                     timeout++;
@@ -575,9 +626,6 @@ public class Program
                 // Save Event XML
                 Events.SaveEvents(eventname, bankfilename);
             }
-
-            // Extract Sounds to /Assets folder
-            ExtractSoundAssets.ExtractSoundFiles(bankFilePath, bankfilename);
         }
 
         // if not verbose, stop spinner
