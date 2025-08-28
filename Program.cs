@@ -90,8 +90,28 @@ public class Program
     public static bool SpinnerInit = false;
     public static int SpinnerPattern = new Random().Next(2);
 
-    // Organize Project Level for Arg4
-    public static bool No_Org = false;
+    // Argument Values
+    public static string bankFolder = "";
+    public static string outputProjectPath = "";
+    public static bool verbose = false;
+
+    #region Push to Console/Log Func
+    public static void PushToConsoleLog(string message, string color = "NONE", bool toLog = false)
+    {
+        // for some reason I can't just string color = NORMAL at the beginning because compiler cries
+        var truecolor = (color == "NONE") ? NORMAL : color;
+
+        // Show Message on Console
+        // Only if verbose is enabled or overridden
+        if (verbose)
+            Console.WriteLine($"{truecolor}{message}{NORMAL}");
+
+        // If also saving to log
+        if (toLog)
+            File.AppendAllTextAsync(outputProjectPath + "/EventGUIDs.txt", "\n" + message);
+ 
+    }
+    #endregion
 
     // disable warning that complains that Main is an unawaited async task
     // main is this way because of the spinner btw
@@ -103,7 +123,7 @@ public class Program
         SetConsoleMode(GetStdHandle(-11), mode | 0x4);
         Console.Clear();
 
-        Console.WriteLine($"Welcome to the FMOD Bank Decompiler {GREEN}(Version 1.0.4){NORMAL}"
+        Console.WriteLine($"Welcome to the FMOD Bank Decompiler {GREEN}(Version 1.1.0){NORMAL}"
         + $"\n\nby {BROWN}DogMatt{NORMAL}"
         + $"\nand {OTHERGRAY}burnedpopcorn180{NORMAL}"
 
@@ -113,10 +133,6 @@ public class Program
 
         + $"\n"
         );
-
-        string bankFolder = "";
-        string outputProjectPath = "";
-        bool verbose = false;
 
         // Long ass shit that we should just ignore
         #region DLLs
@@ -134,16 +150,16 @@ public class Program
                     Directory.CreateDirectory(@"C:\fmod-decompiler\");
                     File.Copy(backupfmodDLL, @"C:\fmod-decompiler\fmod.dll");
 
-                    Console.WriteLine($"{GREEN}fmod.dll was applied!{NORMAL}");
+                    PushToConsoleLog($"fmod.dll was applied!", GREEN);
                 }
                 else
                 {
-                    Console.WriteLine($"{RED}fmod.dll was not found in the /dlls folder.{NORMAL}");
+                    PushToConsoleLog($"fmod.dll was not found in the /dlls folder.", RED);
                 }
             }
             catch (UnauthorizedAccessException)
             {
-                Console.WriteLine($"{RED}fmod.dll could not be copied to System\nPlease restart the program as an administrator{NORMAL}");
+                PushToConsoleLog($"fmod.dll could not be copied to System\nPlease restart the program as an administrator", RED);
                 return;
             }
         }
@@ -160,16 +176,16 @@ public class Program
                     Directory.CreateDirectory(@"C:\fmod-decompiler\");
                     File.Copy(backupfmodstudioDLL, @"C:\fmod-decompiler\fmodstudio.dll");
 
-                    Console.WriteLine($"{GREEN}fmodstudio.dll was applied!{NORMAL}");
+                    PushToConsoleLog($"fmodstudio.dll was applied!", GREEN);
                 }
                 else
                 {
-                    Console.WriteLine($"{RED}fmodstudio.dll was not found in the /dlls folder.{NORMAL}");
+                    PushToConsoleLog($"fmodstudio.dll was not found in the /dlls folder.", RED);
                 }
             }
             catch (UnauthorizedAccessException)
             {
-                Console.WriteLine($"{RED}fmodstudio.dll could not be copied to System\nPlease restart the program as an administrator{NORMAL}");
+                PushToConsoleLog($"fmodstudio.dll could not be copied to System\nPlease restart the program as an administrator", RED);
                 return;
             }
         }
@@ -197,15 +213,10 @@ public class Program
             {
                 verbose = true;
             }
-            // check the --noorg flag
-            else if (args[i] == "--noorg")
-            {
-                No_Org = true;
-            }
             else
             {
                 // Handle missing arguments
-                Console.WriteLine($"{RED}Missing argument: {args[i]}{NORMAL}");
+                PushToConsoleLog($"Missing argument: {args[i]}", RED);
                 return;
             }
         }
@@ -223,12 +234,12 @@ public class Program
         // If user input nothing
         if (bankFolder == "")
         {
-            Console.WriteLine($"{RED}No Bank file path provided\nQuitting...{NORMAL}");
+            PushToConsoleLog($"No Bank file path provided\nQuitting...", RED);
             return;
         }
         if (outputProjectPath == "")
         {
-            Console.WriteLine($"{RED}No Output file path provided\nQuitting...{NORMAL}");
+            PushToConsoleLog($"No Output file path provided\nQuitting...", RED);
             return;
         }
 
@@ -239,13 +250,16 @@ public class Program
         // If bank folder doesn't exist
         if (!Directory.Exists(bankFolder))
         {
-            Console.WriteLine($"{RED}Bank Folder does not exist\nQuitting...{NORMAL}");
+            PushToConsoleLog($"Bank Folder does not exist\nQuitting...", RED);
             return;
         }
 
         // If output folder doesn't exist, warn user
         if (!Directory.Exists(bankFolder))
-            Console.WriteLine($"{RED}Output Folder does not exist{NORMAL}\n{YELLOW}Continuing Anyways...{NORMAL}");
+        {
+            PushToConsoleLog($"Output Folder does not exist", RED);
+            PushToConsoleLog($"Continuing Anyways...", YELLOW);
+        }
 
         #endregion
 
@@ -295,23 +309,6 @@ public class Program
         studioSystem.initialize(512, FMOD.Studio.INITFLAGS.NORMAL, FMOD.INITFLAGS.NORMAL, IntPtr.Zero);
 
         Console.WriteLine($"{YELLOW}Loading Banks...{NORMAL}");
-
-        #region Push to Console/Log Func
-        void PushToConsoleLog(string message, string color = "NONE", bool toLog = false)
-        {
-            // for some reason I can't just string color = NORMAL at the beginning because compiler cries
-            var truecolor = (color == "NONE") ? NORMAL : color;
-
-            // Show Message on Console
-            // Only if verbose is enabled or overridden
-            if (verbose)
-                Console.WriteLine($"{truecolor}{message}{NORMAL}");
-
-            // If also saving to log
-            if (toLog)
-                File.AppendAllText(outputProjectPath + "/EventGUIDs.txt", "\n" + message);
-        }
-        #endregion
 
         #region Built-in XML Files
         // this is basically just stuff that is ALWAYS gonna be in a FSPro Project
@@ -475,12 +472,11 @@ public class Program
                 }
 
                 // add event name to save later
-                if (No_Org == false)
-                    EventFolder.AllEvents.Add(eventname);
+                EventFolder.AllEvents.Add(eventname);
             }
             // Extract Event Folders
-            if (No_Org == false && EventFolder.AllEvents.Count != 0)
-                EventFolder.ExtractEventFolders(outputProjectPath + "/Metadata/EventFolder", verbose);
+            if (EventFolder.AllEvents.Count != 0)
+                EventFolder.ExtractEventFolders(outputProjectPath + "/Metadata/EventFolder");
             #endregion
 
             // process each event in the bank
@@ -502,6 +498,25 @@ public class Program
                 Guid clean_eventID = FMODGUIDToSysGuid(eventID);
 
                 PushToConsoleLog($"Saving Event: {eventname}", YELLOW);
+
+                // add GUID to event
+                EventGUIDs.TryAdd(eventname, clean_eventID); // you can get the GUID for a given event with EventGUIDs["event:/music/w2/graveyard"]
+
+                // Add all events to txt
+                File.AppendAllTextAsync(outputProjectPath + "/EventGUIDs.txt", $"\n{{{EventGUIDs[eventname]}}} {eventname}");
+
+                if (verbose)
+                {
+                    PushToConsoleLog($"Event GUID for {eventname}: {EventGUIDs[eventname]}");
+
+                    // event types (only for testing at the moment)
+                    if (FindEventType.EventisParameter(eventDescription))
+                        PushToConsoleLog($"Event Sheet Type: Parameter\n{FindEventType.DisplayParameterInfo(eventDescription)}", OTHERGRAY, true);
+                    else if (FindEventType.EventisTimeline(eventInstance))
+                        PushToConsoleLog($"Event Sheet Type: Timeline", OTHERGRAY, true);
+                    else
+                        PushToConsoleLog($"Event Sheet Type: Action", OTHERGRAY, true);
+                }
 
                 // HOLY SHIT THIS WORKS
                 // THE FLOOD GATES HAVE OPENED
@@ -542,8 +557,8 @@ public class Program
                     studioSystem.update();
 
                     // Just in case it get stuck, give up and show error message
-                    // 10000000 is about a second, so its decently good
-                    if (timeout == 10000000)
+                    // 50000000 is about 5 seconds, which is long enough
+                    if (timeout == 50000000)
                     {
                         PushToConsoleLog($"ERROR! - Internal Event Metadata failed to be Extracted!", RED, true);
                         break;
@@ -557,31 +572,12 @@ public class Program
                 eventInstance.release();
                 #endregion
 
-                // add GUID to event
-                EventGUIDs.TryAdd(eventname, clean_eventID); // you can get the GUID for a given event with EventGUIDs["event:/music/w2/graveyard"]
-
-                // Add all events to txt
-                File.AppendAllText(outputProjectPath + "/EventGUIDs.txt", $"\n{{{EventGUIDs[eventname]}}} {eventname}");
-
-                if (verbose)
-                {
-                    PushToConsoleLog($"Event GUID for {eventname}: {EventGUIDs[eventname]}");
-
-                    // event types (only for testing at the moment)
-                    if (FindEventType.EventisParameter(eventDescription))
-                        PushToConsoleLog($"Event Sheet Type: Parameter\n{FindEventType.DisplayParameterInfo(eventDescription)}", OTHERGRAY, true);
-                    else if (FindEventType.EventisTimeline(eventInstance))
-                        PushToConsoleLog($"Event Sheet Type: Timeline", OTHERGRAY, true);
-                    else
-                        PushToConsoleLog($"Event Sheet Type: Action", OTHERGRAY, true);
-                }
-
                 // Save Event XML
-                Events.SaveEvents(eventname, outputProjectPath, bankfilename);
+                Events.SaveEvents(eventname, bankfilename);
             }
 
             // Extract Sounds to /Assets folder
-            ExtractSoundAssets.ExtractSoundFiles(bankFilePath, outputProjectPath + "/Assets", bankfilename, verbose);
+            ExtractSoundAssets.ExtractSoundFiles(bankFilePath, bankfilename);
         }
 
         // if not verbose, stop spinner

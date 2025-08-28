@@ -9,7 +9,7 @@ public class EventFolder
     // This HashSet will track which folders have already been processed
     public static HashSet<string> processedFolders = new HashSet<string>();
 
-    public static void ExtractEventFolders(string filePath, bool verbose) 
+    public static void ExtractEventFolders(string filePath) 
     {
         // figure out all subfolders from an event path and make an XML for each subfolder
         // aka event:/music/soundtest/pause
@@ -31,8 +31,7 @@ public class EventFolder
             {
                 if (!processedFolders.Contains(folder + $"{folder_level}"))
                 {
-                    if (verbose && !No_Org)
-                        Console.WriteLine($"{MAGENTA}Saving Event Folder: /{folder}{NORMAL}");
+                    PushToConsoleLog($"Saving Event Folder: /{folder}", MAGENTA);
 
                     // Create GUID for "folder"
                     EventFolderGUIDs.TryAdd(folder + $"{folder_level}", GetRandomGUID());

@@ -32,7 +32,6 @@ FMOD-Decompiler --input "path/to/bank/folder" --output "path/to/output/project"
 - `--input`: Path to the folder containing FMOD bank files.
 - `--output`: Destination folder for the generated `.fspro` project.
 - `--verbose`: (Optional) Enables detailed logging.
-- `--noorg`: (Optional) Disables Automatic Project Organization. (Only use if Organization Issues prevent the Project from opening)
 
 ## Limitations
 - The tool is an attempt to reconstruct `.fspro` projects and may not be fully accurate.

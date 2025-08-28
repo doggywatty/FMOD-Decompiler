@@ -8,7 +8,7 @@ using System.Xml;
 using static Program;
 public class Events
 {
-    public static void SaveEvents(string eventname, string outputProjectPath, string bankfilename)
+    public static void SaveEvents(string eventname, string bankfilename)
     {
         // these change per XML, but not within the XML
         // so they should be here, and not public static
@@ -40,7 +40,7 @@ public class Events
             new string[] { $"{GetName(eventname)}", "0" }, new (string, string)[]
             {
                 // get name of folder containing the event
-            ("folder", $"{{{(No_Org == false ? GetHigherEventFolder(eventname) : MasterEventFolderGUID)}}}"),
+            ("folder", $"{{{GetHigherEventFolder(eventname)}}}"),
             ("mixer", $"{{{EventMixerGuid}}}"),
             ("masterTrack", $"{{{MasterTrackGuid}}}"),
 

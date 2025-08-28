@@ -17,7 +17,7 @@ public class AudioFile
             AudioFileGUIDs.Add(relativepath, GetRandomGUID());
         else //just in case there's a duplicate, ignore
         {
-            Console.WriteLine($"WARNING! - Duplicate Sound file found: " + relativepath + "\nSkipping...");
+            PushToConsoleLog($"WARNING! - Duplicate Sound file found: " + relativepath + "\nSkipping...");
             return;
         }
 
