@@ -36,28 +36,40 @@ public class FindEventType
         }
 
         var parameterInfo = string.Empty;
+
         for (int i = 0; i < parameterCount; i++)
         {
             if (evDesc.getParameterDescriptionByIndex(i, out PARAMETER_DESCRIPTION parameter) == FMOD.RESULT.OK)
             {
-                var parmName = parameter.name.ToString();
-                var parmID = parameter.id.data1 + parameter.id.data2;
-                var parmGUID = FMODGUIDToSysGuid(parameter.guid);
+                // Make XML of the Parameter (if it wasn't made already)
+                if (!Parameters.ParameterList.Contains(parameter))
+                {
+                    Parameters.ParmeterXML(parameter);
+                    Parameters.ParameterList.Add(parameter);
+                }
 
-                parameterInfo += $"\tParameter Name: {parmName}" +
+                string parmName = parameter.name;
+                uint parmID = parameter.id.data1 + parameter.id.data2;//combine uints because yeah
+                Guid parmGUID = FMODGUIDToSysGuid(parameter.guid);
+
+                // spacing for console
+                var spacing = (i != 0 ? "\n\n" : "");
+
+                parameterInfo += $"{spacing}\tParameter Name: {parmName}" +
                                  $"\n\tParameter ID: {parmID}" +
                                  $"\n\tParameter GUID: {parmGUID}" +
                                  $"\n\tParameter Min Value: {parameter.minimum}" +
                                  $"\n\tParameter Max Value: {parameter.maximum}" +
                                  $"\n\tParameter Default Value: {parameter.defaultvalue}" +
                                  $"\n\tParameter Type: {parameter.type}" +
-                                 $"\n\tParameter Flags: {parameter.flags}\n";
+                                 $"\n\tParameter Flags: {parameter.flags}";
             }
             else
             {
                 parameterInfo += $"\tUnable to retrieve details for parameter at index {i}.\n";
             }
         }
+
         return parameterInfo;
     }
 }
