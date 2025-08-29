@@ -300,10 +300,11 @@ public class MasterXMLs
         SaveXML(xmlDoc, filePath);
     }
 
+    //Connects stuff like Audio Files to their original Bank File
     public static void Create_BankAssetXML(string bankfilename)
     {
         var BankGUID = BankSpecificGUIDs[bankfilename + "_Asset"];
-        var BankName = bankfilename.Replace(".bank", "");
+        var BankName = bankfilename.Replace(".bank", "/");// Replace Music.bank to be Music/ (to set it as a valid folder)
 
         // Setup XML
         SetupXML(out XmlDocument xmlDoc, out XmlElement root);
@@ -321,4 +322,18 @@ public class MasterXMLs
         SaveXML(xmlDoc, filePath);
     }
     #endregion
+
+    // Creates the .fspro file
+    public static void Create_FSPROFile(string projectname)
+    {
+        // it literally just contains setup header
+        SetupXML(out XmlDocument xmlDoc, out XmlElement root);
+        xmlDoc.AppendChild(root);
+
+        // XML File Path
+        string filePath = outputProjectPath + $"/{projectname}.fspro";
+
+        // Save
+        SaveXML(xmlDoc, filePath);
+    }
 }

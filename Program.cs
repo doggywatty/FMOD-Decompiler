@@ -9,6 +9,7 @@ public class Program
     #pragma warning disable CS8600
     #pragma warning disable CS8601
     #pragma warning disable CS8602
+    #pragma warning disable CS8604
 
     #endregion
 
@@ -41,29 +42,6 @@ public class Program
     public static extern IntPtr GetStdHandle(int handle);
     #endregion
 
-    // get random GUIDs for some stuff
-    public static Guid GetRandomGUID()
-    {
-        // Generate a new GUID
-        return Guid.NewGuid();
-    }
-
-    // FMOD.GUID to System.Guid Converter
-    public static Guid FMODGUIDToSysGuid(FMOD.GUID fmodGuid)
-    {
-        // create byte array
-        byte[] bytes = new byte[16];
-
-        // copy FMOD.GUID Struct Data into the correct positions
-        BitConverter.GetBytes(fmodGuid.Data1).CopyTo(bytes, 0);   // Data1 goes into positions 0-3
-        BitConverter.GetBytes(fmodGuid.Data2).CopyTo(bytes, 4);   // Data2 goes into positions 4-7
-        BitConverter.GetBytes(fmodGuid.Data3).CopyTo(bytes, 8);   // Data3 goes into positions 8-11
-        BitConverter.GetBytes(fmodGuid.Data4).CopyTo(bytes, 12);  // Data4 goes into positions 12-15
-
-        // return output as System.Guid
-        return new Guid(bytes);
-    }
-
     #region Static GUIDs
     // since they are static, it'll only run once, so they should stay the same
     public static Guid MasterAssetsGUID = GetRandomGUID();
@@ -94,6 +72,7 @@ public class Program
     public static Dictionary<string, Guid> BankSpecificGUIDs = new Dictionary<string, Guid> { };
     #endregion
 
+    #region Initialize Main Variables
     // For Spinner
     public static CancellationTokenSource SpinnerKill = new CancellationTokenSource();
     public static bool SpinnerInit = false;
@@ -103,8 +82,9 @@ public class Program
     public static string bankFolder = "";
     public static string outputProjectPath = "";
     public static bool verbose = false;
+    #endregion
 
-    #region Push to Console/Log Func
+    #region Helper Funcs
     public static void PushToConsoleLog(string message, string color = "NONE", bool toLog = false)
     {
         // for some reason I can't just string color = NORMAL at the beginning because compiler cries
@@ -119,6 +99,28 @@ public class Program
         if (toLog)
             File.AppendAllTextAsync(outputProjectPath + "/log.txt", "\n" + message);
  
+    }
+    // get random GUIDs for some stuff
+    public static Guid GetRandomGUID()
+    {
+        // Generate a new GUID
+        return Guid.NewGuid();
+    }
+
+    // FMOD.GUID to System.Guid Converter
+    public static Guid FMODGUIDToSysGuid(FMOD.GUID fmodGuid)
+    {
+        // create byte array
+        byte[] bytes = new byte[16];
+
+        // copy FMOD.GUID Struct Data into the correct positions
+        BitConverter.GetBytes(fmodGuid.Data1).CopyTo(bytes, 0);   // Data1 goes into positions 0-3
+        BitConverter.GetBytes(fmodGuid.Data2).CopyTo(bytes, 4);   // Data2 goes into positions 4-7
+        BitConverter.GetBytes(fmodGuid.Data3).CopyTo(bytes, 8);   // Data3 goes into positions 8-11
+        BitConverter.GetBytes(fmodGuid.Data4).CopyTo(bytes, 12);  // Data4 goes into positions 12-15
+
+        // return output as System.Guid
+        return new Guid(bytes);
     }
     #endregion
 
@@ -300,14 +302,14 @@ public class Program
         Directory.CreateDirectory(outputProjectPath + "/Metadata/Event");
 
         // Main FSPro File
-        File.AppendAllText(outputProjectPath + $"/{projectname}.fspro", "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<objects serializationModel=\"Studio.02.02.00\" />");
+        MasterXMLs.Create_FSPROFile(projectname);
 
         #endregion
 
         // create the FMOD Studio system
         FMOD.Studio.System studioSystem;
         FMOD.Studio.System.create(out studioSystem);
-        studioSystem.initialize(512, FMOD.Studio.INITFLAGS.NORMAL, FMOD.INITFLAGS.NORMAL, IntPtr.Zero);
+        studioSystem.initialize(512, INITFLAGS.NORMAL, FMOD.INITFLAGS.NORMAL, IntPtr.Zero);
 
         Console.WriteLine($"{YELLOW}Loading Banks...{NORMAL}");
 
@@ -338,8 +340,7 @@ public class Program
         // load all the banks in the specified folder
         foreach (string bankFilePath in Directory.GetFiles(bankFolder, "*.bank"))
         {
-            FMOD.Studio.Bank bank;
-            studioSystem.loadBankFile(bankFilePath, FMOD.Studio.LOAD_BANK_FLAGS.NORMAL, out bank);
+            studioSystem.loadBankFile(bankFilePath, LOAD_BANK_FLAGS.NORMAL, out Bank bank);
 
             // just filename
             string bankfilename = Path.GetFileName(bankFilePath);
@@ -354,8 +355,7 @@ public class Program
             ExtractSoundAssets.ExtractSoundFiles(bankFilePath, bankfilename);
 
             // get the list of events in the bank
-            int eventCount;
-            bank.getEventCount(out eventCount);
+            bank.getEventCount(out int eventCount);
             PushToConsoleLog($"\nEvents Found in {bankFilePath}: {eventCount}\n", YELLOW, true);
 
             // basically just the XML Files for most assets that references their given bank file
@@ -373,8 +373,7 @@ public class Program
             #endregion
 
             // Start doing the actual extraction parts
-            FMOD.Studio.EventDescription[] eventDescriptions = new FMOD.Studio.EventDescription[eventCount];
-            bank.getEventList(out eventDescriptions);
+            bank.getEventList(out EventDescription[] eventDescriptions);
 
             // clear organization everytime a bank file is loaded
             // so event:/music/folder and event:/sfx/folder dont merge to /music
@@ -437,7 +436,7 @@ public class Program
                 // Add all events to txt
                 File.AppendAllTextAsync(outputProjectPath + "/EventGUIDs.txt", $"\n{{{EventGUIDs[eventname]}}} {eventname}");
 
-                // Get Parameters
+                #region Get Parameters
                 if (FindEventType.EventisParameter(eventDescription))
                     FindEventType.GetParameterInfo(eventDescription);
 
@@ -453,6 +452,7 @@ public class Program
                     else
                         PushToConsoleLog($"Event Sheet Type: Action", OTHERGRAY, true);
                 }
+                #endregion
 
                 // HOLY SHIT THIS WORKS
                 // THE FLOOD GATES HAVE OPENED
@@ -563,6 +563,7 @@ public class Program
             }
         }
 
+        #region Finish
         // if not verbose, stop spinner
         if (!verbose)
         {
@@ -578,6 +579,7 @@ public class Program
 
         // Clean up the FMOD Studio system
         studioSystem.release();
+        #endregion
     }
 
     // If User is not using --verbose
