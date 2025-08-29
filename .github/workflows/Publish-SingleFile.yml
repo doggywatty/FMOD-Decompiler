@@ -28,31 +28,31 @@ jobs:
       run: dotnet restore
 # ----------------------------------------------------
     - name: Build
-      run: 
+      run: |
         dotnet build FMOD-Decompiler --no-restore
 # ----------------------------------------------------
     - name: Publish FMOD-Decompiler
-      run:
+      run: |
         dotnet publish FMOD-Decompiler -c Release -r win-x64 --self-contained true -pPublishSingleFile=true --output windows-latest
 # ----------------------------------------------------
     - name: Copy README and LICENSE Files
-      run: 
+      run: |
         cp .README.md .windows-latest
         cp .LICENSE.txt .windows-latest
 # ----------------------------------------------------
     - name: Create ZIP from Build
-      run: 
+      run: |
         7z a -tzip FMOD-Decompiler-v1.2.0.zip .windows-latest -mx0
 # ----------------------------------------------------
     - name: Create Release
       id: create_release
       uses: actionscreate-release@v1
       env:
-        GITHUB_TOKEN ${{ secrets.GITHUB_TOKEN }}
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         tag_name: v1.2.0
         release_name: Release v1.2.0
-        body: 
+        body: |
           This is release v1.2.0 of FMOD-Decompiler
         draft: false
         prerelease: false
@@ -61,7 +61,7 @@ jobs:
       id: upload-release-asset
       uses: actionsupload-release-asset@v1
       env:
-        GITHUB_TOKEN ${{ secrets.GITHUB_TOKEN }}
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         upload_url: ${{ steps.create_release.outputs.upload_url }}
         asset_path: .FMOD-Decompiler-v1.2.0.zip
