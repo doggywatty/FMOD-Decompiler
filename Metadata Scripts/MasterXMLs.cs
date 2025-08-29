@@ -1,65 +1,324 @@
-﻿using static Program;
+﻿using System.Xml;
+using static Program;
+using static XMLHelper;
 
 // Create Main XML Files found in /Metadata
 // These will use Template ones, since we can't get information of more complex stuff from the .bank files
 public class MasterXMLs
-{ 
-    public static void Create_MasterXML(string filepath)
+{
+    #region XML Files that are in their own subfolders
+    public static void Create_MasterAssetXML() 
     {
-        File.WriteAllText(filepath + $"/Metadata/Master.xml", ""
-            + "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\r"
-            + "\n<objects serializationModel=\"Studio.02.02.00\">\r"
-            + $"\n\t<object class=\"MixerMaster\" id=\"{{{MasterXMLGUID}}}\">\r"
-            + "\n\t\t<property name=\"name\">\r\n\t\t\t<value>Master Bus</value>\r"
-            + "\n\t\t</property>\r\n\t\t<relationship name=\"effectChain\">\r"
-            + $"\n\t\t\t<destination>{{{Master1GUID}}}</destination>\r"
-            + "\n\t\t</relationship>\r\n\t\t<relationship name=\"panner\">\r"
-            + $"\n\t\t\t<destination>{{{Master2GUID}}}</destination>\r"
-            + "\n\t\t</relationship>\r\n\t\t<relationship name=\"mixer\">\r"
-            + $"\n\t\t\t<destination>{{{MasterMixerXMLGUID}}}</destination>\r"
-            + "\n\t\t</relationship>\r\n\t</object>\r"
-            + $"\n\t<object class=\"MixerBusEffectChain\" id=\"{{{Master1GUID}}}\">\r"
-            + "\n\t\t<relationship name=\"effects\">\r"
-            + $"\n\t\t\t<destination>{{{Master3GUID}}}</destination>\r\n\t\t</relationship>\r"
-            + $"\n\t</object>\r\n\t<object class=\"MixerBusPanner\" id=\"{{{Master2GUID}}}\">\r"
-            + "\n\t\t<property name=\"overridingOutputFormat\">\r\n\t\t\t<value>2</value>\r\n\t\t</property>\r"
-            + $"\n\t</object>\r\n\t<object class=\"MixerBusFader\" id=\"{{{Master3GUID}}}\" />\r\n</objects>");
+        // Setup XML
+        SetupXML(out XmlDocument xmlDoc, out XmlElement root);
+
+        SetupHeaderXML(xmlDoc, root, "MasterAssetFolder", $"{{{MasterAssetsGUID}}}", out XmlElement Element);
+
+        xmlDoc.AppendChild(root);
+
+        // XML File Path
+        string filePath = outputProjectPath + $"/Metadata/Asset/{{{MasterAssetsGUID}}}.xml";
+
+        // Save
+        SaveXML(xmlDoc, filePath);
+    }
+    public static void Create_MasterBankFoldersXML() 
+    {
+        // Setup XML
+        SetupXML(out XmlDocument xmlDoc, out XmlElement root);
+
+        SetupHeaderXML(xmlDoc, root, "MasterBankFolder", $"{{{MasterBankFolderGUID}}}", out XmlElement Element);
+
+        xmlDoc.AppendChild(root);
+
+        // XML File Path
+        string filePath = outputProjectPath + $"/Metadata/BankFolder/{{{MasterBankFolderGUID}}}.xml";
+
+        // Save
+        SaveXML(xmlDoc, filePath);
+    }
+    public static void Create_MasterBankXML() 
+    {
+        // Setup XML
+        SetupXML(out XmlDocument xmlDoc, out XmlElement root);
+
+        SetupHeaderXML(xmlDoc, root, "Bank", $"{{{MasterBankGUID}}}", out XmlElement Element);
+        AddPropertyElement(xmlDoc, Element, "name", "Master");
+        AddPropertyElement(xmlDoc, Element, "isMasterBank", "true");
+        AddRelationshipElement(xmlDoc, Element, "folder", $"{{{MasterBankFolderGUID}}}");
+
+        xmlDoc.AppendChild(root);
+
+        // XML File Path
+        string filePath = outputProjectPath + $"/Metadata/Bank/{{{MasterBankGUID}}}.xml";
+
+        // Save
+        SaveXML(xmlDoc, filePath);
+    }
+    public static void Create_EventFolderXML() 
+    {
+        // Setup XML
+        SetupXML(out XmlDocument xmlDoc, out XmlElement root);
+
+        SetupHeaderXML(xmlDoc, root, "MasterEventFolder", $"{{{MasterEventFolderGUID}}}", out XmlElement Element);
+        AddPropertyElement(xmlDoc, Element, "name", "Master");
+
+        xmlDoc.AppendChild(root);
+
+        // XML File Path
+        string filePath = outputProjectPath + $"/Metadata/EventFolder/{{{MasterEventFolderGUID}}}.xml";
+
+        // Save
+        SaveXML(xmlDoc, filePath);
+    }
+    public static void Create_PlatformXML() 
+    {
+        // Setup XML
+        SetupXML(out XmlDocument xmlDoc, out XmlElement root);
+
+        SetupHeaderXML(xmlDoc, root, "Platform", $"{{{MasterPlatformGUID}}}", out XmlElement Element);
+        AddPropertyElement(xmlDoc, Element, "hardwareType", "0");
+        AddPropertyElement(xmlDoc, Element, "name", "Desktop");
+        AddPropertyElement(xmlDoc, Element, "subDirectory", "Desktop");
+        AddPropertyElement(xmlDoc, Element, "speakerFormat", "5");
+
+        xmlDoc.AppendChild(root);
+
+        // XML File Path
+        string filePath = outputProjectPath + $"/Metadata/Platform/{{{MasterPlatformGUID}}}.xml";
+
+        // Save
+        SaveXML(xmlDoc, filePath);
+    }
+    public static void Create_EncodingSettingXML() 
+    {
+        // Setup XML
+        SetupXML(out XmlDocument xmlDoc, out XmlElement root);
+
+        SetupHeaderXML(xmlDoc, root, "EncodingSetting", $"{{{MasterEncodingSettingGUID}}}", out XmlElement Element);
+        AddPropertyElement(xmlDoc, Element, "encodingFormat", "3");
+        AddPropertyElement(xmlDoc, Element, "quality", "37");
+        AddRelationshipElement(xmlDoc, Element, "platform", $"{{{MasterPlatformGUID}}}");
+        AddRelationshipElement(xmlDoc, Element, "encodable", $"{{{MasterPlatformGUID}}}");
+
+        xmlDoc.AppendChild(root);
+
+        // XML File Path
+        string filePath = outputProjectPath + $"/Metadata/EncodingSetting/{{{MasterEncodingSettingGUID}}}.xml";
+
+        // Save
+        SaveXML(xmlDoc, filePath);
+    }
+    public static void Create_EffectPresetFolderXML() 
+    {
+        // Setup XML
+        SetupXML(out XmlDocument xmlDoc, out XmlElement root);
+
+        SetupHeaderXML(xmlDoc, root, "MasterEffectPresetFolder", $"{{{MasterEffectPresetGUID}}}", out XmlElement Element);
+
+        xmlDoc.AppendChild(root);
+
+        // XML File Path
+        string filePath = outputProjectPath + $"/Metadata/EffectPresetFolder/{{{MasterEffectPresetGUID}}}.xml";
+
+        // Save
+        SaveXML(xmlDoc, filePath);
+    }
+    public static void Create_ParameterPresetFolderXML() 
+    {
+        // Setup XML
+        SetupXML(out XmlDocument xmlDoc, out XmlElement root);
+
+        SetupHeaderXML(xmlDoc, root, "MasterParameterPresetFolder", $"{{{MasterParameterPresetGUID}}}", out XmlElement Element);
+
+        xmlDoc.AppendChild(root);
+
+        // XML File Path
+        string filePath = outputProjectPath + $"/Metadata/ParameterPresetFolder/{{{MasterParameterPresetGUID}}}.xml";
+
+        // Save
+        SaveXML(xmlDoc, filePath);
+    }
+    public static void Create_ProfilerFolderXML() 
+    {
+        // Setup XML
+        SetupXML(out XmlDocument xmlDoc, out XmlElement root);
+
+        SetupHeaderXML(xmlDoc, root, "ProfilerSessionFolder", $"{{{MasterProfilerFolderGUID}}}", out XmlElement Element);
+
+        xmlDoc.AppendChild(root);
+
+        // XML File Path
+        string filePath = outputProjectPath + $"/Metadata/ProfilerFolder/{{{MasterProfilerFolderGUID}}}.xml";
+
+        // Save
+        SaveXML(xmlDoc, filePath);
+    }
+    public static void Create_SandboxFolderXML() 
+    {
+        // Setup XML
+        SetupXML(out XmlDocument xmlDoc, out XmlElement root);
+
+        SetupHeaderXML(xmlDoc, root, "MasterSandboxFolder", $"{{{MasterSandboxFolderGUID}}}", out XmlElement Element);
+
+        xmlDoc.AppendChild(root);
+
+        // XML File Path
+        string filePath = outputProjectPath + $"/Metadata/SandboxFolder/{{{MasterSandboxFolderGUID}}}.xml";
+
+        // Save
+        SaveXML(xmlDoc, filePath);
+    }
+    public static void Create_SnapshotGroupXML() 
+    {
+        // Setup XML
+        SetupXML(out XmlDocument xmlDoc, out XmlElement root);
+
+        SetupHeaderXML(xmlDoc, root, "SnapshotList", $"{{{MasterSnapshotGUID}}}", out XmlElement Element);
+        AddRelationshipElement(xmlDoc, Element, "mixer", $"{{{MasterMixerXMLGUID}}}");
+
+        xmlDoc.AppendChild(root);
+
+        // XML File Path
+        string filePath = outputProjectPath + $"/Metadata/SnapshotGroup/{{{MasterSandboxFolderGUID}}}.xml";
+
+        // Save
+        SaveXML(xmlDoc, filePath);
+    }
+#endregion
+
+    #region XML Files in the /Metadata folder
+    public static void Create_MasterXML()
+    {
+        // Setup XML
+        SetupXML(out XmlDocument xmlDoc, out XmlElement root);
+
+        SetupHeaderXML(xmlDoc, root, "MixerMaster", $"{{{MasterXMLGUID}}}", out XmlElement MixerMasterElement);
+        AddPropertyElement(xmlDoc, MixerMasterElement, "name", "Master Bus");
+        AddRelationshipElement(xmlDoc, MixerMasterElement, "effectChain", $"{{{Master1GUID}}}");
+        AddRelationshipElement(xmlDoc, MixerMasterElement, "panner", $"{{{Master2GUID}}}");
+        AddRelationshipElement(xmlDoc, MixerMasterElement, "mixer", $"{{{MasterMixerXMLGUID}}}");
+
+        SetupHeaderXML(xmlDoc, root, "MixerBusEffectChain", $"{{{Master1GUID}}}", out XmlElement MixerBusEffectChainElement);
+        AddRelationshipElement(xmlDoc, MixerBusEffectChainElement, "effects", $"{{{Master3GUID}}}");
+
+        SetupHeaderXML(xmlDoc, root, "MixerBusPanner", $"{{{Master2GUID}}}", out XmlElement MixerBusPannerElement);
+        AddPropertyElement(xmlDoc, MixerBusPannerElement, "overridingOutputFormat", "2");
+
+        SetupHeaderXML(xmlDoc, root, "MixerBusFader", $"{{{Master3GUID}}}", out XmlElement MixerBusFaderElement);
+
+        xmlDoc.AppendChild(root);
+
+        // XML File Path
+        string filePath = outputProjectPath + $"/Metadata/Master.xml";
+
+        // Save
+        SaveXML(xmlDoc, filePath);
     }
 
-    public static void Create_MixerXML(string filepath)
+    public static void Create_MixerXML()
     {
-        File.WriteAllText(filepath + $"/Metadata/Mixer.xml", ""
-            + "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\r\n<objects serializationModel=\"Studio.02.02.00\">\r"
-            + $"\n\t<object class=\"Mixer\" id=\"{{{MasterMixerXMLGUID}}}\">\r\n\t\t<relationship name=\"masterBus\">\r"
-            + $"\n\t\t\t<destination>{{{MasterXMLGUID}}}</destination>\r\n\t\t</relationship>\r"
-            + $"\n\t\t<relationship name=\"snapshotList\">\r\n\t\t\t<destination>{{{MasterSnapshotGUID}}}</destination>\r"
-            + "\n\t\t</relationship>\r\n\t</object>\r\n</objects>");
+        // Setup XML
+        SetupXML(out XmlDocument xmlDoc, out XmlElement root);
+
+        SetupHeaderXML(xmlDoc, root, "Mixer", $"{{{MasterMixerXMLGUID}}}", out XmlElement MixerElement);
+        AddRelationshipElement(xmlDoc, MixerElement, "masterBus", $"{{{MasterXMLGUID}}}");
+        AddRelationshipElement(xmlDoc, MixerElement, "snapshotList", $"{{{MasterSnapshotGUID}}}");
+
+        xmlDoc.AppendChild(root);
+
+        // XML File Path
+        string filePath = outputProjectPath + $"/Metadata/Mixer.xml";
+
+        // Save
+        SaveXML(xmlDoc, filePath);
     }
 
-    public static void Create_TagsXML(string filepath)
+    public static void Create_TagsXML()
     {
-        File.WriteAllText(filepath + $"/Metadata/Tags.xml", ""
-            + "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\r\n<objects serializationModel=\"Studio.02.02.00\">\r"
-            + $"\n\t<object class=\"MasterTagFolder\" id=\"{{{MasterTagsXMLGUID}}}\">\r\n\t\t<property name=\"name\">\r"
-            + "\n\t\t\t<value>Master</value>\r\n\t\t</property>\r\n\t</object>\r\n</objects>");
+        // Setup XML
+        SetupXML(out XmlDocument xmlDoc, out XmlElement root);
+
+        SetupHeaderXML(xmlDoc, root, "MasterTagFolder", $"{{{MasterTagsXMLGUID}}}", out XmlElement MasterTagElement);
+        AddPropertyElement(xmlDoc, MasterTagElement, "name", "Master");
+
+        xmlDoc.AppendChild(root);
+
+        // XML File Path
+        string filePath = outputProjectPath + $"/Metadata/Tags.xml";
+
+        // Save
+        SaveXML(xmlDoc, filePath);
     }
 
-    public static void Create_WorkspaceXML(string filepath)
+    public static void Create_WorkspaceXML()
     {
-        File.WriteAllText(filepath + $"/Metadata/Workspace.xml", ""
-            + "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\r\n<objects serializationModel=\"Studio.02.02.00\">\r"
-            + $"\n\t<object class=\"Workspace\" id=\"{{{MasterWorkspaceXMLGUID}}}\">\r\n\t\t<relationship name=\"masterEventFolder\">\r"
-            + $"\n\t\t\t<destination>{{{MasterEventFolderGUID}}}</destination>\r\n\t\t</relationship>\r"
-            + $"\n\t\t<relationship name=\"masterTagFolder\">\r\n\t\t\t<destination>{{{MasterTagsXMLGUID}}}</destination>\r"
-            + "\n\t\t</relationship>\r\n\t\t<relationship name=\"masterEffectPresetFolder\">\r"
-            + $"\n\t\t\t<destination>{{{MasterEffectPresetGUID}}}</destination>\r\n\t\t</relationship>\r"
-            + $"\n\t\t<relationship name=\"masterParameterPresetFolder\">\r\n\t\t\t<destination>{{{MasterParameterPresetGUID}}}</destination>\r"
-            + $"\n\t\t</relationship>\r\n\t\t<relationship name=\"masterBankFolder\">\r\n\t\t\t<destination>{{{MasterBankFolderGUID}}}</destination>\r"
-            + $"\n\t\t</relationship>\r\n\t\t<relationship name=\"masterSandboxFolder\">\r\n\t\t\t<destination>{{{MasterSandboxFolderGUID}}}</destination>\r"
-            + $"\n\t\t</relationship>\r\n\t\t<relationship name=\"masterAssetFolder\">\r\n\t\t\t<destination>{{{MasterAssetsGUID}}}</destination>\r"
-            + $"\n\t\t</relationship>\r\n\t\t<relationship name=\"mixer\">\r\n\t\t\t<destination>{{{MasterMixerXMLGUID}}}</destination>\r"
-            + $"\n\t\t</relationship>\r\n\t\t<relationship name=\"profilerSessionFolder\">\r\n\t\t\t<destination>{{{MasterProfilerFolderGUID}}}</destination>\r"
-            + $"\n\t\t</relationship>\r\n\t\t<relationship name=\"platforms\">\r\n\t\t\t<destination>{{{MasterPlatformGUID}}}</destination>\r"
-            + "\n\t\t</relationship>\r\n\t</object>\r\n</objects>");
+        // Setup XML
+        SetupXML(out XmlDocument xmlDoc, out XmlElement root);
+
+        SetupHeaderXML(xmlDoc, root, "Workspace", $"{{{MasterWorkspaceXMLGUID}}}", out XmlElement WorkspaceElement);
+        AddRelationshipElement(xmlDoc, WorkspaceElement, "masterEventFolder", $"{{{MasterEventFolderGUID}}}");
+        AddRelationshipElement(xmlDoc, WorkspaceElement, "masterTagFolder", $"{{{MasterTagsXMLGUID}}}");
+        AddRelationshipElement(xmlDoc, WorkspaceElement, "masterEffectPresetFolder", $"{{{MasterEffectPresetGUID}}}");
+        AddRelationshipElement(xmlDoc, WorkspaceElement, "masterParameterPresetFolder", $"{{{MasterParameterPresetGUID}}}");
+        AddRelationshipElement(xmlDoc, WorkspaceElement, "masterBankFolder", $"{{{MasterBankFolderGUID}}}");
+        AddRelationshipElement(xmlDoc, WorkspaceElement, "masterSandboxFolder", $"{{{MasterSandboxFolderGUID}}}");
+        AddRelationshipElement(xmlDoc, WorkspaceElement, "masterAssetFolder", $"{{{MasterAssetsGUID}}}");
+        AddRelationshipElement(xmlDoc, WorkspaceElement, "mixer", $"{{{MasterMixerXMLGUID}}}");
+        AddRelationshipElement(xmlDoc, WorkspaceElement, "profilerSessionFolder", $"{{{MasterProfilerFolderGUID}}}");
+        AddRelationshipElement(xmlDoc, WorkspaceElement, "platforms", $"{{{MasterPlatformGUID}}}");
+
+        xmlDoc.AppendChild(root);
+
+        // XML File Path
+        string filePath = outputProjectPath + $"/Metadata/Workspace.xml";
+
+        // Save
+        SaveXML(xmlDoc, filePath);
     }
+    #endregion
+
+    #region XML Files per each Bank File
+    public static void Create_BankFileXML(string bankfilename)
+    {
+        var BankGUID = BankSpecificGUIDs[bankfilename + "_Bank"];
+        var BankName = bankfilename.Replace(".bank", "");
+
+        // Setup XML
+        SetupXML(out XmlDocument xmlDoc, out XmlElement root);
+
+        SetupHeaderXML(xmlDoc, root, "Bank", $"{{{BankGUID}}}", out XmlElement Element);
+        AddPropertyElement(xmlDoc, Element, "name", BankName);
+        AddRelationshipElement(xmlDoc, Element, "folder", $"{{{MasterBankFolderGUID}}}");
+
+        xmlDoc.AppendChild(root);
+
+        // XML File Path
+        string filePath = outputProjectPath + $"/Metadata/Bank/{{{BankGUID}}}.xml";
+
+        // Save
+        SaveXML(xmlDoc, filePath);
+    }
+
+    public static void Create_BankAssetXML(string bankfilename)
+    {
+        var BankGUID = BankSpecificGUIDs[bankfilename + "_Asset"];
+        var BankName = bankfilename.Replace(".bank", "");
+
+        // Setup XML
+        SetupXML(out XmlDocument xmlDoc, out XmlElement root);
+
+        SetupHeaderXML(xmlDoc, root, "EncodableAsset", $"{{{BankGUID}}}", out XmlElement Element);
+        AddPropertyElement(xmlDoc, Element, "assetPath", BankName);
+        AddRelationshipElement(xmlDoc, Element, "masterAssetFolder", $"{{{MasterAssetsGUID}}}");
+
+        xmlDoc.AppendChild(root);
+
+        // XML File Path
+        string filePath = outputProjectPath + $"/Metadata/Asset/{{{BankGUID}}}.xml";
+
+        // Save
+        SaveXML(xmlDoc, filePath);
+    }
+    #endregion
 }

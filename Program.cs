@@ -129,7 +129,7 @@ public class Program
         SetConsoleMode(GetStdHandle(-11), mode | 0x4);
         Console.Clear();
 
-        Console.WriteLine($"Welcome to the FMOD Bank Decompiler {GREEN}(Version 1.1.1){NORMAL}"
+        Console.WriteLine($"Welcome to the FMOD Bank Decompiler {GREEN}(Version 1.1.2){NORMAL}"
         + $"\n\nby {BROWN}DogMatt{NORMAL}"
         + $"\nand {OTHERGRAY}burnedpopcorn180{NORMAL}"
 
@@ -313,85 +313,25 @@ public class Program
 
         #region Built-in XML Files
         // this is basically just stuff that is ALWAYS gonna be in a FSPro Project
-        // also this is more readable than trying any XML type shit LMAO
 
-        // For Master Asset XML
-        File.WriteAllText(outputProjectPath + $"/Metadata/Asset/{{{MasterAssetsGUID}}}.xml", ""
-                + "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\r"
-                + "\n<objects serializationModel=\"Studio.02.02.00\">\r"
-                + $"\n\t<object class=\"MasterAssetFolder\" id=\"{{{MasterAssetsGUID}}}\" />\r"
-                + "\n</objects>");
+        // XML Files that are in their own subfolders
+        MasterXMLs.Create_MasterAssetXML();
+        MasterXMLs.Create_MasterBankFoldersXML();
+        MasterXMLs.Create_MasterBankXML();
+        MasterXMLs.Create_EventFolderXML();
+        MasterXMLs.Create_PlatformXML();
+        MasterXMLs.Create_EncodingSettingXML();
+        MasterXMLs.Create_EffectPresetFolderXML();
+        MasterXMLs.Create_ParameterPresetFolderXML();
+        MasterXMLs.Create_ProfilerFolderXML();
+        MasterXMLs.Create_SandboxFolderXML();
+        MasterXMLs.Create_SnapshotGroupXML();
 
-        // For Master Bank XML (Bank Folders)
-        File.WriteAllText(outputProjectPath + $"/Metadata/BankFolder/{{{MasterBankFolderGUID}}}.xml", ""
-            + "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\r"
-            + "\n<objects serializationModel=\"Studio.02.02.00\">\r"
-            + $"\n\t<object class=\"MasterBankFolder\" id=\"{{{MasterBankFolderGUID}}}\" />\r\n</objects>");
-
-        // For Master Bank XML
-        File.WriteAllText(outputProjectPath + $"/Metadata/Bank/{{{MasterBankGUID}}}.xml", ""
-            + "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\r"
-            + "\n<objects serializationModel=\"Studio.02.02.00\">\r"
-            + $"\n\t<object class=\"Bank\" id=\"{{{MasterBankGUID}}}\">\r"
-            + "\n\t\t<property name=\"name\">\r\n\t\t\t<value>Master</value>\r\n\t\t</property>\r"
-            + "\n\t\t<property name=\"isMasterBank\">\r\n\t\t\t<value>true</value>\r\n\t\t</property>\r"
-            + $"\n\t\t<relationship name=\"folder\">\r\n\t\t\t<destination>{{{MasterBankFolderGUID}}}</destination>\r"
-            + "\n\t\t</relationship>\r\n\t</object>\r\n</objects>");
-
-        // For EventFolder XML (Master)
-        File.WriteAllText(outputProjectPath + $"/Metadata/EventFolder/{{{MasterEventFolderGUID}}}.xml", ""
-            + "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\r\n<objects serializationModel=\"Studio.02.02.00\">\r"
-            + $"\n\t<object class=\"MasterEventFolder\" id=\"{{{MasterEventFolderGUID}}}\">\r"
-            + "\n\t\t<property name=\"name\">\r\n\t\t\t<value>Master</value>\r\n\t\t</property>\r\n\t</object>\r\n</objects>");
-
-        // For Platform XML
-        File.WriteAllText(outputProjectPath + $"/Metadata/Platform/{{{MasterPlatformGUID}}}.xml", ""
-            + "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\r\n<objects serializationModel=\"Studio.02.02.00\">\r"
-            + $"\n\t<object class=\"Platform\" id=\"{{{MasterPlatformGUID}}}\">\r\n\t\t<property name=\"hardwareType\">\r"
-            + "\n\t\t\t<value>0</value>\r\n\t\t</property>\r\n\t\t<property name=\"name\">\r\n\t\t\t<value>Desktop</value>\r\n\t\t</property>\r"
-            + "\n\t\t<property name=\"subDirectory\">\r\n\t\t\t<value>Desktop</value>\r\n\t\t</property>\r\n\t\t<property name=\"speakerFormat\">\r"
-            + "\n\t\t\t<value>5</value>\r\n\t\t</property>\r\n\t</object>\r\n</objects>");
-
-        // For EncodingSetting XML
-        File.WriteAllText(outputProjectPath + $"/Metadata/EncodingSetting/{{{MasterEncodingSettingGUID}}}.xml", ""
-            + "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\r\n<objects serializationModel=\"Studio.02.02.00\">\r"
-            + $"\n\t<object class=\"EncodingSetting\" id=\"{{{MasterEncodingSettingGUID}}}\">\r\n\t\t<property name=\"encodingFormat\">\r"
-            + "\n\t\t\t<value>3</value>\r\n\t\t</property>\r\n\t\t<property name=\"quality\">\r\n\t\t\t<value>37</value>\r\n\t\t</property>\r"
-            + $"\n\t\t<relationship name=\"platform\">\r\n\t\t\t<destination>{{{MasterPlatformGUID}}}</destination>\r\n\t\t</relationship>\r"
-            + $"\n\t\t<relationship name=\"encodable\">\r\n\t\t\t<destination>{{{MasterPlatformGUID}}}</destination>\r\n\t\t</relationship>\r"
-            + "\n\t</object>\r\n</objects>");
-
-        // For EffectPresetFolder XML
-        File.WriteAllText(outputProjectPath + $"/Metadata/EffectPresetFolder/{{{MasterEffectPresetGUID}}}.xml", ""
-            + "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\r\n<objects serializationModel=\"Studio.02.02.00\">\r"
-            + $"\n\t<object class=\"MasterEffectPresetFolder\" id=\"{{{MasterEffectPresetGUID}}}\" />\r\n</objects>");
-
-        // For ParameterPresetFolder XML
-        File.WriteAllText(outputProjectPath + $"/Metadata/ParameterPresetFolder/{{{MasterParameterPresetGUID}}}.xml", ""
-            + "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\r\n<objects serializationModel=\"Studio.02.02.00\">\r"
-            + $"\n\t<object class=\"MasterParameterPresetFolder\" id=\"{{{MasterParameterPresetGUID}}}\" />\r\n</objects>");
-
-        // For ProfilerFolder XML
-        File.WriteAllText(outputProjectPath + $"/Metadata/ProfilerFolder/{{{MasterProfilerFolderGUID}}}.xml", ""
-            + "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\r\n<objects serializationModel=\"Studio.02.02.00\">\r"
-            + $"\n\t<object class=\"ProfilerSessionFolder\" id=\"{{{MasterProfilerFolderGUID}}}\" />\r\n</objects>");
-
-        // For SandboxFolder XML
-        File.WriteAllText(outputProjectPath + $"/Metadata/SandboxFolder/{{{MasterSandboxFolderGUID}}}.xml", ""
-            + "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\r\n<objects serializationModel=\"Studio.02.02.00\">\r"
-            + $"\n\t<object class=\"MasterSandboxFolder\" id=\"{{{MasterSandboxFolderGUID}}}\" />\r\n</objects>");
-
-        // For SnapshotGroup XML
-        File.WriteAllText(outputProjectPath + $"/Metadata/SnapshotGroup/{{{MasterSandboxFolderGUID}}}.xml", ""
-            + "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\r\n<objects serializationModel=\"Studio.02.02.00\">\r"
-            + $"\n\t<object class=\"SnapshotList\" id=\"{{{MasterSnapshotGUID}}}\">\r\n\t\t<relationship name=\"mixer\">\r"
-            + $"\n\t\t\t<destination>{{{MasterMixerXMLGUID}}}</destination>\r\n\t\t</relationship>\r\n\t</object>\r\n</objects>");
-
-        // Add Main XML Files
-        MasterXMLs.Create_MasterXML(outputProjectPath);
-        MasterXMLs.Create_MixerXML(outputProjectPath);
-        MasterXMLs.Create_TagsXML(outputProjectPath);
-        MasterXMLs.Create_WorkspaceXML(outputProjectPath);
+        // XML Files in the /Metadata folder
+        MasterXMLs.Create_MasterXML();
+        MasterXMLs.Create_MixerXML();
+        MasterXMLs.Create_TagsXML();
+        MasterXMLs.Create_WorkspaceXML();
 
         #endregion
 
@@ -424,23 +364,11 @@ public class Program
             {
                 // For Bank Asset XML
                 BankSpecificGUIDs.Add(bankfilename + "_Asset", GetRandomGUID());
-                File.WriteAllText(outputProjectPath + $"/Metadata/Asset/{{{BankSpecificGUIDs[bankfilename + "_Asset"]}}}.xml", ""
-                    + "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\r"
-                    + "\n<objects serializationModel=\"Studio.02.02.00\">\r"
-                    + $"\n\t<object class=\"EncodableAsset\" id=\"{{{BankSpecificGUIDs[bankfilename + "_Asset"]}}}\">\r"
-                    + "\n\t\t<property name=\"assetPath\">\r"
-                    + $"\n\t\t\t<value>{bankfilename.Replace(".bank", "")}/</value>\r\n\t\t</property>\r"
-                    + "\n\t\t<relationship name=\"masterAssetFolder\">\r"
-                    + $"\n\t\t\t<destination>{{{MasterAssetsGUID}}}</destination>\r"
-                    + "\n\t\t</relationship>\r\n\t</object>\r\n</objects>");
+                MasterXMLs.Create_BankAssetXML(bankfilename);
 
-                // For Bank XML
+                // For Bank File XML
                 BankSpecificGUIDs.Add(bankfilename + "_Bank", GetRandomGUID());
-                File.WriteAllText(outputProjectPath + $"/Metadata/Bank/{{{BankSpecificGUIDs[bankfilename + "_Bank"]}}}.xml", ""
-                    + "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\r\n<objects serializationModel=\"Studio.02.02.00\">\r"
-                    + $"\n\t<object class=\"Bank\" id=\"{{{BankSpecificGUIDs[bankfilename + "_Bank"]}}}\">\r\n\t\t<property name=\"name\">\r"
-                    + $"\n\t\t\t<value>{bankfilename.Replace(".bank", "")}</value>\r\n\t\t</property>\r\n\t\t<relationship name=\"folder\">\r"
-                    + $"\n\t\t\t<destination>{{{MasterBankFolderGUID}}}</destination>\r\n\t\t</relationship>\r\n\t</object>\r\n</objects>");
+                MasterXMLs.Create_BankFileXML(bankfilename);
             }
             #endregion
 
