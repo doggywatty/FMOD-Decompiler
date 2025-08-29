@@ -1,7 +1,7 @@
-﻿using System.ComponentModel;
-using System.Xml;
+﻿using System.Xml;
 using FMOD.Studio;
 using static Program;
+using static XMLHelper;
 
 public class Parameters
 {
@@ -14,18 +14,10 @@ public class Parameters
         // string name of the parameter
         string parmName = parameter.name;
 
+        #region First Segment (Setup)
         // Setup XML
-        var xmlDoc = new XmlDocument();
-        var xmlDeclaration = xmlDoc.CreateXmlDeclaration("1.0", "UTF-8", null);
-        xmlDoc.AppendChild(xmlDeclaration);
-        var root = xmlDoc.CreateElement("objects");
-        root.SetAttribute("serializationModel", "Studio.02.02.00");
-
-        #region First Segment
-        var objectElement1 = xmlDoc.CreateElement("object");
-        objectElement1.SetAttribute("class", "ParameterPreset");
-        objectElement1.SetAttribute("id", $"{{{XMLGUID}}}");
-        root.AppendChild(objectElement1);
+        SetupXML(out XmlDocument xmlDoc, out XmlElement root);
+        SetupHeaderXML(xmlDoc, root, "ParameterPreset", $"{{{XMLGUID}}}", out XmlElement objectElement1);
 
         // Parmeter Name
         AddPropertyElement(xmlDoc, objectElement1, "name", parmName);
@@ -35,11 +27,8 @@ public class Parameters
         AddRelationshipElement(xmlDoc, objectElement1, "parameter", $"{{{ParameterSettings}}}");
         #endregion
 
-        #region Second Segment
-        var objectElement2 = xmlDoc.CreateElement("object");
-        objectElement2.SetAttribute("class", "GameParameter");
-        objectElement2.SetAttribute("id", $"{{{ParameterSettings}}}");
-        root.AppendChild(objectElement2);
+        #region Second Segment (Actual Shit)
+        SetupHeaderXML(xmlDoc, root, "GameParameter", $"{{{ParameterSettings}}}", out XmlElement objectElement2);
 
         // Add Settings Elements
         // Initial Value is always there
@@ -123,28 +112,6 @@ public class Parameters
         string filePath = outputProjectPath + "/Metadata/ParameterPreset/" + $"{{{XMLGUID}}}" + ".xml";
 
         // Save
-        xmlDoc.Save(filePath);
-    }
-    private static void AddPropertyElement(XmlDocument xmlDoc, XmlElement parent, string propertyName, string value)
-    {
-        var propertyElement = xmlDoc.CreateElement("property");
-        propertyElement.SetAttribute("name", propertyName);
-
-        var valueElement = xmlDoc.CreateElement("value");
-        valueElement.InnerText = value;
-
-        propertyElement.AppendChild(valueElement);
-        parent.AppendChild(propertyElement);
-    }
-    private static void AddRelationshipElement(XmlDocument xmlDoc, XmlElement parent, string name, string value)
-    {
-        var propertyElement = xmlDoc.CreateElement("relationship");
-        propertyElement.SetAttribute("name", name);
-
-        var distinationElement = xmlDoc.CreateElement("destination");
-        distinationElement.InnerText = value;
-
-        propertyElement.AppendChild(distinationElement);
-        parent.AppendChild(propertyElement);
+        SaveXML(xmlDoc, filePath);
     }
 }

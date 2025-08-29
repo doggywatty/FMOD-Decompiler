@@ -3,7 +3,6 @@
 using Fmod5Sharp;
 using Fmod5Sharp.FmodTypes;
 using System.Text;
-using System.Xml.Linq;
 using static Program;
 
 public class ExtractSoundAssets

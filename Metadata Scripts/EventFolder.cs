@@ -1,5 +1,7 @@
-﻿using System.Xml;
+﻿using System.Security.Claims;
+using System.Xml;
 using static Program;
+using static XMLHelper;
 
 public class EventFolder
 {
@@ -37,7 +39,7 @@ public class EventFolder
                     EventFolderGUIDs.TryAdd(folder + $"{folder_level}", GetRandomGUID());
 
                     // Create XML
-                    CreateXmlFile(filePath, folder, folders, folder_level);
+                    EventFolderXML(filePath, folder, folders, folder_level);
 
                     // Mark this folder as processed
                     processedFolders.Add(folder + $"{folder_level}");
@@ -47,36 +49,22 @@ public class EventFolder
             }
         }
     }
-    static void CreateXmlFile(string filePath, string folderName, List<string> folders, int folder_level)
+    static void EventFolderXML(string directorypath, string folderName, List<string> folders, int folder_level)
     {
-        // Create XML document
-        XmlDocument xmlDoc = new XmlDocument();
-        XmlDeclaration declaration = xmlDoc.CreateXmlDeclaration("1.0", "UTF-8", null);
-        xmlDoc.AppendChild(declaration);
-
-        // Create the root element
-        XmlElement root = xmlDoc.CreateElement("objects");
-        root.SetAttribute("serializationModel", "Studio.02.02.00");
+        // Setup XML
+        SetupXML(out XmlDocument xmlDoc, out XmlElement root);
         xmlDoc.AppendChild(root);
 
-        // Create object element
-        XmlElement objectElement = xmlDoc.CreateElement("object");
-        objectElement.SetAttribute("class", "EventFolder");
-        objectElement.SetAttribute("id", $"{{{EventFolderGUIDs[folderName + $"{folder_level}"]}}}");
-        root.AppendChild(objectElement);
+        // Create Header and Link its own GUID to itself
+        SetupHeaderXML(xmlDoc, root, "EventFolder", $"{{{EventFolderGUIDs[folderName + $"{folder_level}"]}}}", out XmlElement objectElement);
 
-        // Create property element for the name
-        XmlElement propertyElement = xmlDoc.CreateElement("property");
-        propertyElement.SetAttribute("name", "name");
-        XmlElement valueElement = xmlDoc.CreateElement("value");
-        valueElement.InnerText = folderName;
-        propertyElement.AppendChild(valueElement);
-        objectElement.AppendChild(propertyElement);
+        // Set its Folder Name
+        AddPropertyElement(xmlDoc, objectElement, "name", folderName);
 
-        // GUID of the folder above it
-        XmlElement relationshipElement = xmlDoc.CreateElement("relationship");
+        // Link the GUID of the folder above it
+        var relationshipElement = xmlDoc.CreateElement("relationship");
         relationshipElement.SetAttribute("name", "folder");
-        XmlElement destinationElement = xmlDoc.CreateElement("destination");
+        var destinationElement = xmlDoc.CreateElement("destination");
 
         // find how many subfolders down the folder is
         if (folders[0] == folderName) // if root event folder (like /music/)
@@ -95,7 +83,9 @@ public class EventFolder
         relationshipElement.AppendChild(destinationElement);
         objectElement.AppendChild(relationshipElement);
 
+        string filePath = directorypath + $"/{{{EventFolderGUIDs[folderName + $"{folder_level}"]}}}.xml";
+
         // Save the XML document to File
-        xmlDoc.Save(filePath + $"/{{{EventFolderGUIDs[folderName + $"{folder_level}"]}}}.xml");
+        SaveXML(xmlDoc, filePath);
     }
 }

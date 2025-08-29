@@ -4,8 +4,12 @@
 // so this is basically just a basic template to get events to appear in FMOD Studio
 // anything important like sounds being there is not happening, due to how limited the FMOD API is
 
+using System.Data.Common;
+using System.Data.SqlTypes;
+using System.Reflection.Metadata;
 using System.Xml;
 using static Program;
+using static XMLHelper;
 public class Events
 {
     public static void SaveEvents(string eventname, string bankfilename)
@@ -26,101 +30,69 @@ public class Events
         Guid MixerBusFaderGuid1 = GetRandomGUID();
         Guid MixerBusFaderGuid2 = GetRandomGUID();
 
-        // starter code
-        XmlDocument xmlDoc = new XmlDocument();
-        XmlDeclaration declaration = xmlDoc.CreateXmlDeclaration("1.0", "UTF-8", null);
-        xmlDoc.AppendChild(declaration);
-        XmlElement root = xmlDoc.CreateElement("objects");
-        root.SetAttribute("serializationModel", "Studio.02.02.00");
+        // Setup XML
+        SetupXML(out XmlDocument xmlDoc, out XmlElement root);
         xmlDoc.AppendChild(root);
 
-        // Add the other elements
-        root.AppendChild(CreateObjectElement(xmlDoc, "Event", $"{{{EventGUIDs[eventname]}}}", new string[] { "name", "outputFormat" },
-            // get shortened event name out of event path
-            new string[] { $"{GetName(eventname)}", "0" }, new (string, string)[]
-            {
-                // get name of folder containing the event
-            ("folder", $"{{{GetHigherEventFolder(eventname)}}}"),
-            ("mixer", $"{{{EventMixerGuid}}}"),
-            ("masterTrack", $"{{{MasterTrackGuid}}}"),
+        #region Main Event Info Links
+        SetupHeaderXML(xmlDoc, root, "Event", $"{{{EventGUIDs[eventname]}}}", out XmlElement EventElement);
+        //                                               get shortened event name out of event path
+        AddPropertyElement(xmlDoc, EventElement, "name", GetName(eventname));
+        AddPropertyElement(xmlDoc, EventElement, "outputFormat", "0");
+        //                                                          get name of folder containing the event
+        AddRelationshipElement(xmlDoc, EventElement, "folder", $"{{{GetHigherEventFolder(eventname)}}}");
+        AddRelationshipElement(xmlDoc, EventElement, "mixer", $"{{{EventMixerGuid}}}");
+        AddRelationshipElement(xmlDoc, EventElement, "masterTrack", $"{{{MasterTrackGuid}}}");
+        AddRelationshipElement(xmlDoc, EventElement, "mixerInput", $"{{{MixerInputGuid}}}");
+        AddRelationshipElement(xmlDoc, EventElement, "automatableProperties", $"{{{EventAutomatablePropertiesGuid}}}");
+        AddRelationshipElement(xmlDoc, EventElement, "markerTracks", $"{{{MarkerTrackGuid}}}");
+        AddRelationshipElement(xmlDoc, EventElement, "timeline", $"{{{TimelineGuid}}}");
+        //                                                          connects event to its original bank file
+        AddRelationshipElement(xmlDoc, EventElement, "banks", $"{{{BankSpecificGUIDs[bankfilename + "_Bank"]}}}");
+        #endregion
 
-            ("mixerInput", $"{{{MixerInputGuid}}}"),
-            ("automatableProperties", $"{{{EventAutomatablePropertiesGuid}}}"),
-            ("markerTracks", $"{{{MarkerTrackGuid}}}"),
-            ("timeline", $"{{{TimelineGuid}}}"),
-            // connects event to its original bank file
-            ("banks", $"{{{BankSpecificGUIDs[bankfilename + "_Bank"]}}}")
-            })
-        );
+        #region Event Info
+        SetupHeaderXML(xmlDoc, root, "EventMixer", $"{{{EventMixerGuid}}}", out XmlElement EventMixerElement);
+        AddRelationshipElement(xmlDoc, EventMixerElement, "masterBus", $"{{{EventMixerMasterGuid}}}");
 
-        root.AppendChild(CreateObjectElement(xmlDoc, "EventMixer", $"{{{EventMixerGuid}}}", new string[] { },
-            new string[] { }, new (string, string)[]
-            {
-            ("masterBus", $"{{{EventMixerMasterGuid}}}")
-            })
-        );
+        SetupHeaderXML(xmlDoc, root, "MasterTrack", $"{{{MasterTrackGuid}}}", out XmlElement MasterTrackElement);
+        AddRelationshipElement(xmlDoc, MasterTrackElement, "mixerGroup", $"{{{EventMixerMasterGuid}}}");
 
-        root.AppendChild(CreateObjectElement(xmlDoc, "MasterTrack", $"{{{MasterTrackGuid}}}", new string[] { },
-            new string[] { }, new (string, string)[]
-            {
-            ("mixerGroup", $"{{{EventMixerMasterGuid}}}")
-            })
-        );
+        SetupHeaderXML(xmlDoc, root, "MixerInput", $"{{{MixerInputGuid}}}", out XmlElement MixerInputElement);
+        AddRelationshipElement(xmlDoc, MixerInputElement, "effectChain", $"{{{MixerBusEffectChainGuid1}}}");
+        AddRelationshipElement(xmlDoc, MixerInputElement, "panner", $"{{{MixerBusPannerGuid1}}}");
+        AddRelationshipElement(xmlDoc, MixerInputElement, "output", $"{{{MasterXMLGUID}}}"); // only one that is actually connected to something (Master.xml)
 
-        root.AppendChild(CreateObjectElement(xmlDoc, "MixerInput", $"{{{MixerInputGuid}}}", new string[] { },
-            new string[] { }, new (string, string)[]
-            {
-            ("effectChain", $"{{{MixerBusEffectChainGuid1}}}"),
-            ("panner", $"{{{MixerBusPannerGuid1}}}"),
-            ("output", $"{{{MasterXMLGUID}}}")  // only one that is actually connected to something (Master.xml)
-            })
-        );
+        // Empty Headers (for now maybe)
+        SetupHeaderXML(xmlDoc, root, "EventAutomatableProperties", $"{{{EventAutomatablePropertiesGuid}}}", out XmlElement EventAutomatablePropertiesElement);
+        SetupHeaderXML(xmlDoc, root, "MarkerTrack", $"{{{MarkerTrackGuid}}}", out XmlElement MarkerTrackElement);
+        SetupHeaderXML(xmlDoc, root, "Timeline", $"{{{TimelineGuid}}}", out XmlElement TimelineElement);
 
-        root.AppendChild(CreateEmptyObjectElement(xmlDoc, "EventAutomatableProperties", $"{{{EventAutomatablePropertiesGuid}}}"));
-        root.AppendChild(CreateEmptyObjectElement(xmlDoc, "MarkerTrack", $"{{{MarkerTrackGuid}}}"));
-        root.AppendChild(CreateEmptyObjectElement(xmlDoc, "Timeline", $"{{{TimelineGuid}}}"));
+        SetupHeaderXML(xmlDoc, root, "EventMixerMaster", $"{{{EventMixerMasterGuid}}}", out XmlElement EventMixerMasterElement);
+        AddRelationshipElement(xmlDoc, EventMixerMasterElement, "effectChain", $"{{{MixerBusEffectChainGuid2}}}");
+        AddRelationshipElement(xmlDoc, EventMixerMasterElement, "panner", $"{{{MixerBusPannerGuid2}}}");
+        AddRelationshipElement(xmlDoc, EventMixerMasterElement, "mixer", $"{{{EventMixerGuid}}}");
 
-        root.AppendChild(CreateObjectElement(xmlDoc, "EventMixerMaster", $"{{{EventMixerMasterGuid}}}", new string[] { },
-            new string[] { }, new (string, string)[]
-            {
-            ("effectChain", $"{{{MixerBusEffectChainGuid2}}}"),
-            ("panner", $"{{{MixerBusPannerGuid2}}}"),
-            ("mixer", $"{{{EventMixerGuid}}}")
-            })
-        );
+        SetupHeaderXML(xmlDoc, root, "MixerBusEffectChain", $"{{{MixerBusEffectChainGuid1}}}", out XmlElement MixerBusEffectChainElement1);
+        AddRelationshipElement(xmlDoc, MixerBusEffectChainElement1, "effects", $"{{{MixerBusFaderGuid1}}}");
 
-        root.AppendChild(CreateObjectElement(xmlDoc, "MixerBusEffectChain", $"{{{MixerBusEffectChainGuid1}}}", new string[] { },
-            new string[] { }, new (string, string)[]
-            {
-            ("effects", $"{{{MixerBusFaderGuid1}}}")
-            })
-        );
+        // Empty for now
+        SetupHeaderXML(xmlDoc, root, "MixerBusPanner", $"{{{MixerBusPannerGuid1}}}", out XmlElement MixerBusPannerElement1);
 
-        root.AppendChild(CreateEmptyObjectElement(xmlDoc, "MixerBusPanner", $"{{{MixerBusPannerGuid1}}}"));
-        root.AppendChild(CreateObjectElement(xmlDoc, "MixerBusEffectChain", $"{{{MixerBusEffectChainGuid2}}}", new string[] { },
-            new string[] { }, new (string, string)[]
-            {
-            ("effects", $"{{{MixerBusFaderGuid2}}}")
-            })
-        );
+        SetupHeaderXML(xmlDoc, root, "MixerBusEffectChain", $"{{{MixerBusEffectChainGuid2}}}", out XmlElement MixerBusEffectChainElement2);
+        AddRelationshipElement(xmlDoc, MixerBusEffectChainElement2, "effects", $"{{{MixerBusFaderGuid2}}}");
 
-        root.AppendChild(CreateEmptyObjectElement(xmlDoc, "MixerBusPanner", $"{{{MixerBusPannerGuid2}}}"));
-        root.AppendChild(CreateEmptyObjectElement(xmlDoc, "MixerBusFader", $"{{{MixerBusFaderGuid1}}}"));
-        root.AppendChild(CreateEmptyObjectElement(xmlDoc, "MixerBusFader", $"{{{MixerBusFaderGuid2}}}"));
+        // Empty Headers (for now maybe)
+        SetupHeaderXML(xmlDoc, root, "MixerBusPanner", $"{{{MixerBusPannerGuid2}}}", out XmlElement MixerBusPannerElement2);
+        SetupHeaderXML(xmlDoc, root, "MixerBusFader", $"{{{MixerBusFaderGuid1}}}", out XmlElement MixerBusFaderElement1);
+        SetupHeaderXML(xmlDoc, root, "MixerBusFader", $"{{{MixerBusPannerGuid2}}}", out XmlElement MixerBusFaderElement2);
+        #endregion
 
-        // Make Indentation Settings
-        XmlWriterSettings settings = new XmlWriterSettings
-        {
-            Indent = true,
-            IndentChars = "    ",  // Set 4 spaces for indentation
-            NewLineOnAttributes = false  // avoid new lines
-        };
+        // Output Filepath
+        string filePath = outputProjectPath + $"/Metadata/Event/{{{EventGUIDs[eventname]}}}.xml";
 
         // Save the XML document to a file
-        using (XmlWriter writer = XmlWriter.Create(outputProjectPath + $"/Metadata/Event/{{{EventGUIDs[eventname]}}}.xml", settings))
-        {
-            xmlDoc.WriteTo(writer);
-        }
+        SaveXML(xmlDoc, filePath);
     }
 
     #region Get Event Names
@@ -152,49 +124,6 @@ public class Events
         // Get the last part (event name)
         var folders = new List<string>(pathParts);
         return $"{folders[folders.Count - 1]}";
-    }
-    #endregion
-
-    #region XML Element Stuff
-    // create object elements with properties and relationships
-    private static XmlElement CreateObjectElement(XmlDocument doc, string className, string objectId, string[] propertyNames, string[] propertyValues, (string, string)[] relationships)
-    {
-        XmlElement objElement = doc.CreateElement("object");
-        objElement.SetAttribute("class", className);
-        objElement.SetAttribute("id", objectId);
-
-        // Add properties
-        for (int i = 0; i < propertyNames.Length; i++)
-        {
-            XmlElement propertyElement = doc.CreateElement("property");
-            propertyElement.SetAttribute("name", propertyNames[i]);
-            XmlElement valueElement = doc.CreateElement("value");
-            valueElement.InnerText = propertyValues[i];
-            propertyElement.AppendChild(valueElement);
-            objElement.AppendChild(propertyElement);
-        }
-
-        // Add relationships
-        foreach (var relationship in relationships)
-        {
-            XmlElement relationshipElement = doc.CreateElement("relationship");
-            relationshipElement.SetAttribute("name", relationship.Item1);
-            XmlElement destinationElement = doc.CreateElement("destination");
-            destinationElement.InnerText = relationship.Item2;
-            relationshipElement.AppendChild(destinationElement);
-            objElement.AppendChild(relationshipElement);
-        }
-
-        return objElement;
-    }
-
-    // Create empty elements without properties and relationships
-    private static XmlElement CreateEmptyObjectElement(XmlDocument doc, string className, string objectId)
-    {
-        XmlElement objElement = doc.CreateElement("object");
-        objElement.SetAttribute("class", className);
-        objElement.SetAttribute("id", objectId);
-        return objElement;
     }
     #endregion
 }

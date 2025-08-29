@@ -129,7 +129,7 @@ public class Program
         SetConsoleMode(GetStdHandle(-11), mode | 0x4);
         Console.Clear();
 
-        Console.WriteLine($"Welcome to the FMOD Bank Decompiler {GREEN}(Version 1.1.0){NORMAL}"
+        Console.WriteLine($"Welcome to the FMOD Bank Decompiler {GREEN}(Version 1.1.1){NORMAL}"
         + $"\n\nby {BROWN}DogMatt{NORMAL}"
         + $"\nand {OTHERGRAY}burnedpopcorn180{NORMAL}"
 
