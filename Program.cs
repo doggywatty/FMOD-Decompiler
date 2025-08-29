@@ -9,13 +9,15 @@ public class Program
     #pragma warning disable CS8600
     #pragma warning disable CS8601
     #pragma warning disable CS8602
+    #pragma warning disable CS8603
     #pragma warning disable CS8604
+    #pragma warning disable CS8625
 
     #endregion
 
     #region Colored Text
     // thank you https://stackoverflow.com/questions/2743260/is-it-possible-to-write-to-the-console-in-colour-in-net
-    public static string NL = Environment.NewLine; // shortcut
+    public static string SPACE = "\r                                            "; // shortcut for when not verbose
     public static string NORMAL = Console.IsOutputRedirected ? "" : "\x1b[39m";
     public static string RED = Console.IsOutputRedirected ? "" : "\x1b[91m";
     public static string GREEN = Console.IsOutputRedirected ? "" : "\x1b[92m";
@@ -90,9 +92,25 @@ public class Program
         // for some reason I can't just string color = NORMAL at the beginning because compiler cries
         var truecolor = (color == "NONE") ? NORMAL : color;
 
+        // Whitelisted Strings (for when not in verbose)
+        // i just really dont want to make another optional arg
+        var ifwhitelisted = false;
+        if (!verbose)
+        {
+            string[] whitelist = { "Loading Banks...", "Loaded Bank:", "Conversion Complete!", "Exported Project is at" };
+            foreach (var str in whitelist)
+            {
+                if (message.Contains(str))
+                {
+                    ifwhitelisted = true;
+                    break;
+                }
+            }
+        }
+
         // Show Message on Console
-        // Only if verbose is enabled or overridden
-        if (verbose)
+        // Only if verbose is enabled, or if strings are in whitelist
+        if (verbose || ifwhitelisted)
             Console.WriteLine($"{truecolor}{message}{NORMAL}");
 
         // If also saving to log
@@ -131,7 +149,7 @@ public class Program
         SetConsoleMode(GetStdHandle(-11), mode | 0x4);
         Console.Clear();
 
-        Console.WriteLine($"Welcome to the FMOD Bank Decompiler {GREEN}(Version 1.1.2){NORMAL}"
+        Console.WriteLine($"Welcome to the FMOD Bank Decompiler {GREEN}(Version 1.2.0){NORMAL}"
         + $"\n\nby {BROWN}DogMatt{NORMAL}"
         + $"\nand {OTHERGRAY}burnedpopcorn180{NORMAL}"
 
@@ -143,56 +161,6 @@ public class Program
         );
 
         // Long ass shit that we should just ignore
-        #region DLLs
-
-        // kinda shit way of doing it, but i really dont want to fuck with the FMOD code just to dynamically link it
-        string backupfmodDLL = Path.GetDirectoryName(Environment.ProcessPath) + @"\dlls\fmod.dll"; // Path to your DLL
-        try
-        {
-            // Check if the fmod.dll exists
-            if (File.Exists(backupfmodDLL))
-            {
-                // Copy the file to System32
-                Directory.CreateDirectory(@"C:\fmod-decompiler\");
-                File.Copy(backupfmodDLL, @"C:\fmod-decompiler\fmod.dll", true);
-
-                PushToConsoleLog($"fmod.dll was applied!", GREEN);
-            }
-            else
-            {
-                PushToConsoleLog($"fmod.dll was not found in the /dlls folder.", RED);
-            }
-        }
-        catch (UnauthorizedAccessException)
-        {
-            PushToConsoleLog($"fmod.dll could not be copied to System\nPlease restart the program as an administrator", RED);
-            return;
-        }
-
-        string backupfmodstudioDLL = Path.GetDirectoryName(Environment.ProcessPath) + @"\dlls\fmodstudio.dll"; // Path to your DLL
-        try
-        {
-            // Check if the fmod.dll exists
-            if (File.Exists(backupfmodstudioDLL))
-            {
-                // Copy the file to System32
-                Directory.CreateDirectory(@"C:\fmod-decompiler\");
-                File.Copy(backupfmodstudioDLL, @"C:\fmod-decompiler\fmodstudio.dll", true);
-
-                PushToConsoleLog($"fmodstudio.dll was applied!", GREEN);
-            }
-            else
-            {
-                PushToConsoleLog($"fmodstudio.dll was not found in the /dlls folder.", RED);
-            }
-        }
-        catch (UnauthorizedAccessException)
-        {
-            PushToConsoleLog($"fmodstudio.dll could not be copied to System\nPlease restart the program as an administrator", RED);
-            return;
-        }
-
-        #endregion
         #region Arguments and Folders
 
         // check arguments
@@ -218,7 +186,7 @@ public class Program
             else
             {
                 // Handle missing arguments
-                PushToConsoleLog($"Missing argument: {args[i]}", RED);
+                Console.Write($"Missing argument: {args[i]}");
                 return;
             }
         }
@@ -226,22 +194,22 @@ public class Program
         // if no arguments were added
         if (args.Length == 0)
         {
-            Console.Write("Enter the path to the bank folder: ");
+            Console.Write("Enter the path to the Bank Folder: ");
             bankFolder = Console.ReadLine();
 
-            Console.Write("Enter the path to output the FSPro project: ");
+            Console.Write("Enter the path to output the FSPRO Project: ");
             outputProjectPath = Console.ReadLine();
         }
 
         // If user input nothing
         if (bankFolder == "")
         {
-            PushToConsoleLog($"No Bank file path provided\nQuitting...", RED);
+            Console.Write($"No Bank file path provided\nQuitting...");
             return;
         }
         if (outputProjectPath == "")
         {
-            PushToConsoleLog($"No Output file path provided\nQuitting...", RED);
+            Console.Write($"No Output file path provided\nQuitting...");
             return;
         }
 
@@ -269,6 +237,7 @@ public class Program
         string projectname = "Generic-Project";
         Console.Write("Enter the Project Name: ");
         projectname = Console.ReadLine();
+        var USESPACE = !verbose ? SPACE : "";
 
         if (projectname == "")
             projectname = "Generic-Project";
@@ -311,7 +280,7 @@ public class Program
         FMOD.Studio.System.create(out studioSystem);
         studioSystem.initialize(512, INITFLAGS.NORMAL, FMOD.INITFLAGS.NORMAL, IntPtr.Zero);
 
-        Console.WriteLine($"{YELLOW}Loading Banks...{NORMAL}");
+        PushToConsoleLog($"Loading Banks...", YELLOW);
 
         #region Built-in XML Files
         // this is basically just stuff that is ALWAYS gonna be in a FSPro Project
@@ -344,7 +313,7 @@ public class Program
 
             // just filename
             string bankfilename = Path.GetFileName(bankFilePath);
-            Console.WriteLine($"{GREEN}\nLoaded Bank: {bankfilename}{NORMAL}                    ");//spaces for when not in verbose
+            PushToConsoleLog($"{USESPACE}\nLoaded Bank: {bankfilename}", GREEN);
 
             // if bank loaded is Master.strings.bank, stop and continue to next bank
             // as it never has anything useful to extract
@@ -440,18 +409,15 @@ public class Program
                 if (FindEventType.EventisParameter(eventDescription))
                     FindEventType.GetParameterInfo(eventDescription);
 
-                if (verbose)
-                {
-                    PushToConsoleLog($"Event GUID for {eventname}: {EventGUIDs[eventname]}");
+                PushToConsoleLog($"Event GUID for {eventname}: {EventGUIDs[eventname]}");
 
-                    // event types
-                    if (FindEventType.EventisParameter(eventDescription))
-                        PushToConsoleLog($"Event Sheet Type: Parameter\n{FindEventType.DisplayParameterInfo(eventDescription)}", OTHERGRAY, true);
-                    else if (FindEventType.EventisTimeline(eventInstance))
-                        PushToConsoleLog($"Event Sheet Type: Timeline", OTHERGRAY, true);
-                    else
-                        PushToConsoleLog($"Event Sheet Type: Action", OTHERGRAY, true);
-                }
+                // event types
+                if (FindEventType.EventisParameter(eventDescription))
+                    PushToConsoleLog($"Event Sheet Type: Parameter\n{FindEventType.DisplayParameterInfo(eventDescription)}", OTHERGRAY, true);
+                else if (FindEventType.EventisTimeline(eventInstance))
+                    PushToConsoleLog($"Event Sheet Type: Timeline", OTHERGRAY, true);
+                else
+                    PushToConsoleLog($"Event Sheet Type: Action", OTHERGRAY, true);
                 #endregion
 
                 // HOLY SHIT THIS WORKS
@@ -566,15 +532,9 @@ public class Program
         #region Finish
         // if not verbose, stop spinner
         if (!verbose)
-        {
             SpinnerKill.Cancel();
-            // also write text in a way that will overwrite spinner text
-            Console.WriteLine($"\r                                            \n{GREEN}Conversion Complete!{NORMAL}");
-        }
-        // else if using sane code
-        else if (verbose)
-            PushToConsoleLog($"\nConversion Complete!", GREEN);
 
+        PushToConsoleLog($"{USESPACE}\nConversion Complete!", GREEN);
         PushToConsoleLog($"Exported Project is at {outputProjectPath}", GREEN);
 
         // Clean up the FMOD Studio system

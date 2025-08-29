@@ -30,16 +30,16 @@
     <Resource Include="icon.ico" />
   </ItemGroup>
 
-  <ItemGroup>
-    <None Update="api\studio\lib\fmodstudio.dll">
-      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
-    </None>
-    <None Update="dlls\fmod.dll">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Update="dlls\fmodstudio.dll">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-  </ItemGroup>
+  <!-- Copy FMOD DLLs when running a test build -->
+  <Target Name="PostBuild" AfterTargets="PostBuildEvent">
+    <Copy SourceFiles="DLLs\fmod.dll" DestinationFolder="$(OutDir)" />
+    <Copy SourceFiles="DLLs\fmodstudio.dll" DestinationFolder="$(OutDir)" />
+  </Target>
+
+	<!-- Copy FMOD DLLs when publishing a build -->
+  <Target Name="PostPublish" AfterTargets="Publish">
+	<Copy SourceFiles="DLLs\fmod.dll" DestinationFolder="$(PublishDir)" />
+	<Copy SourceFiles="DLLs\fmodstudio.dll" DestinationFolder="$(PublishDir)" />
+  </Target>
 
 </Project>

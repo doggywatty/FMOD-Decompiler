@@ -21,7 +21,7 @@ namespace FMOD
     {
         public const int    number = 0x00020309;
 #if !UNITY_2021_3_OR_NEWER
-        public const string dll    = @"C:\fmod-decompiler\fmod.dll";
+        public const string dll = "fmod.dll";
 #endif
     }
 
