@@ -144,56 +144,50 @@ public class Program
         #region DLLs
 
         // kinda shit way of doing it, but i really dont want to fuck with the FMOD code just to dynamically link it
-        if (!File.Exists(@"C:\fmod-decompiler\fmod.dll"))
+        string backupfmodDLL = Path.GetDirectoryName(Environment.ProcessPath) + @"\dlls\fmod.dll"; // Path to your DLL
+        try
         {
-            string backupfmodDLL = Path.GetDirectoryName(Environment.ProcessPath) + @"\dlls\fmod.dll"; // Path to your DLL
-            try
+            // Check if the fmod.dll exists
+            if (File.Exists(backupfmodDLL))
             {
-                // Check if the fmod.dll exists
-                if (File.Exists(backupfmodDLL))
-                {
-                    // Copy the file to System32
-                    Directory.CreateDirectory(@"C:\fmod-decompiler\");
-                    File.Copy(backupfmodDLL, @"C:\fmod-decompiler\fmod.dll");
+                // Copy the file to System32
+                Directory.CreateDirectory(@"C:\fmod-decompiler\");
+                File.Copy(backupfmodDLL, @"C:\fmod-decompiler\fmod.dll", true);
 
-                    PushToConsoleLog($"fmod.dll was applied!", GREEN);
-                }
-                else
-                {
-                    PushToConsoleLog($"fmod.dll was not found in the /dlls folder.", RED);
-                }
+                PushToConsoleLog($"fmod.dll was applied!", GREEN);
             }
-            catch (UnauthorizedAccessException)
+            else
             {
-                PushToConsoleLog($"fmod.dll could not be copied to System\nPlease restart the program as an administrator", RED);
-                return;
+                PushToConsoleLog($"fmod.dll was not found in the /dlls folder.", RED);
             }
         }
-
-        if (!File.Exists(@"C:\fmod-decompiler\fmodstudio.dll"))
+        catch (UnauthorizedAccessException)
         {
-            string backupfmodstudioDLL = Path.GetDirectoryName(Environment.ProcessPath) + @"\dlls\fmodstudio.dll"; // Path to your DLL
-            try
-            {
-                // Check if the fmod.dll exists
-                if (File.Exists(backupfmodstudioDLL))
-                {
-                    // Copy the file to System32
-                    Directory.CreateDirectory(@"C:\fmod-decompiler\");
-                    File.Copy(backupfmodstudioDLL, @"C:\fmod-decompiler\fmodstudio.dll");
+            PushToConsoleLog($"fmod.dll could not be copied to System\nPlease restart the program as an administrator", RED);
+            return;
+        }
 
-                    PushToConsoleLog($"fmodstudio.dll was applied!", GREEN);
-                }
-                else
-                {
-                    PushToConsoleLog($"fmodstudio.dll was not found in the /dlls folder.", RED);
-                }
-            }
-            catch (UnauthorizedAccessException)
+        string backupfmodstudioDLL = Path.GetDirectoryName(Environment.ProcessPath) + @"\dlls\fmodstudio.dll"; // Path to your DLL
+        try
+        {
+            // Check if the fmod.dll exists
+            if (File.Exists(backupfmodstudioDLL))
             {
-                PushToConsoleLog($"fmodstudio.dll could not be copied to System\nPlease restart the program as an administrator", RED);
-                return;
+                // Copy the file to System32
+                Directory.CreateDirectory(@"C:\fmod-decompiler\");
+                File.Copy(backupfmodstudioDLL, @"C:\fmod-decompiler\fmodstudio.dll", true);
+
+                PushToConsoleLog($"fmodstudio.dll was applied!", GREEN);
             }
+            else
+            {
+                PushToConsoleLog($"fmodstudio.dll was not found in the /dlls folder.", RED);
+            }
+        }
+        catch (UnauthorizedAccessException)
+        {
+            PushToConsoleLog($"fmodstudio.dll could not be copied to System\nPlease restart the program as an administrator", RED);
+            return;
         }
 
         #endregion
@@ -461,6 +455,10 @@ public class Program
             EventFolderGUIDs.Clear();
 
             #region Get Event Folders
+            // if there are no events, just skip the entire bank
+            if (eventDescriptions is null)
+                continue;
+
             foreach (var eventDescription in eventDescriptions)
             {
                 // get event path
@@ -511,11 +509,15 @@ public class Program
                 // Add all events to txt
                 File.AppendAllTextAsync(outputProjectPath + "/EventGUIDs.txt", $"\n{{{EventGUIDs[eventname]}}} {eventname}");
 
+                // Get Parameters
+                if (FindEventType.EventisParameter(eventDescription))
+                    FindEventType.GetParameterInfo(eventDescription);
+
                 if (verbose)
                 {
                     PushToConsoleLog($"Event GUID for {eventname}: {EventGUIDs[eventname]}");
 
-                    // event types (only for testing at the moment)
+                    // event types
                     if (FindEventType.EventisParameter(eventDescription))
                         PushToConsoleLog($"Event Sheet Type: Parameter\n{FindEventType.DisplayParameterInfo(eventDescription)}", OTHERGRAY, true);
                     else if (FindEventType.EventisTimeline(eventInstance))
@@ -649,7 +651,6 @@ public class Program
         // Clean up the FMOD Studio system
         studioSystem.release();
     }
-    #pragma warning restore CS1998
 
     // If User is not using --verbose
     #region Spinner

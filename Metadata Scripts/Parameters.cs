@@ -6,7 +6,7 @@ using static Program;
 public class Parameters
 {
     public static List<PARAMETER_DESCRIPTION> ParameterList = new List<PARAMETER_DESCRIPTION>();
-    public static void ParmeterXML(PARAMETER_DESCRIPTION parameter, EventDescription evDesc)
+    public static void ParameterXML(PARAMETER_DESCRIPTION parameter, EventDescription evDesc)
     {
         Guid XMLGUID = FMODGUIDToSysGuid(parameter.guid);
         Guid ParameterSettings = GetRandomGUID();
@@ -55,31 +55,47 @@ public class Parameters
         if (parameter.maximum != 1)
             AddPropertyElement(xmlDoc, objectElement2, "maximum", parameter.maximum.ToString());
 
-        // Check if isGlobal | 0x00000004
-        var flags = (uint)parameter.flags;
-        if (flags == (uint)PARAMETER_FLAGS.GLOBAL)
-            AddPropertyElement(xmlDoc, objectElement2, "isGlobal", "true");
+        // Up here because the flags tell if its discrete
+        // but we need to figure out if its labelled
+        int parmType = 0;
 
-        // Check if ReadOnly | 0x00000001
-        if (flags == (uint)PARAMETER_FLAGS.READONLY)
-            AddPropertyElement(xmlDoc, objectElement2, "isReadOnly", "true");
+        // Get Flag string and parse it for goodies
+        string flag = parameter.flags.ToString();
+        // If its not an integer (because it can sometimes be a zero for some reason
+        if (flag != "0")
+        {
+            string[] flags = flag.Split(", ");
 
-        // Since this property takes only integers
-        // cast enum as int first so we don't get enum name
-        // "0" == Continuious (is missing in XML)
+            // Check if isGlobal
+            if (flags.Contains("GLOBAL") || flag == "GLOBAL")
+                AddPropertyElement(xmlDoc, objectElement2, "isGlobal", "true");
+
+            // Check if ReadOnly
+            if (flags.Contains("READONLY") || flag == "READONLY")
+                AddPropertyElement(xmlDoc, objectElement2, "isReadOnly", "true");
+
+            // If Discrete, then setup up var for thing below
+            if (flags.Contains("DISCRETE") || flag == "DISCRETE")
+                parmType = 1;
+
+            // If Labeled, then setup up var for thing below
+            if (flags.Contains("LABELED") || flag == "LABELED")
+                parmType = 2;
+        }
+
+        // "0" == Continuious (is default and missing in XML)
         // "1" == Discrete
         // "2" == Labeled (requires some more stuff)
-        int parmType = (int)parameter.type;
         if (parmType != 0)// If Discrete or Labeled
             AddPropertyElement(xmlDoc, objectElement2, "parameterType", parmType.ToString());
-        else if (parmType == 2)// If Labeled
+        if (parmType == 2)// If Labeled
         {
             // add labels
             var propElement = xmlDoc.CreateElement("property");
             propElement.SetAttribute("name", "enumerationLabels");
 
             // Add Label Names of all values
-            for (var i = 0; i < parameter.maximum; i++)
+            for (var i = 0; i < parameter.maximum + 1; i++)
             {
                 // Get Label Name
                 evDesc.getParameterLabelByID(parameter.id, i, out string labelName);
@@ -95,8 +111,6 @@ public class Parameters
 
         // idk what this is
         //AddPropertyElement(xmlDoc, objectElement2, "isExposedRecursively", "false");
-
-        //AddPropertyElement(xmlDoc, objectElement2, "isReadOnly", "true");
 
         // probably not gonna be added
         //AddPropertyElement(xmlDoc, objectElement2, "seekSpeed", "1");

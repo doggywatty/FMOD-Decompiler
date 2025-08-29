@@ -1,8 +1,9 @@
 ﻿// shit that extracts sounds from banks
 // https://github.com/SamboyCoding/Fmod5Sharp
-using Fmod5Sharp.FmodTypes;
 using Fmod5Sharp;
+using Fmod5Sharp.FmodTypes;
 using System.Text;
+using System.Xml.Linq;
 using static Program;
 
 public class ExtractSoundAssets
@@ -16,17 +17,21 @@ public class ExtractSoundAssets
     {
         string outPath = outputProjectPath + "/Assets";
 
-        // if Master.bank or Master.strings.bank
-        if (bankPath.Contains("Master"))
-            return; // ignore because it causes the thing to fail
-
         var bytes = File.ReadAllBytes(bankPath);
         var index = bytes.AsSpan().IndexOf(Encoding.ASCII.GetBytes("FSB5"));
 
         if (index > 0)
             bytes = bytes.AsSpan(index).ToArray();
 
-        var bank = FsbLoader.LoadFsbFromByteArray(bytes);
+        // Try to safely get sounds from bank file
+        FmodSoundBank bank;
+        try
+            { bank = FsbLoader.LoadFsbFromByteArray(bytes); }
+        catch
+        {
+            PushToConsoleLog($"ERROR! - Failed to extract sounds from {bankfilename}!", RED);
+            return;
+        }
         var outDir = Directory.CreateDirectory(outPath + $"/{bankfilename.Replace(".bank", "")}/");
 
         PushToConsoleLog($"\nExtracting Sound Files from {bankfilename}...\n", YELLOW);

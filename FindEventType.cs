@@ -2,10 +2,7 @@
 using static Program;
 
 // Finds out what Sheet Type an Event uses
-
-// we can't really find out if it's an Action Event tho
-// and Actions should be the default anyways
-// sooooo ... if its not either, just default to action
+// we can't really find out if it's an Action Event tho, so yeah
 
 public class FindEventType
 {
@@ -15,7 +12,7 @@ public class FindEventType
         {
             return true;
         }
-        return false; // explicit return statement for clarity
+        return false;
     }
 
     public static bool EventisParameter(EventDescription evDesc)
@@ -26,6 +23,25 @@ public class FindEventType
             return false;
         }
         return parameterCount > 0;
+    }
+
+    public static void GetParameterInfo(EventDescription evDesc)
+    {
+        if (evDesc.getParameterDescriptionCount(out int parameterCount) != FMOD.RESULT.OK || parameterCount == 0)
+            return;
+
+        for (int i = 0; i < parameterCount; i++)
+        {
+            if (evDesc.getParameterDescriptionByIndex(i, out PARAMETER_DESCRIPTION parameter) == FMOD.RESULT.OK)
+            {
+                // Make XML of the Parameter (if it wasn't made already)
+                if (!Parameters.ParameterList.Contains(parameter))
+                {
+                    Parameters.ParameterXML(parameter, evDesc);
+                    Parameters.ParameterList.Add(parameter);
+                }
+            }
+        }
     }
 
     public static string DisplayParameterInfo(EventDescription evDesc)
@@ -41,13 +57,6 @@ public class FindEventType
         {
             if (evDesc.getParameterDescriptionByIndex(i, out PARAMETER_DESCRIPTION parameter) == FMOD.RESULT.OK)
             {
-                // Make XML of the Parameter (if it wasn't made already)
-                if (!Parameters.ParameterList.Contains(parameter))
-                {
-                    Parameters.ParmeterXML(parameter, evDesc);
-                    Parameters.ParameterList.Add(parameter);
-                }
-
                 string parmName = parameter.name;
                 uint parmID = parameter.id.data1 + parameter.id.data2;//combine uints because yeah
                 Guid parmGUID = FMODGUIDToSysGuid(parameter.guid);
