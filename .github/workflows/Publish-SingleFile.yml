@@ -33,7 +33,7 @@ jobs:
 # ----------------------------------------------------------------------------
     - name: Publish FMOD-Decompiler
       run: |
-        dotnet publish FMOD-Decompiler -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true --output windows-latest
+        dotnet publish FMOD-Decompiler.sln -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true --output windows-latest
 # ----------------------------------------------------------------------------
     - name: Copy README and LICENSE Files
       run: |
