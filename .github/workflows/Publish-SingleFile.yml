@@ -1,46 +1,69 @@
 name: Publish Single File
 
-permissions:
-  contents: write
-
 on:
-  push:
-    tags:
-      - 'v*.*.*'
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: true
 
 jobs:
-  publish:
-    runs-on: ubuntu-latest
+  Building-GUI:
+    strategy:
+      fail-fast: false
+
+    runs-on: windows-latest
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v3
-
-      - name: Set up .NET
-        uses: actions/setup-dotnet@v3
-        with:
-          dotnet-version: '8.0.x'
-
-      - name: Restore dependencies
-        run: dotnet restore
-
-      - name: Build
-        run: dotnet build --configuration Release --no-restore
-
-      - name: Publish Single File
-        run: dotnet publish -c Release -r win-x64 --self-contained true /p:PublishSingleFile=true /p:IncludeNativeLibrariesForSelfExtract=true -o publish
-
-      - name: Upload artifact
-        uses: actions/upload-artifact@v3
-        with:
-          name: published-app
-          path: publish/
-
-      - name: Create Release
-        uses: softprops/action-gh-release@v1
-        with:
-          name: Release ${{ github.ref }}
-          tag_name: ${{ github.ref }}
-          files: publish/*
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    - uses: actions/checkout@v5
+      with:
+        submodules: true
+# ----------------------------------------------------------------------------
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: 8.0.x
+# ----------------------------------------------------------------------------
+    - name: Restore Dependencies
+      run: dotnet restore
+# ----------------------------------------------------------------------------
+    - name: Build
+      run: |
+        dotnet build FMOD-Decompiler.sln --no-restore
+# ----------------------------------------------------------------------------
+    - name: Publish FMOD-Decompiler
+      run: |
+        dotnet publish FMOD-Decompiler.sln -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true --output windows-latest
+# ----------------------------------------------------------------------------
+    - name: Copy README and LICENSE Files
+      run: |
+        cp ./README.md ./windows-latest
+        cp ./LICENSE.txt ./windows-latest
+# ----------------------------------------------------------------------------
+    - name: Create ZIP from Build
+      run: |
+        7z a -tzip FMOD-Decompiler-v1.2.0.zip ./windows-latest/* -mx0
+# ----------------------------------------------------------------------------
+    - name: Create Release
+      id: create_release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: v1.2.0
+        release_name: Release v1.2.0
+        body: |
+          This is release v1.2.0 of FMOD-Decompiler
+        draft: false
+        prerelease: false
+# ----------------------------------------------------------------------------
+    - name: Upload Release to Github
+      id: upload-release-asset
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: ./FMOD-Decompiler-v1.2.0.zip
+        asset_name: FMOD-Decompiler-v1.2.0.zip
+        asset_content_type: application/zip
