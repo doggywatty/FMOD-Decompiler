@@ -1,18 +1,10 @@
 ﻿// Extract Event Info and Create Event XML
-
-// We definitely can't get everything
-// so this is basically just a basic template to get events to appear in FMOD Studio
-// anything important like sounds being there is not happening, due to how limited the FMOD API is
-
-using System.Data.Common;
-using System.Data.SqlTypes;
-using System.Reflection.Metadata;
 using System.Xml;
 using static Program;
 using static XMLHelper;
 public class Events
 {
-    public static void SaveEvents(string eventname, string bankfilename)
+    public static void SaveEvents(string eventname, string bankfilename, List<EventSoundInfo> SoundsinEvent)
     {
         // these change per XML, but not within the XML
         // so they should be here, and not public static
@@ -52,26 +44,74 @@ public class Events
         #endregion
 
         #region Event Info
+        // if audiofile on timeline, assign internal GUID
+        Guid[] multisoundGUIDs = [];
+        if (SoundsinEvent != null && SoundsinEvent.Count != 0)
+        {
+            multisoundGUIDs = new Guid[SoundsinEvent.Count];
+            var i = 0;
+            foreach (var sound in SoundsinEvent)
+            {
+                multisoundGUIDs[i] = GetRandomGUID();
+                i++;
+            }
+        }
+
         SetupHeaderXML(xmlDoc, root, "EventMixer", $"{{{EventMixerGuid}}}", out XmlElement EventMixerElement);
         AddRelationshipElement(xmlDoc, EventMixerElement, "masterBus", $"{{{EventMixerMasterGuid}}}");
 
         SetupHeaderXML(xmlDoc, root, "MasterTrack", $"{{{MasterTrackGuid}}}", out XmlElement MasterTrackElement);
+        // if audiofile on timeline
+        if (SoundsinEvent != null && SoundsinEvent.Count != 0)
+            AddMultiRelationshipElement(xmlDoc, MasterTrackElement, "modules", multisoundGUIDs);
         AddRelationshipElement(xmlDoc, MasterTrackElement, "mixerGroup", $"{{{EventMixerMasterGuid}}}");
 
         SetupHeaderXML(xmlDoc, root, "MixerInput", $"{{{MixerInputGuid}}}", out XmlElement MixerInputElement);
         AddRelationshipElement(xmlDoc, MixerInputElement, "effectChain", $"{{{MixerBusEffectChainGuid1}}}");
         AddRelationshipElement(xmlDoc, MixerInputElement, "panner", $"{{{MixerBusPannerGuid1}}}");
-        AddRelationshipElement(xmlDoc, MixerInputElement, "output", $"{{{MasterXMLGUID}}}"); // only one that is actually connected to something (Master.xml)
+        AddRelationshipElement(xmlDoc, MixerInputElement, "output", $"{{{MasterXMLGUID}}}"); // connected to Master.xml
 
         // Empty Headers (for now maybe)
         SetupHeaderXML(xmlDoc, root, "EventAutomatableProperties", $"{{{EventAutomatablePropertiesGuid}}}", out XmlElement EventAutomatablePropertiesElement);
         SetupHeaderXML(xmlDoc, root, "MarkerTrack", $"{{{MarkerTrackGuid}}}", out XmlElement MarkerTrackElement);
+
+        // Empty header if no sounds are present
         SetupHeaderXML(xmlDoc, root, "Timeline", $"{{{TimelineGuid}}}", out XmlElement TimelineElement);
+        if (SoundsinEvent != null && SoundsinEvent.Count != 0)
+            AddMultiRelationshipElement(xmlDoc, TimelineElement, "modules", multisoundGUIDs);
 
         SetupHeaderXML(xmlDoc, root, "EventMixerMaster", $"{{{EventMixerMasterGuid}}}", out XmlElement EventMixerMasterElement);
         AddRelationshipElement(xmlDoc, EventMixerMasterElement, "effectChain", $"{{{MixerBusEffectChainGuid2}}}");
         AddRelationshipElement(xmlDoc, EventMixerMasterElement, "panner", $"{{{MixerBusPannerGuid2}}}");
         AddRelationshipElement(xmlDoc, EventMixerMasterElement, "mixer", $"{{{EventMixerGuid}}}");
+
+        // Here is where Single Sounds would go
+        if (SoundsinEvent != null && SoundsinEvent.Count != 0)
+        {
+            var i = 0;
+            foreach (var sound in SoundsinEvent)
+            {
+                SetupHeaderXML(xmlDoc, root, "SingleSound", $"{{{multisoundGUIDs[i]}}}", out XmlElement SoundElement);
+                // where the sound starts on the timeline (in seconds)
+                if (sound.startpos != 0)
+                    AddPropertyElement(xmlDoc, SoundElement, "start", $"{sound.startpos}");
+                // length in milliseconds
+                AddPropertyElement(xmlDoc, SoundElement, "length", $"{sound.length}");
+
+                // sometimes there if needed
+
+                // if loopcount == -1 or 1+
+                if (sound.loopcount == -1 || sound.loopcount > 0)
+                    AddPropertyElement(xmlDoc, SoundElement, "looping", $"true");
+                // if loopcount is 1+ (not -1 or 0)
+                if (sound.loopcount > 0)
+                    AddPropertyElement(xmlDoc, SoundElement, "playCount", $"{sound.loopcount}");
+
+                // link audiofile GUID (always there)
+                AddRelationshipElement(xmlDoc, SoundElement, "audioFile", $"{{{sound.GUID}}}");
+                i++;
+            }
+        }
 
         SetupHeaderXML(xmlDoc, root, "MixerBusEffectChain", $"{{{MixerBusEffectChainGuid1}}}", out XmlElement MixerBusEffectChainElement1);
         AddRelationshipElement(xmlDoc, MixerBusEffectChainElement1, "effects", $"{{{MixerBusFaderGuid1}}}");

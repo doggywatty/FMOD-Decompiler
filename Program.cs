@@ -142,6 +142,16 @@ public class Program
     }
     #endregion
 
+    // Struct for Event Info and shit
+    public struct EventSoundInfo
+    {
+        public string name;
+        public Guid GUID;
+        public int startpos;
+        public uint length;
+        public int loopcount;
+    }
+
     public static async Task Main(string[] args)
     {
         // initialize
@@ -431,7 +441,13 @@ public class Program
                 bool Event_IsDone = false;
 
                 // List that holds all names of sounds that have already been played
-                List<string> SoundsinEvent = new List<string> { };
+                List<string> SoundsinEvent = [];
+                // tells us if FMOD tried to play it twice (looping event)
+                Dictionary<string, bool> SoundIsLooping = [];
+
+                // Save Sound Info to struct
+                List<EventSoundInfo> SoundsInfo = [];
+                EventSoundInfo SoundInfo;
 
                 #region Callbacks
                 // Here's basically all the Functions we can use now
@@ -451,6 +467,15 @@ public class Program
                                 break;
                             }
 
+                            // Get Starting Position of sound currently playing
+                            eventInstance.getTimelinePosition(out int currentPosition);
+
+                            // get loop info (-1 is always loop, 0 is no loop, 1+ is loop at specific points)
+                            sound.getLoopCount(out int loopcount);
+
+                            // get length of sound in milliseconds
+                            sound.getLength(out uint soundlength, FMOD.TIMEUNIT.MS);
+
                             // Get File Extension (from ExtractSounds.cs)
                             var fileExtension = "";
                             // get sound names and their extensions from the current bank file
@@ -459,14 +484,32 @@ public class Program
                             if (SoundNameExt.ContainsKey(name))
                                 fileExtension = "." + SoundNameExt[name];
 
+                            var truename = name + fileExtension;
+
                             // If Sound hasn't been played yet
                             if (!SoundsinEvent.Contains(name))
                             {
                                 // Get Sound File used in Event
-                                PushToConsoleLog($"Sound Used: {name}{fileExtension}", GREEN, true);
+                                PushToConsoleLog($"Sound Used: {truename}", GREEN, true);
+                                PushToConsoleLog($"Sound Length: {soundlength}", GREEN, true);
+                                PushToConsoleLog($"Loop Count: {loopcount}", GREEN, true);
+                                PushToConsoleLog($"Played at: {currentPosition}", GREEN, true);
+
+                                // Add Important Info to Struct
+                                SoundInfo.name = truename;
+                                SoundInfo.GUID = AudioFileGUIDs[bankfilename.Replace(".bank", "\\") + truename];
+                                SoundInfo.startpos = currentPosition / 1000;
+                                SoundInfo.length = soundlength / 1000;
+                                SoundInfo.loopcount = loopcount;
+                                // Save info in a dictionary, since there could be many sounds
+                                SoundsInfo.Add(SoundInfo);
+
                                 // Flag as played
                                 SoundsinEvent.Add(name);
+                                SoundIsLooping[name] = false;
                             }
+                            else
+                                SoundIsLooping[name] = true;
                             // Just leave if it has already been played
                             break;
 
@@ -500,6 +543,20 @@ public class Program
                 {
                     studioSystem.update();
 
+                    // check if sounds are looping
+                    var islooping = false;
+                    foreach (var name in SoundsinEvent) 
+                    {
+                        if (SoundIsLooping[name] == true)
+                        {
+                            islooping = true;
+                            break;
+                        }
+                    }
+                    // If it is, leave
+                    if (islooping)
+                        break;
+
                     // Timeout, that triggers when the event should've ended (accounting for speedup as well)
                     // plus about a second
                     if (timeout == (EventLength / playbackSpeed) + 10000000)
@@ -511,7 +568,7 @@ public class Program
                         else if (SoundsinEvent.Count == 0 && EventLength != 0)
                             PushToConsoleLog($"ERROR! - Internal Event Metadata failed to load!", RED, true);
                         else
-                            PushToConsoleLog($"Internal Event Checking Timed Out...\n(Likely a Looping Event)", NORMAL, true);
+                            PushToConsoleLog($"Internal Event Checking Timed Out...", NORMAL, true);
 
                         break;
                     }
@@ -525,7 +582,7 @@ public class Program
                 #endregion
 
                 // Save Event XML
-                Events.SaveEvents(eventname, bankfilename);
+                Events.SaveEvents(eventname, bankfilename, SoundsInfo);
             }
         }
 

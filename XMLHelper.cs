@@ -48,6 +48,37 @@ public class XMLHelper
         propertyElement.AppendChild(distinationElement);
         root.AppendChild(propertyElement);
     }
+
+    public static void AddMultiPropertyElement(XmlDocument xmlDoc, XmlElement root, string name, string[] values)
+    {
+        var propertyElement = xmlDoc.CreateElement("property");
+        propertyElement.SetAttribute("name", name);
+
+        foreach (var value in values)
+        {
+            var valueElement = xmlDoc.CreateElement("value");
+            valueElement.InnerText = value;
+
+            propertyElement.AppendChild(valueElement);
+        }
+
+        root.AppendChild(propertyElement);
+    }
+
+    public static void AddMultiRelationshipElement(XmlDocument xmlDoc, XmlElement root, string name, Guid[] values)
+    {
+        var propertyElement = xmlDoc.CreateElement("relationship");
+        propertyElement.SetAttribute("name", name);
+
+        foreach (var value in values)
+        {
+            var distinationElement = xmlDoc.CreateElement("destination");
+            distinationElement.InnerText = value.ToString();
+            propertyElement.AppendChild(distinationElement);
+        }
+
+        root.AppendChild(propertyElement);
+    }
     #endregion
 
     #region Save XML Function
