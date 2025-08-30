@@ -1,66 +1,46 @@
 name: Publish Single File
 
-on:
-  workflow_dispatch:
-    inputs:
-      version:
-        description: "Release version"
-        required: true
-        default: "v1.2.0"
+permissions:
+  contents: write
 
-concurrency:
-  group: ${{ github.workflow }}
-  cancel-in-progress: true
+on:
+  push:
+    tags:
+      - 'v*.*.*'
 
 jobs:
-  Building-GUI:
-    runs-on: windows-latest
-    strategy:
-      fail-fast: false
+  publish:
+    runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v5
-      with:
-        submodules: true
+      - name: Checkout repository
+        uses: actions/checkout@v3
 
-    - name: Setup .NET
-      uses: actions/setup-dotnet@v4
-      with:
-        dotnet-version: 8.0.x
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v3
+        with:
+          dotnet-version: '8.0.x'
 
-    - name: Restore Dependencies
-      run: dotnet restore
+      - name: Restore dependencies
+        run: dotnet restore
 
-    - name: Build
-      run: dotnet build FMOD-Decompiler.sln --no-restore
+      - name: Build
+        run: dotnet build --configuration Release --no-restore
 
-    - name: Publish FMOD-Decompiler
-      run: dotnet publish FMOD-Decompiler.sln -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true --output ./publish
+      - name: Publish Single File
+        run: dotnet publish -c Release -r win-x64 --self-contained true /p:PublishSingleFile=true /p:IncludeNativeLibrariesForSelfExtract=true -o publish
 
-    - name: Copy README and LICENSE Files
-      run: |
-        copy README.md publish\
-        copy LICENSE.txt publish\
+      - name: Upload artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: published-app
+          path: publish/
 
-    - name: Create ZIP from Build
-      run: |
-        7z a -tzip FMOD-Decompiler-${{ github.event.inputs.version }}.zip ./publish/* -mx0
-
-    - name: Create Release
-      uses: softprops/action-gh-release@v1
-      with:
-        tag_name: ${{ github.event.inputs.version }}
-        name: Release ${{ github.event.inputs.version }}
-        body: |
-          This is release ${{ github.event.inputs.version }} of FMOD-Decompiler
-        draft: false
-        prerelease: false
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-    - name: Upload Release Asset
-      uses: softprops/action-gh-release@v1
-      with:
-        files: FMOD-Decompiler-${{ github.event.inputs.version }}.zip
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          name: Release ${{ github.ref }}
+          tag_name: ${{ github.ref }}
+          files: publish/*
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
