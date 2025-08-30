@@ -2,6 +2,11 @@ name: Publish Single File
 
 on:
   workflow_dispatch:
+    inputs:
+      version:
+        description: "Release version"
+        required: true
+        default: "v1.2.0"
 
 concurrency:
   group: ${{ github.workflow }}
@@ -9,61 +14,53 @@ concurrency:
 
 jobs:
   Building-GUI:
+    runs-on: windows-latest
     strategy:
       fail-fast: false
-
-    runs-on: windows-latest
 
     steps:
     - uses: actions/checkout@v5
       with:
         submodules: true
-# ----------------------------------------------------------------------------
+
     - name: Setup .NET
       uses: actions/setup-dotnet@v4
       with:
         dotnet-version: 8.0.x
-# ----------------------------------------------------------------------------
+
     - name: Restore Dependencies
       run: dotnet restore
-# ----------------------------------------------------------------------------
+
     - name: Build
-      run: |
-        dotnet build FMOD-Decompiler.sln --no-restore
-# ----------------------------------------------------------------------------
+      run: dotnet build FMOD-Decompiler.sln --no-restore
+
     - name: Publish FMOD-Decompiler
-      run: |
-        dotnet publish FMOD-Decompiler.sln -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true --output windows-latest
-# ----------------------------------------------------------------------------
+      run: dotnet publish FMOD-Decompiler.sln -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true --output ./publish
+
     - name: Copy README and LICENSE Files
       run: |
-        cp ./README.md ./windows-latest
-        cp ./LICENSE.txt ./windows-latest
-# ----------------------------------------------------------------------------
+        copy README.md publish\
+        copy LICENSE.txt publish\
+
     - name: Create ZIP from Build
       run: |
-        7z a -tzip FMOD-Decompiler-v1.2.0.zip ./windows-latest/* -mx0
-# ----------------------------------------------------------------------------
+        7z a -tzip FMOD-Decompiler-${{ github.event.inputs.version }}.zip ./publish/* -mx0
+
     - name: Create Release
-      id: create_release
-      uses: actions/create-release@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      uses: softprops/action-gh-release@v1
       with:
-        tag_name: v1.2.0
-        release_name: Release v1.2.0
+        tag_name: ${{ github.event.inputs.version }}
+        name: Release ${{ github.event.inputs.version }}
         body: |
-          This is release v1.2.0 of FMOD-Decompiler
+          This is release ${{ github.event.inputs.version }} of FMOD-Decompiler
         draft: false
         prerelease: false
-# ----------------------------------------------------------------------------
-    - name: Upload Release to Github
-      id: upload-release-asset
-      uses: actions/upload-release-asset@v1
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Upload Release Asset
+      uses: softprops/action-gh-release@v1
       with:
-        upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: ./FMOD-Decompiler-v1.2.0.zip
-        asset_name: FMOD-Decompiler-v1.2.0.zip
-        asset_content_type: application/zip
+        files: FMOD-Decompiler-${{ github.event.inputs.version }}.zip
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
