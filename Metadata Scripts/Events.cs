@@ -1,11 +1,12 @@
 ﻿// Extract Event Info and Create Event XML
+using System.Reflection;
 using System.Xml;
 using static Program;
 using static XMLHelper;
 #pragma warning disable CS8602
 public class Events
 {
-    public static void SaveEvents(string eventname, string bankfilename, List<EventSoundInfo> SoundsinEvent, List<EventMarkerInfo> MarkersInfo, bool IsAction = false, bool IsParameter = false)
+    public static void SaveEvents(string eventname, string bankfilename, List<EventSoundInfo> SoundsinEvent, List<EventMarkerInfo> MarkersInfo, List<EventParameterInfo> ParametersInfo, bool IsAction = false)
     {
         #region Init Main GUIDs
         // these change per XML, but not within the XML
@@ -31,7 +32,7 @@ public class Events
         {
             multisoundGUIDs = new Guid[SoundsinEvent.Count];
             var i = 0;
-            foreach (var sound in SoundsinEvent)
+            foreach (var s in SoundsinEvent)
             {
                 multisoundGUIDs[i] = GetRandomGUID();
                 i++;
@@ -44,13 +45,29 @@ public class Events
         #region Marker Init
         var MarkersPresent = MarkersInfo != null && MarkersInfo.Count != 0;
         Guid[] MarkerGUIDs = [];
-        if (SoundsPresent)
+        if (MarkersPresent)
         {
             MarkerGUIDs = new Guid[MarkersInfo.Count];
             var i = 0;
-            foreach (var marker in MarkersInfo)
+            foreach (var m in MarkersInfo)
             {
                 MarkerGUIDs[i] = GetRandomGUID();
+                i++;
+            }
+        }
+        #endregion
+        #region Parameter Init
+        var ParametersPresent = ParametersInfo != null && ParametersInfo.Count != 0;
+        Guid[] ParameterGUIDs = [], ParameterConditionGUIDs = [];
+        if (ParametersPresent)
+        {
+            ParameterGUIDs = new Guid[ParametersInfo.Count];
+            ParameterConditionGUIDs = new Guid[ParametersInfo.Count];
+            var i = 0;
+            foreach (var p in ParametersInfo)
+            {
+                ParameterGUIDs[i] = GetRandomGUID();
+                ParameterConditionGUIDs[i] = GetRandomGUID();
                 i++;
             }
         }
@@ -115,9 +132,13 @@ public class Events
         // else if there are sounds, and action sheet
         else if (SoundsPresent && IsAction)
             AddPropertyElement(xmlDoc, TimelineElement, "isProxyEnabled", "false");
-        // Add Markers to Timeline
-        if (MarkersPresent)
+        // Add Markers and Parameters to Timeline
+        if (MarkersPresent && ParametersPresent)
+            AddMultiRelationshipElement(xmlDoc, TimelineElement, "markers", MarkerGUIDs.Concat(ParameterGUIDs).ToArray());// add both to single array
+        else if (MarkersPresent)
             AddMultiRelationshipElement(xmlDoc, TimelineElement, "markers", MarkerGUIDs);
+        else if (ParametersPresent)
+            AddMultiRelationshipElement(xmlDoc, TimelineElement, "markers", ParameterGUIDs);
         #endregion
 
         // Main Action Sheet Header
@@ -152,18 +173,6 @@ public class Events
                 // length in milliseconds
                 AddPropertyElement(xmlDoc, SoundElement, "length", $"{sound.length}");
 
-                /*
-                 * sound.getLoopCount doesn't work as intended
-                 * so we need another solution
-
-                // if loopcount == -1 or 1+
-                if (sound.loopcount == -1 || sound.loopcount > 0)
-                    AddPropertyElement(xmlDoc, SoundElement, "looping", $"true");
-                // if loopcount is 1+ (not -1 or 0)
-                if (sound.loopcount > 0)
-                    AddPropertyElement(xmlDoc, SoundElement, "playCount", $"{sound.loopcount}");
-                */
-
                 // link audiofile GUID (always there)
                 AddRelationshipElement(xmlDoc, SoundElement, "audioFile", $"{{{sound.GUID}}}");
                 i++;
@@ -176,6 +185,27 @@ public class Events
 
         // Empty for now
         SetupHeaderXML(xmlDoc, root, "MixerBusPanner", $"{{{MixerBusPannerGuid1}}}", out XmlElement MixerBusPannerElement1);
+
+        // Mainly used for Magnet Regions with Parameters, but could be used for normal Loop regions
+        #region Index Loop Regions
+        if (ParametersPresent)
+        {
+            var i = 0;
+            foreach (var param in ParametersInfo)
+            {
+                SetupHeaderXML(xmlDoc, root, "LoopRegion", $"{{{ParameterGUIDs[i]}}}", out XmlElement LoopElement);
+                AddPropertyElement(xmlDoc, LoopElement, "position", $"{param.start}");
+                AddPropertyElement(xmlDoc, LoopElement, "length", $"{param.length}");
+                // Normal = 0, Loop = 1 (missing), Magnet = 2
+                AddPropertyElement(xmlDoc, LoopElement, "looping", "2");
+
+                AddRelationshipElement(xmlDoc, LoopElement, "timeline", $"{{{TimelineGuid}}}");
+                AddRelationshipElement(xmlDoc, LoopElement, "markerTrack", $"{{{MarkerTrackGuid}}}");
+                AddRelationshipElement(xmlDoc, LoopElement, "triggerConditions", $"{{{ParameterConditionGUIDs[i]}}}");
+                i++;
+            }
+        }
+        #endregion
 
         #region Index Markers
         if (MarkersPresent)
@@ -199,6 +229,24 @@ public class Events
         // Empty Headers (for now maybe)
         SetupHeaderXML(xmlDoc, root, "MixerBusPanner", $"{{{MixerBusPannerGuid2}}}", out XmlElement MixerBusPannerElement2);
         SetupHeaderXML(xmlDoc, root, "MixerBusFader", $"{{{MixerBusFaderGuid1}}}", out XmlElement MixerBusFaderElement1);
+
+        #region Index Parameter Conditions for Loop Regions
+        if (ParametersPresent)
+        {
+            var i = 0;
+            foreach (var param in ParametersInfo)
+            {
+                SetupHeaderXML(xmlDoc, root, "ParameterCondition", $"{{{ParameterConditionGUIDs[i]}}}", out XmlElement ParameterElement);
+                AddPropertyElement(xmlDoc, ParameterElement, "minimum", $"{param.value}");
+                AddPropertyElement(xmlDoc, ParameterElement, "maximum", $"{param.value}");
+
+                // Link to actual parameter XML
+                AddRelationshipElement(xmlDoc, ParameterElement, "parameter", $"{{{param.GUID}}}");
+                i++;
+            }
+        }
+        #endregion
+
         SetupHeaderXML(xmlDoc, root, "MixerBusFader", $"{{{MixerBusPannerGuid2}}}", out XmlElement MixerBusFaderElement2);
         #endregion
 

@@ -6,13 +6,17 @@ using static XMLHelper;
 public class Parameters
 {
     public static List<PARAMETER_DESCRIPTION> ParameterList = [];
+    public static Dictionary<string, Guid> ParametersGuid = [];
     public static void ParameterXML(PARAMETER_DESCRIPTION parameter, EventDescription evDesc)
     {
-        Guid XMLGUID = FMODGUIDToSysGuid(parameter.guid);
-        Guid ParameterSettings = GetRandomGUID();
+        Guid XMLGUID = GetRandomGUID();
+        Guid ParameterSettings = FMODGUIDToSysGuid(parameter.guid);
 
         // string name of the parameter
         string parmName = parameter.name;
+
+        // add for event XML
+        ParametersGuid.Add(parmName, ParameterSettings);
 
         #region First Segment (Setup)
         // Setup XML

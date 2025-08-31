@@ -49,22 +49,6 @@ public class XMLHelper
         root.AppendChild(propertyElement);
     }
 
-    public static void AddMultiPropertyElement(XmlDocument xmlDoc, XmlElement root, string name, string[] values)
-    {
-        var propertyElement = xmlDoc.CreateElement("property");
-        propertyElement.SetAttribute("name", name);
-
-        foreach (var value in values)
-        {
-            var valueElement = xmlDoc.CreateElement("value");
-            valueElement.InnerText = value;
-
-            propertyElement.AppendChild(valueElement);
-        }
-
-        root.AppendChild(propertyElement);
-    }
-
     public static void AddMultiRelationshipElement(XmlDocument xmlDoc, XmlElement root, string name, Guid[] values)
     {
         var propertyElement = xmlDoc.CreateElement("relationship");

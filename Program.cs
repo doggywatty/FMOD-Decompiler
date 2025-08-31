@@ -143,17 +143,14 @@ public class Program
     }
     #endregion
 
-    // Struct for Event Info and shit
+    #region Event Structs
+    // Struct for Sounds on Timeline
     public struct EventSoundInfo
     {
         public string name;
         public Guid GUID;
         public double startpos;
         public double length;
-
-        // Which parameter they are set to
-        public string parametername;
-        public double parametervalue;
     }
 
     // Structs for Markers on Timeline
@@ -163,6 +160,17 @@ public class Program
         public double position;
     }
 
+    // Structs for Parameters on Timeline
+    public struct EventParameterInfo
+    {
+        public string name;
+        public Guid GUID;
+        public double value;
+        public double start;
+        public double length;
+    }
+    #endregion
+
     public static async Task Main(string[] args)
     {
         // initialize
@@ -170,13 +178,15 @@ public class Program
         SetConsoleMode(GetStdHandle(-11), mode | 0x4);
         Console.Clear();
 
-        Console.WriteLine($"Welcome to the FMOD Bank Decompiler {GREEN}(Version 1.3.0){NORMAL}"
-        + $"\n\nby {BROWN}DogMatt{NORMAL}"
-        + $"\nand {OTHERGRAY}burnedpopcorn180{NORMAL}"
+        Console.WriteLine($"Welcome to the FMOD Bank Decompiler {GREEN}(Version 1.4.0){NORMAL}"
+        + $"\n\nby {OTHERGRAY}burnedpopcorn180{NORMAL}"
+        + $"\nand {BROWN}DogMatt{NORMAL}"
 
-        + $"\n\n{RED}Unfortunately, this Decompiler is pretty limited in what it can extract{NORMAL}"
-        + $"\n{RED}Most things, like Events, you WILL have to recreate by yourself{NORMAL}"
-        + $"\n{RED}But this Decompiler will at least give you a bare shell to work off of{NORMAL}"
+        + $"\n\n{RED}Note that this Decompiler tries its best to recreate the original project file{NORMAL}"
+        + $"\n{RED}However, it won't give you a working recreation out of the box{NORMAL}"
+        + $"\n{RED}You most likely will have to tweak things like events to get a functional recreation{NORMAL}"
+
+        + $"\n{GREEN}With that being said, have fun{NORMAL}"
 
         + $"\n"
         );
@@ -439,9 +449,6 @@ public class Program
                 else
                     PushToConsoleLog($"Event Sheet Type: Action", OTHERGRAY, true);
                 #endregion
-
-                // HOLY SHIT THIS WORKS
-                // THE FLOOD GATES HAVE OPENED
                 #region Get Internal Event MetaData
                 // So basically what this is doing is that it's playing every sound in the event
                 // so we can retrieve info on the sound such as sound file names
@@ -461,6 +468,10 @@ public class Program
                 List<EventSoundInfo> SoundsInfo = [];
                 EventSoundInfo SoundInfo;
 
+                // Save Parameter Info to struct
+                List<EventParameterInfo> ParametersInfo = [];
+                EventParameterInfo ParameterInfo;
+
                 // Save Marker Info to struct
                 List<EventMarkerInfo> MarkersInfo = [];
                 EventMarkerInfo MarkerInfo;
@@ -471,6 +482,11 @@ public class Program
                 bool IsAction = false;
                 bool LockAction = false;
 
+                // Sometimes Sound starts at 1.962 seconds late into the timeline
+                // Adjust for that when needed
+                bool AdjustStartPos = true;
+                bool FirstSound = true;
+
                 // Parameter stuffs
                 bool IsParameter = FindEventType.EventisParameter(eventDescription);
                 bool InitParameter = false;
@@ -478,7 +494,7 @@ public class Program
                 int MaxParameterValue = 0;
                 List<string> ParameterList = FindEventType.ParameterArray;
                 int ParameterIndex = 0;
-                string ParameterName = "";
+                string ParameterName = string.Empty;
                 #endregion
                 #region Callback
                 // Here's basically all the Functions we can use now
@@ -491,7 +507,7 @@ public class Program
                         // Callback that triggers once a single sound is played in the event
                         // (Can trigger many times depending on how many sounds there are)
                         case EVENT_CALLBACK_TYPE.SOUND_PLAYED:
-
+                            #region Get Info
                             FMOD.Sound sound = new(parameterPtr);
                             if (sound.getName(out string name, 1024) != FMOD.RESULT.OK)
                             {
@@ -505,6 +521,9 @@ public class Program
                             // get length of sound in milliseconds
                             sound.getLength(out uint soundlength, FMOD.TIMEUNIT.MS);
 
+                            // get loop points of sound (aka start and end points on timeline)
+                            sound.getLoopPoints(out uint unused, FMOD.TIMEUNIT.MS, out uint loopend, FMOD.TIMEUNIT.MS);
+
                             // Get File Extension (from ExtractSounds.cs)
                             var fileExtension = "";
                             // get sound names and their extensions from the current bank file
@@ -517,7 +536,19 @@ public class Program
                             // Get precise values (values with decimals)
                             double truelength = (double)soundlength / 1000;
                             double truestartpos = (double)currentPosition / 1000;
-
+                            // Adjust Start Pos if needed
+                            if (AdjustStartPos)
+                            {
+                                if (truestartpos != 0)
+                                    truestartpos = truestartpos - 1.962;
+                                // if First Sound starts at zero, dont adjust for this one or future ones
+                                else if (truestartpos == 0 && FirstSound)
+                                    AdjustStartPos = false;
+                            }
+                            FirstSound = false;
+                            double truelooplength = (double)loopend / 1000;
+                            #endregion
+                            #region Set Info
                             // If Sound hasn't been played yet
                             if (!SoundsinEvent.Contains(name))
                             {
@@ -532,15 +563,24 @@ public class Program
                                     PushToConsoleLog($"Parameter Value when triggered: {ParameterValue}", GREEN, true);
                                 }
 
-                                // Add Important Info to Struct
+                                // Add Important Sound Info to Struct
                                 SoundInfo.name = truename;
                                 SoundInfo.GUID = AudioFileGUIDs[bankfilename.Replace(".bank", "\\") + truename];
                                 SoundInfo.startpos = truestartpos;
                                 SoundInfo.length = truelength;
-                                SoundInfo.parametername = ParameterName;
-                                SoundInfo.parametervalue = ParameterValue;
                                 // Save info in a dictionary, since there could be many sounds
                                 SoundsInfo.Add(SoundInfo);
+
+                                // Add Parameter Info to Struct
+                                if (ParameterName != string.Empty)
+                                {
+                                    ParameterInfo.name = ParameterName;
+                                    ParameterInfo.GUID = Parameters.ParametersGuid[ParameterName];
+                                    ParameterInfo.value = ParameterValue;
+                                    ParameterInfo.start = truestartpos;
+                                    ParameterInfo.length = truelooplength;
+                                    ParametersInfo.Add(ParameterInfo);
+                                }
 
                                 // If sound is less than a second long, make it an Action Sheet
                                 // Or else it won't play in FMOD Studio
@@ -560,8 +600,9 @@ public class Program
                                 // Flag as played
                                 SoundsinEvent.Add(name);
                             }
-
-                            // Just leave if it has already been played
+                            #endregion
+                            // to skip sound and go to the end of it for next sound
+                            eventInstance.setTimelinePosition((int)loopend);
                             break;
                         #endregion
                         #region Marker Callback
@@ -575,6 +616,12 @@ public class Program
                                 PushToConsoleLog($"Found Marker!", OTHERGRAY, true);
                                 PushToConsoleLog($"Marker Name: {markername}", OTHERGRAY, true);
                                 PushToConsoleLog($"Marker Pos: {markerpos}", OTHERGRAY, true);
+
+                                if (IsParameter && ParameterValue > 0)
+                                {
+                                    PushToConsoleLog($"Marker triggered on Parameter: {ParameterName}", OTHERGRAY, true);
+                                    PushToConsoleLog($"Parameter Value when triggered: {ParameterValue}", OTHERGRAY, true);
+                                }
 
                                 // Save Marker
                                 MarkerInfo.name = markername;
@@ -614,6 +661,21 @@ public class Program
                 // Get length of All of the Event's Audio
                 eventDescription.getLength(out int EventLength);
 
+                #region Initial Parameter Check n Set
+                if (ParameterList == null || ParameterList.Count == 0)
+                    IsParameter = false;
+
+                if (IsParameter && !InitParameter)
+                {
+                    ParameterName = ParameterList[ParameterIndex];
+                    PushToConsoleLog($"Checking Parameter: {ParameterName}", BROWN, true);
+                    ParameterValue = FindEventType.GetMinParamValue(eventDescription, ParameterIndex);
+                    MaxParameterValue = FindEventType.GetMaxParamValue(eventDescription, ParameterIndex);
+                    // so this won't run anymore
+                    InitParameter = true;
+                }
+                #endregion
+
                 // Updates FMOD System until event has ended
                 #region Wait for Callbacks
                 while (!Event_IsDone)
@@ -624,7 +686,7 @@ public class Program
                     // plus about a second
                     if (timeout >= (EventLength / playbackSpeed) + 10000000)
                     {
-                        // if no events, skip this shit
+                        #region Looping Parameter Check n Set
                         if (ParameterList == null || ParameterList.Count == 0)
                             IsParameter = false;
 
@@ -637,6 +699,7 @@ public class Program
                             // so this won't run anymore
                             InitParameter = true;
                         }
+                        #endregion
 
                         // If not Parameter
                         if (!IsParameter)
@@ -656,6 +719,7 @@ public class Program
                         else if (MaxParameterValue > ParameterValue && IsParameter)
                         {
                             ParameterValue++;
+                            PushToConsoleLog($"Setting value for Parameter \"{ParameterName}\" to: {ParameterValue}", BROWN);
                             eventInstance.setParameterByName(ParameterName, ParameterValue);
                             // reset timer
                             timeout = 0;
@@ -692,7 +756,7 @@ public class Program
                 IsAction = FindEventType.EventisTimeline(eventInstance) ? IsAction : true;
 
                 // Save Event XML
-                Events.SaveEvents(eventname, bankfilename, SoundsInfo, MarkersInfo, IsAction, IsParameter);
+                Events.SaveEvents(eventname, bankfilename, SoundsInfo, MarkersInfo, ParametersInfo, IsAction);
             }
         }
 
