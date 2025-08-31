@@ -68,10 +68,10 @@ public class Program
     public static Guid Master3GUID = GetRandomGUID();// for Master.XML (effect)
 
     // these keep track of all randomly generated GUIDs, so we can call them back if needed elsewhere
-    public static Dictionary<string, Guid> EventGUIDs = new Dictionary<string, Guid> { };
-    public static Dictionary<string, Guid> EventFolderGUIDs = new Dictionary<string, Guid> { };
-    public static Dictionary<string, Guid> AudioFileGUIDs = new Dictionary<string, Guid> { };
-    public static Dictionary<string, Guid> BankSpecificGUIDs = new Dictionary<string, Guid> { };
+    public static Dictionary<string, Guid> EventGUIDs = [];
+    public static Dictionary<string, Guid> EventFolderGUIDs = [];
+    public static Dictionary<string, Guid> AudioFileGUIDs = [];
+    public static Dictionary<string, Guid> BankSpecificGUIDs = [];
     #endregion
 
     #region Initialize Main Variables
@@ -147,9 +147,8 @@ public class Program
     {
         public string name;
         public Guid GUID;
-        public int startpos;
-        public uint length;
-        public int loopcount;
+        public double startpos;
+        public double length;
     }
 
     public static async Task Main(string[] args)
@@ -357,7 +356,6 @@ public class Program
             // clear organization everytime a bank file is loaded
             // so event:/music/folder and event:/sfx/folder dont merge to /music
             EventFolder.AllEvents.Clear();
-            EventFolder.processedFolders.Clear();
             EventFolderGUIDs.Clear();
 
             #region Get Event Folders
@@ -442,16 +440,20 @@ public class Program
 
                 // List that holds all names of sounds that have already been played
                 List<string> SoundsinEvent = [];
-                // tells us if FMOD tried to play it twice (looping event)
-                Dictionary<string, bool> SoundIsLooping = [];
 
                 // Save Sound Info to struct
                 List<EventSoundInfo> SoundsInfo = [];
                 EventSoundInfo SoundInfo;
 
-                #region Callbacks
+                // bool to check if it should be action
+                // we determine this by seeing if a sound is less than a second
+                // gotta do this because if its a timeline, it won't play in FMOD Studio
+                bool IsAction = false;
+                bool LockAction = false;
+
+                #region Callback
                 // Here's basically all the Functions we can use now
-                // https://www.fmod.com/docs/2.01/api/core-api-sound.html
+                // https://www.fmod.com/docs/2.03/api/core-api-sound.html
                 FMOD.RESULT EventCallback(EVENT_CALLBACK_TYPE type, IntPtr _unusedlmao, IntPtr parameterPtr)
                 {
                     switch (type)
@@ -470,9 +472,6 @@ public class Program
                             // Get Starting Position of sound currently playing
                             eventInstance.getTimelinePosition(out int currentPosition);
 
-                            // get loop info (-1 is always loop, 0 is no loop, 1+ is loop at specific points)
-                            sound.getLoopCount(out int loopcount);
-
                             // get length of sound in milliseconds
                             sound.getLength(out uint soundlength, FMOD.TIMEUNIT.MS);
 
@@ -485,31 +484,45 @@ public class Program
                                 fileExtension = "." + SoundNameExt[name];
 
                             var truename = name + fileExtension;
+                            // Get precise values (values with decimals)
+                            double truelength = (double)soundlength / 1000;
+                            double truestartpos = (double)currentPosition / 1000;
 
                             // If Sound hasn't been played yet
                             if (!SoundsinEvent.Contains(name))
                             {
                                 // Get Sound File used in Event
                                 PushToConsoleLog($"Sound Used: {truename}", GREEN, true);
-                                PushToConsoleLog($"Sound Length: {soundlength}", GREEN, true);
-                                PushToConsoleLog($"Loop Count: {loopcount}", GREEN, true);
-                                PushToConsoleLog($"Played at: {currentPosition}", GREEN, true);
+                                PushToConsoleLog($"Sound Length: {truelength}", GREEN, true);
+                                PushToConsoleLog($"Played at: {truestartpos}", GREEN, true);
 
                                 // Add Important Info to Struct
                                 SoundInfo.name = truename;
                                 SoundInfo.GUID = AudioFileGUIDs[bankfilename.Replace(".bank", "\\") + truename];
-                                SoundInfo.startpos = currentPosition / 1000;
-                                SoundInfo.length = soundlength / 1000;
-                                SoundInfo.loopcount = loopcount;
+                                SoundInfo.startpos = truestartpos;
+                                SoundInfo.length = truelength;
                                 // Save info in a dictionary, since there could be many sounds
                                 SoundsInfo.Add(SoundInfo);
 
+                                // If sound is less than a second long, make it an Action Sheet
+                                // Or else it won't play in FMOD Studio
+                                if (!LockAction)
+                                {
+                                    if (SoundInfo.length < 1)
+                                        IsAction = true;
+                                    // If another sound in the same event is larger than that however, ensure it is Timeline
+                                    else
+                                    {
+                                        IsAction = false;
+                                        // ensure that IsAction can't be set to true anymore
+                                        LockAction = true;
+                                    }
+                                }
+
                                 // Flag as played
                                 SoundsinEvent.Add(name);
-                                SoundIsLooping[name] = false;
                             }
-                            else
-                                SoundIsLooping[name] = true;
+
                             // Just leave if it has already been played
                             break;
 
@@ -543,20 +556,6 @@ public class Program
                 {
                     studioSystem.update();
 
-                    // check if sounds are looping
-                    var islooping = false;
-                    foreach (var name in SoundsinEvent) 
-                    {
-                        if (SoundIsLooping[name] == true)
-                        {
-                            islooping = true;
-                            break;
-                        }
-                    }
-                    // If it is, leave
-                    if (islooping)
-                        break;
-
                     // Timeout, that triggers when the event should've ended (accounting for speedup as well)
                     // plus about a second
                     if (timeout == (EventLength / playbackSpeed) + 10000000)
@@ -582,7 +581,7 @@ public class Program
                 #endregion
 
                 // Save Event XML
-                Events.SaveEvents(eventname, bankfilename, SoundsInfo);
+                Events.SaveEvents(eventname, bankfilename, SoundsInfo, IsAction);
             }
         }
 

@@ -73,7 +73,7 @@ public class XMLHelper
         foreach (var value in values)
         {
             var distinationElement = xmlDoc.CreateElement("destination");
-            distinationElement.InnerText = value.ToString();
+            distinationElement.InnerText = $"{{{value}}}";
             propertyElement.AppendChild(distinationElement);
         }
 

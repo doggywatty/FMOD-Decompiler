@@ -2,9 +2,10 @@
 using System.Xml;
 using static Program;
 using static XMLHelper;
+#pragma warning disable CS8602
 public class Events
 {
-    public static void SaveEvents(string eventname, string bankfilename, List<EventSoundInfo> SoundsinEvent)
+    public static void SaveEvents(string eventname, string bankfilename, List<EventSoundInfo> SoundsinEvent, bool IsAction = false)
     {
         // these change per XML, but not within the XML
         // so they should be here, and not public static
@@ -21,6 +22,23 @@ public class Events
         Guid MixerBusPannerGuid2 = GetRandomGUID();
         Guid MixerBusFaderGuid1 = GetRandomGUID();
         Guid MixerBusFaderGuid2 = GetRandomGUID();
+
+        // if audiofile on timeline, assign internal GUID
+        var SoundsPresent = SoundsinEvent != null && SoundsinEvent.Count != 0;
+        Guid[] multisoundGUIDs = [];
+        if (SoundsPresent)
+        {
+            multisoundGUIDs = new Guid[SoundsinEvent.Count];
+            var i = 0;
+            foreach (var sound in SoundsinEvent)
+            {
+                multisoundGUIDs[i] = GetRandomGUID();
+                i++;
+            }
+        }
+        // Only use when Action
+        Guid MultiSoundGuid = GetRandomGUID();
+        Guid ActionSheetGuid = GetRandomGUID();
 
         // Setup XML
         SetupXML(out XmlDocument xmlDoc, out XmlElement root);
@@ -39,31 +57,25 @@ public class Events
         AddRelationshipElement(xmlDoc, EventElement, "automatableProperties", $"{{{EventAutomatablePropertiesGuid}}}");
         AddRelationshipElement(xmlDoc, EventElement, "markerTracks", $"{{{MarkerTrackGuid}}}");
         AddRelationshipElement(xmlDoc, EventElement, "timeline", $"{{{TimelineGuid}}}");
+        // Add Action Sheet if it is one
+        if (SoundsPresent && IsAction)
+            AddRelationshipElement(xmlDoc, EventElement, "parameters", $"{{{ActionSheetGuid}}}");
         //                                                          connects event to its original bank file
         AddRelationshipElement(xmlDoc, EventElement, "banks", $"{{{BankSpecificGUIDs[bankfilename + "_Bank"]}}}");
         #endregion
 
         #region Event Info
-        // if audiofile on timeline, assign internal GUID
-        Guid[] multisoundGUIDs = [];
-        if (SoundsinEvent != null && SoundsinEvent.Count != 0)
-        {
-            multisoundGUIDs = new Guid[SoundsinEvent.Count];
-            var i = 0;
-            foreach (var sound in SoundsinEvent)
-            {
-                multisoundGUIDs[i] = GetRandomGUID();
-                i++;
-            }
-        }
-
         SetupHeaderXML(xmlDoc, root, "EventMixer", $"{{{EventMixerGuid}}}", out XmlElement EventMixerElement);
         AddRelationshipElement(xmlDoc, EventMixerElement, "masterBus", $"{{{EventMixerMasterGuid}}}");
 
         SetupHeaderXML(xmlDoc, root, "MasterTrack", $"{{{MasterTrackGuid}}}", out XmlElement MasterTrackElement);
-        // if audiofile on timeline
-        if (SoundsinEvent != null && SoundsinEvent.Count != 0)
+        // if audiofile on timeline (and isn't Action)
+        if (SoundsPresent && !IsAction)
             AddMultiRelationshipElement(xmlDoc, MasterTrackElement, "modules", multisoundGUIDs);
+        // else if sounds and is Action
+        else if (SoundsPresent && IsAction)
+            AddRelationshipElement(xmlDoc, MasterTrackElement, "modules", $"{{{MultiSoundGuid}}}");
+
         AddRelationshipElement(xmlDoc, MasterTrackElement, "mixerGroup", $"{{{EventMixerMasterGuid}}}");
 
         SetupHeaderXML(xmlDoc, root, "MixerInput", $"{{{MixerInputGuid}}}", out XmlElement MixerInputElement);
@@ -77,16 +89,32 @@ public class Events
 
         // Empty header if no sounds are present
         SetupHeaderXML(xmlDoc, root, "Timeline", $"{{{TimelineGuid}}}", out XmlElement TimelineElement);
-        if (SoundsinEvent != null && SoundsinEvent.Count != 0)
+        if (SoundsPresent && !IsAction)
             AddMultiRelationshipElement(xmlDoc, TimelineElement, "modules", multisoundGUIDs);
+        else if (SoundsPresent && IsAction)
+            AddPropertyElement(xmlDoc, TimelineElement, "isProxyEnabled", "false");
+
+        // Only for Action Sheet
+        if (SoundsPresent && IsAction) 
+        {
+            SetupHeaderXML(xmlDoc, root, "ActionSheet", $"{{{ActionSheetGuid}}}", out XmlElement ActionSheetElement);
+            AddRelationshipElement(xmlDoc, ActionSheetElement, "modules", $"{{{MultiSoundGuid}}}");
+        }
 
         SetupHeaderXML(xmlDoc, root, "EventMixerMaster", $"{{{EventMixerMasterGuid}}}", out XmlElement EventMixerMasterElement);
         AddRelationshipElement(xmlDoc, EventMixerMasterElement, "effectChain", $"{{{MixerBusEffectChainGuid2}}}");
         AddRelationshipElement(xmlDoc, EventMixerMasterElement, "panner", $"{{{MixerBusPannerGuid2}}}");
         AddRelationshipElement(xmlDoc, EventMixerMasterElement, "mixer", $"{{{EventMixerGuid}}}");
 
+        // Only for Action Sheet
+        if (SoundsPresent && IsAction)
+        {
+            SetupHeaderXML(xmlDoc, root, "MultiSound", $"{{{MultiSoundGuid}}}", out XmlElement MultiSoundElement);
+            AddMultiRelationshipElement(xmlDoc, MultiSoundElement, "sounds", multisoundGUIDs);
+        }
+
         // Here is where Single Sounds would go
-        if (SoundsinEvent != null && SoundsinEvent.Count != 0)
+        if (SoundsPresent)
         {
             var i = 0;
             foreach (var sound in SoundsinEvent)
@@ -98,7 +126,9 @@ public class Events
                 // length in milliseconds
                 AddPropertyElement(xmlDoc, SoundElement, "length", $"{sound.length}");
 
-                // sometimes there if needed
+                /*
+                 * sound.getLoopCount doesn't work as intended
+                 * so we need another solution
 
                 // if loopcount == -1 or 1+
                 if (sound.loopcount == -1 || sound.loopcount > 0)
@@ -106,6 +136,7 @@ public class Events
                 // if loopcount is 1+ (not -1 or 0)
                 if (sound.loopcount > 0)
                     AddPropertyElement(xmlDoc, SoundElement, "playCount", $"{sound.loopcount}");
+                */
 
                 // link audiofile GUID (always there)
                 AddRelationshipElement(xmlDoc, SoundElement, "audioFile", $"{{{sound.GUID}}}");
