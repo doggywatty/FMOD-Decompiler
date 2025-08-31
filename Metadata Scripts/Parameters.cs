@@ -26,7 +26,6 @@ public class Parameters
         // Link to Parameter Settings in Second Segment below
         AddRelationshipElement(xmlDoc, objectElement1, "parameter", $"{{{ParameterSettings}}}");
         #endregion
-
         #region Second Segment (Actual Shit)
         SetupHeaderXML(xmlDoc, root, "GameParameter", $"{{{ParameterSettings}}}", out XmlElement objectElement2);
 

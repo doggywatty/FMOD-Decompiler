@@ -5,6 +5,7 @@ using static Program;
 
 public class FindEventType
 {
+    #region Check Types
     public static bool EventisTimeline(EventInstance evInst)
     {
         if (evInst.getTimelinePosition(out int timelinePos) == FMOD.RESULT.OK)
@@ -23,11 +24,38 @@ public class FindEventType
         }
         return parameterCount > 0;
     }
-
-    public static void GetParameterInfo(EventDescription evDesc)
+    #endregion
+    #region Get Parameter Values
+    public static int GetMinParamValue(EventDescription evDesc, int index)
     {
+        if (evDesc.getParameterDescriptionCount(out int parameterCount) != FMOD.RESULT.OK)
+            return 0;
+
+        if (evDesc.getParameterDescriptionByIndex(index, out PARAMETER_DESCRIPTION parameter) != FMOD.RESULT.OK)
+            return 0;
+
+        return (int)parameter.minimum;
+    }
+    public static int GetMaxParamValue(EventDescription evDesc, int index)
+    {
+        if (evDesc.getParameterDescriptionCount(out int parameterCount) != FMOD.RESULT.OK)
+            return 0;
+
+        if (evDesc.getParameterDescriptionByIndex(index, out PARAMETER_DESCRIPTION parameter) != FMOD.RESULT.OK)
+            return 0;
+
+        return (int)parameter.maximum;
+    }
+    #endregion
+    #region Misc Parameter stuff
+    public static void GetParameterInfo(EventDescription evDesc, out string[] ParameterArray)
+    {
+        ParameterArray = new string[] { "" };
+
         if (evDesc.getParameterDescriptionCount(out int parameterCount) != FMOD.RESULT.OK || parameterCount == 0)
             return;
+
+        ParameterArray = new string[parameterCount];
 
         for (int i = 0; i < parameterCount; i++)
         {
@@ -36,8 +64,10 @@ public class FindEventType
                 // Make XML of the Parameter (if it wasn't made already)
                 if (!Parameters.ParameterList.Contains(parameter))
                 {
+                    string paramName = (string)parameter.name;
                     Parameters.ParameterXML(parameter, evDesc);
                     Parameters.ParameterList.Add(parameter);
+                    ParameterArray[i] = paramName;
                 }
             }
         }
@@ -80,4 +110,5 @@ public class FindEventType
 
         return parameterInfo;
     }
+    #endregion
 }

@@ -84,7 +84,7 @@ public class Program
     // Argument Values
     public static string bankFolder = "";
     public static string outputProjectPath = "";
-    public static bool verbose = false;
+    public static bool verbose = true;
     #endregion
 
     #region Helper Funcs
@@ -421,8 +421,9 @@ public class Program
                 File.AppendAllTextAsync(outputProjectPath + "/EventGUIDs.txt", $"\n{{{EventGUIDs[eventname]}}} {eventname}");
 
                 #region Get Parameters
+                string[] ParametersInEvent = new string[] { "" };
                 if (FindEventType.EventisParameter(eventDescription))
-                    FindEventType.GetParameterInfo(eventDescription);
+                    FindEventType.GetParameterInfo(eventDescription, out ParametersInEvent);
 
                 PushToConsoleLog($"Event GUID for {eventname}: {EventGUIDs[eventname]}");
 
@@ -442,6 +443,7 @@ public class Program
                 // so we can retrieve info on the sound such as sound file names
                 // becase that's the only other way to extract this info for some reason
 
+                #region Init These vars idk
                 // force it to wait until event end callback returns
                 bool Event_IsDone = false;
 
@@ -465,6 +467,15 @@ public class Program
                 bool IsAction = false;
                 bool LockAction = false;
 
+                // Parameter stuffs
+                bool IsParameter = FindEventType.EventisParameter(eventDescription);
+                bool InitParameter = false;
+                int ParameterValue = 0;
+                int MaxParameterValue = 0;
+                List<string> ParameterList = ParametersInEvent.ToList();
+                int ParameterIndex = 0;
+                string ParameterName = "";
+                #endregion
                 #region Callback
                 // Here's basically all the Functions we can use now
                 // https://www.fmod.com/docs/2.03/api/core-api-sound.html
@@ -472,6 +483,7 @@ public class Program
                 {
                     switch (type)
                     {
+                        #region Sound Played Callback
                         // Callback that triggers once a single sound is played in the event
                         // (Can trigger many times depending on how many sounds there are)
                         case EVENT_CALLBACK_TYPE.SOUND_PLAYED:
@@ -510,6 +522,12 @@ public class Program
                                 PushToConsoleLog($"Sound Length: {truelength}", GREEN, true);
                                 PushToConsoleLog($"Played at: {truestartpos}", GREEN, true);
 
+                                if (IsParameter && ParameterValue > 0) 
+                                {
+                                    PushToConsoleLog($"Sound triggered on Parameter: {ParameterName}", GREEN, true);
+                                    PushToConsoleLog($"Parameter Value when triggered: {ParameterValue}", GREEN, true);
+                                }
+
                                 // Add Important Info to Struct
                                 SoundInfo.name = truename;
                                 SoundInfo.GUID = AudioFileGUIDs[bankfilename.Replace(".bank", "\\") + truename];
@@ -539,7 +557,8 @@ public class Program
 
                             // Just leave if it has already been played
                             break;
-
+                        #endregion
+                        #region Marker Callback
                         // Callback for when it detects it passed a Marker
                         case EVENT_CALLBACK_TYPE.TIMELINE_MARKER:
                             var marker = (TIMELINE_MARKER_PROPERTIES)Marshal.PtrToStructure(parameterPtr, typeof(TIMELINE_MARKER_PROPERTIES));
@@ -559,12 +578,14 @@ public class Program
                                 MarkersinEvent.Add(markername);
                             }
                             break;
-
+                        #endregion
+                        #region Finish Event Callback
                         // Callback that triggers if the event has ended entirely (no more sounds have played)
                         case EVENT_CALLBACK_TYPE.STOPPED:
                             // Mark as done
                             Event_IsDone = true;
                             break;
+                        #endregion
                     }
                     return FMOD.RESULT.OK;
                 }
@@ -577,7 +598,7 @@ public class Program
                 // Set volume to 0, because the following will kill your ears
                 eventInstance.setVolume(0f);
                 // Speed up Playback, because we don't care about actually listening to it
-                var playbackSpeed = 100f;// should be 100x speed, thank god we aren't listening to it
+                var playbackSpeed = 1000f;// should be 100x speed, thank god we aren't listening to it
                 eventInstance.setPitch(playbackSpeed);
 
                 // just in case it gets stuck
@@ -586,27 +607,71 @@ public class Program
                 eventDescription.getLength(out int EventLength);
 
                 // Updates FMOD System until event has ended
+                #region Wait for Callbacks
                 while (!Event_IsDone)
                 {
                     studioSystem.update();
 
                     // Timeout, that triggers when the event should've ended (accounting for speedup as well)
                     // plus about a second
-                    if (timeout == (EventLength / playbackSpeed) + 10000000)
+                    if (timeout >= (EventLength / playbackSpeed) + 10000000)
                     {
-                        // if event just had no audio files in it
-                        if (EventLength == 0 && SoundsinEvent.Count == 0)
-                            PushToConsoleLog($"ERROR! - Event has no audio!", RED, true);
-                        // if no sounds played at all, but the event still has length
-                        else if (SoundsinEvent.Count == 0 && EventLength != 0)
-                            PushToConsoleLog($"ERROR! - Internal Event Metadata failed to load!", RED, true);
-                        else
-                            PushToConsoleLog($"Internal Event Checking Timed Out...", NORMAL, true);
+                        // if no events, skip this shit
+                        if (ParameterList.Count == 0)
+                            IsParameter = false;
 
-                        break;
+                        if (IsParameter && !InitParameter)
+                        {
+                            ParameterName = ParameterList[ParameterIndex];
+                            PushToConsoleLog($"Checking Parameter: {ParameterName}", RED, true);
+                            ParameterValue = FindEventType.GetMinParamValue(eventDescription, ParameterIndex);
+                            MaxParameterValue = FindEventType.GetMaxParamValue(eventDescription, ParameterIndex);
+                            // so this won't run anymore
+                            InitParameter = true;
+                        }
+
+                        // If not Parameter
+                        if (!IsParameter)
+                        {
+                            // if event just had no audio files in it
+                            if (EventLength == 0 && SoundsinEvent.Count == 0)
+                                PushToConsoleLog($"ERROR! - Event has no audio!", RED, true);
+                            // if no sounds played at all, but the event still has length
+                            else if (SoundsinEvent.Count == 0 && EventLength != 0)
+                                PushToConsoleLog($"ERROR! - Internal Event Metadata failed to load!", RED, true);
+                            else
+                                PushToConsoleLog($"Internal Event Checking Timed Out...", NORMAL, true);
+
+                            break;
+                        }
+                        // If Parameter Value hasn't reached its Max, go onto next value
+                        else if (MaxParameterValue > ParameterValue && IsParameter)
+                        {
+                            ParameterValue++;
+                            eventInstance.setParameterByName(ParameterName, ParameterValue);
+                            // reset timer
+                            timeout = 0;
+                        }
+                        // If Parameter Value has reached its end
+                        else if (MaxParameterValue == ParameterValue && IsParameter)
+                        {
+                            // if no more parameters to check, leave cycle
+                            if ((ParameterList.Count - 1) <= ParameterIndex)
+                                break;
+                            else
+                            {
+                                // move onto next parameter
+                                ParameterIndex++;
+                                // redo the cycle
+                                InitParameter = false;
+                                // reset timer
+                                timeout = 0;
+                            }
+                        }
                     }
                     timeout++;
                 }
+                #endregion
 
                 // Stop sound if the while loop condition is met
                 // aka if it finishes extracting shit

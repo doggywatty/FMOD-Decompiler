@@ -1,5 +1,4 @@
 ﻿// Extract Event Info and Create Event XML
-using FMOD;
 using System.Xml;
 using static Program;
 using static XMLHelper;
@@ -8,6 +7,7 @@ public class Events
 {
     public static void SaveEvents(string eventname, string bankfilename, List<EventSoundInfo> SoundsinEvent, List<EventMarkerInfo> MarkersInfo, bool IsAction = false)
     {
+        #region Init Main GUIDs
         // these change per XML, but not within the XML
         // so they should be here, and not public static
         Guid EventMixerGuid = GetRandomGUID();
@@ -23,7 +23,7 @@ public class Events
         Guid MixerBusPannerGuid2 = GetRandomGUID();
         Guid MixerBusFaderGuid1 = GetRandomGUID();
         Guid MixerBusFaderGuid2 = GetRandomGUID();
-
+        #endregion
         #region AudioFile Init
         var SoundsPresent = SoundsinEvent != null && SoundsinEvent.Count != 0;
         Guid[] multisoundGUIDs = [];
