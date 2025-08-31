@@ -6,7 +6,7 @@ using static XMLHelper;
 #pragma warning disable CS8602
 public class Events
 {
-    public static void SaveEvents(string eventname, string bankfilename, List<EventSoundInfo> SoundsinEvent, List<EventMarkerInfo> MarkersInfo, List<EventParameterInfo> ParametersInfo, bool IsAction = false)
+    public static void SaveEvents(string eventname, string bankfilename, List<EventSoundInfo> SoundsinEvent, List<EventMarkerInfo> MarkersInfo, List<EventParameterInfo> ParametersInfo, Dictionary<string, int> SoundLoops, bool IsAction = false)
     {
         #region Init Main GUIDs
         // these change per XML, but not within the XML
@@ -173,6 +173,10 @@ public class Events
                 // length in milliseconds
                 AddPropertyElement(xmlDoc, SoundElement, "length", $"{sound.length}");
 
+                // TODO - Check if multiple sounds loop, and just make a Loop Region instead if they are
+                if (SoundLoops.ContainsKey(sound.name) && SoundLoops[sound.name] > 0)
+                    AddPropertyElement(xmlDoc, SoundElement, "looping", $"true");
+
                 // link audiofile GUID (always there)
                 AddRelationshipElement(xmlDoc, SoundElement, "audioFile", $"{{{sound.GUID}}}");
                 i++;
@@ -201,6 +205,7 @@ public class Events
 
                 AddRelationshipElement(xmlDoc, LoopElement, "timeline", $"{{{TimelineGuid}}}");
                 AddRelationshipElement(xmlDoc, LoopElement, "markerTrack", $"{{{MarkerTrackGuid}}}");
+                // Parameter Conditions (not needed for a Loop Region)
                 AddRelationshipElement(xmlDoc, LoopElement, "triggerConditions", $"{{{ParameterConditionGUIDs[i]}}}");
                 i++;
             }

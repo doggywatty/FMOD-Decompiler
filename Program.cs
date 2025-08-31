@@ -495,6 +495,9 @@ public class Program
                 List<string> ParameterList = FindEventType.ParameterArray;
                 int ParameterIndex = 0;
                 string ParameterName = string.Empty;
+
+                // if int is higher than 0, it loops
+                Dictionary<string, int> SoundLoops = [];
                 #endregion
                 #region Callback
                 // Here's basically all the Functions we can use now
@@ -603,6 +606,13 @@ public class Program
                             #endregion
                             // to skip sound and go to the end of it for next sound
                             eventInstance.setTimelinePosition((int)loopend);
+
+                            // do loop stuffs chud
+                            if (SoundLoops.ContainsKey(truename))
+                                SoundLoops[truename] = SoundLoops[truename]++;
+                            else
+                                SoundLoops.Add(truename, 0);
+
                             break;
                         #endregion
                         #region Marker Callback
@@ -756,7 +766,7 @@ public class Program
                 IsAction = FindEventType.EventisTimeline(eventInstance) ? IsAction : true;
 
                 // Save Event XML
-                Events.SaveEvents(eventname, bankfilename, SoundsInfo, MarkersInfo, ParametersInfo, IsAction);
+                Events.SaveEvents(eventname, bankfilename, SoundsInfo, MarkersInfo, ParametersInfo, SoundLoops, IsAction);
             }
         }
 
