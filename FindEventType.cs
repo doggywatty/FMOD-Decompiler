@@ -2,7 +2,6 @@
 using static Program;
 
 // Finds out what Sheet Type an Event uses
-// we can't really find out if it's an Action Event tho, so yeah
 
 public class FindEventType
 {

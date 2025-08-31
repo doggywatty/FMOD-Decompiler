@@ -1,11 +1,12 @@
 ﻿// Extract Event Info and Create Event XML
+using FMOD;
 using System.Xml;
 using static Program;
 using static XMLHelper;
 #pragma warning disable CS8602
 public class Events
 {
-    public static void SaveEvents(string eventname, string bankfilename, List<EventSoundInfo> SoundsinEvent, bool IsAction = false)
+    public static void SaveEvents(string eventname, string bankfilename, List<EventSoundInfo> SoundsinEvent, List<EventMarkerInfo> MarkersInfo, bool IsAction = false)
     {
         // these change per XML, but not within the XML
         // so they should be here, and not public static
@@ -23,7 +24,7 @@ public class Events
         Guid MixerBusFaderGuid1 = GetRandomGUID();
         Guid MixerBusFaderGuid2 = GetRandomGUID();
 
-        // if audiofile on timeline, assign internal GUID
+        #region AudioFile Init
         var SoundsPresent = SoundsinEvent != null && SoundsinEvent.Count != 0;
         Guid[] multisoundGUIDs = [];
         if (SoundsPresent)
@@ -39,6 +40,21 @@ public class Events
         // Only use when Action
         Guid MultiSoundGuid = GetRandomGUID();
         Guid ActionSheetGuid = GetRandomGUID();
+        #endregion
+        #region Marker Init
+        var MarkersPresent = MarkersInfo != null && MarkersInfo.Count != 0;
+        Guid[] MarkerGUIDs = [];
+        if (SoundsPresent)
+        {
+            MarkerGUIDs = new Guid[MarkersInfo.Count];
+            var i = 0;
+            foreach (var marker in MarkersInfo)
+            {
+                MarkerGUIDs[i] = GetRandomGUID();
+                i++;
+            }
+        }
+        #endregion
 
         // Setup XML
         SetupXML(out XmlDocument xmlDoc, out XmlElement root);
@@ -68,6 +84,7 @@ public class Events
         SetupHeaderXML(xmlDoc, root, "EventMixer", $"{{{EventMixerGuid}}}", out XmlElement EventMixerElement);
         AddRelationshipElement(xmlDoc, EventMixerElement, "masterBus", $"{{{EventMixerMasterGuid}}}");
 
+        #region Master Track
         SetupHeaderXML(xmlDoc, root, "MasterTrack", $"{{{MasterTrackGuid}}}", out XmlElement MasterTrackElement);
         // if audiofile on timeline (and isn't Action)
         if (SoundsPresent && !IsAction)
@@ -75,6 +92,7 @@ public class Events
         // else if sounds and is Action
         else if (SoundsPresent && IsAction)
             AddRelationshipElement(xmlDoc, MasterTrackElement, "modules", $"{{{MultiSoundGuid}}}");
+        #endregion
 
         AddRelationshipElement(xmlDoc, MasterTrackElement, "mixerGroup", $"{{{EventMixerMasterGuid}}}");
 
@@ -83,18 +101,26 @@ public class Events
         AddRelationshipElement(xmlDoc, MixerInputElement, "panner", $"{{{MixerBusPannerGuid1}}}");
         AddRelationshipElement(xmlDoc, MixerInputElement, "output", $"{{{MasterXMLGUID}}}"); // connected to Master.xml
 
-        // Empty Headers (for now maybe)
+        // Empty Header
         SetupHeaderXML(xmlDoc, root, "EventAutomatableProperties", $"{{{EventAutomatablePropertiesGuid}}}", out XmlElement EventAutomatablePropertiesElement);
+
+        // Master Marker i guess
         SetupHeaderXML(xmlDoc, root, "MarkerTrack", $"{{{MarkerTrackGuid}}}", out XmlElement MarkerTrackElement);
 
-        // Empty header if no sounds are present
+        #region Timeline Header (empty if no sounds or markers)
         SetupHeaderXML(xmlDoc, root, "Timeline", $"{{{TimelineGuid}}}", out XmlElement TimelineElement);
+        // if there are sounds, but timeline
         if (SoundsPresent && !IsAction)
             AddMultiRelationshipElement(xmlDoc, TimelineElement, "modules", multisoundGUIDs);
+        // else if there are sounds, and action sheet
         else if (SoundsPresent && IsAction)
             AddPropertyElement(xmlDoc, TimelineElement, "isProxyEnabled", "false");
+        // Add Markers to Timeline
+        if (MarkersPresent)
+            AddMultiRelationshipElement(xmlDoc, TimelineElement, "markers", MarkerGUIDs);
+        #endregion
 
-        // Only for Action Sheet
+        // Main Action Sheet Header
         if (SoundsPresent && IsAction) 
         {
             SetupHeaderXML(xmlDoc, root, "ActionSheet", $"{{{ActionSheetGuid}}}", out XmlElement ActionSheetElement);
@@ -106,14 +132,14 @@ public class Events
         AddRelationshipElement(xmlDoc, EventMixerMasterElement, "panner", $"{{{MixerBusPannerGuid2}}}");
         AddRelationshipElement(xmlDoc, EventMixerMasterElement, "mixer", $"{{{EventMixerGuid}}}");
 
-        // Only for Action Sheet
+        // Action Sheet Header for Sounds
         if (SoundsPresent && IsAction)
         {
             SetupHeaderXML(xmlDoc, root, "MultiSound", $"{{{MultiSoundGuid}}}", out XmlElement MultiSoundElement);
             AddMultiRelationshipElement(xmlDoc, MultiSoundElement, "sounds", multisoundGUIDs);
         }
 
-        // Here is where Single Sounds would go
+        #region Index Single Sounds
         if (SoundsPresent)
         {
             var i = 0;
@@ -143,12 +169,29 @@ public class Events
                 i++;
             }
         }
+        #endregion
 
         SetupHeaderXML(xmlDoc, root, "MixerBusEffectChain", $"{{{MixerBusEffectChainGuid1}}}", out XmlElement MixerBusEffectChainElement1);
         AddRelationshipElement(xmlDoc, MixerBusEffectChainElement1, "effects", $"{{{MixerBusFaderGuid1}}}");
 
         // Empty for now
         SetupHeaderXML(xmlDoc, root, "MixerBusPanner", $"{{{MixerBusPannerGuid1}}}", out XmlElement MixerBusPannerElement1);
+
+        #region Index Markers
+        if (MarkersPresent)
+        {
+            var i = 0;
+            foreach (var marker in MarkersInfo)
+            {
+                SetupHeaderXML(xmlDoc, root, "NamedMarker", $"{{{MarkerGUIDs[i]}}}", out XmlElement MarkerElement);
+                AddPropertyElement(xmlDoc, MarkerElement, "position", $"{marker.position}");
+                AddPropertyElement(xmlDoc, MarkerElement, "name", $"{marker.name}");
+                AddRelationshipElement(xmlDoc, MarkerElement, "timeline", $"{{{TimelineGuid}}}");
+                AddRelationshipElement(xmlDoc, MarkerElement, "markerTrack", $"{{{MarkerTrackGuid}}}");
+                i++;
+            }
+        }
+        #endregion
 
         SetupHeaderXML(xmlDoc, root, "MixerBusEffectChain", $"{{{MixerBusEffectChainGuid2}}}", out XmlElement MixerBusEffectChainElement2);
         AddRelationshipElement(xmlDoc, MixerBusEffectChainElement2, "effects", $"{{{MixerBusFaderGuid2}}}");

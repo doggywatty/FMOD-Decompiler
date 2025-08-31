@@ -11,6 +11,7 @@ public class Program
     #pragma warning disable CS8602
     #pragma warning disable CS8603
     #pragma warning disable CS8604
+    #pragma warning disable CS8605
     #pragma warning disable CS8625
 
     #endregion
@@ -151,6 +152,12 @@ public class Program
         public double length;
     }
 
+    public struct EventMarkerInfo
+    {
+        public string name;
+        public double position;
+    }
+
     public static async Task Main(string[] args)
     {
         // initialize
@@ -158,7 +165,7 @@ public class Program
         SetConsoleMode(GetStdHandle(-11), mode | 0x4);
         Console.Clear();
 
-        Console.WriteLine($"Welcome to the FMOD Bank Decompiler {GREEN}(Version 1.2.0){NORMAL}"
+        Console.WriteLine($"Welcome to the FMOD Bank Decompiler {GREEN}(Version 1.3.0){NORMAL}"
         + $"\n\nby {BROWN}DogMatt{NORMAL}"
         + $"\nand {OTHERGRAY}burnedpopcorn180{NORMAL}"
 
@@ -441,9 +448,16 @@ public class Program
                 // List that holds all names of sounds that have already been played
                 List<string> SoundsinEvent = [];
 
+                // List that holds all names of markers
+                List<string> MarkersinEvent = [];
+
                 // Save Sound Info to struct
                 List<EventSoundInfo> SoundsInfo = [];
                 EventSoundInfo SoundInfo;
+
+                // Save Marker Info to struct
+                List<EventMarkerInfo> MarkersInfo = [];
+                EventMarkerInfo MarkerInfo;
 
                 // bool to check if it should be action
                 // we determine this by seeing if a sound is less than a second
@@ -526,6 +540,26 @@ public class Program
                             // Just leave if it has already been played
                             break;
 
+                        // Callback for when it detects it passed a Marker
+                        case EVENT_CALLBACK_TYPE.TIMELINE_MARKER:
+                            var marker = (TIMELINE_MARKER_PROPERTIES)Marshal.PtrToStructure(parameterPtr, typeof(TIMELINE_MARKER_PROPERTIES));
+                            string markername = (string)marker.name;
+                            double markerpos = (double)marker.position / 1000;
+                            if (!MarkersinEvent.Contains(markername))
+                            {
+                                PushToConsoleLog($"Found Marker!", OTHERGRAY, true);
+                                PushToConsoleLog($"Marker Name: {markername}", OTHERGRAY, true);
+                                PushToConsoleLog($"Marker Pos: {markerpos}", OTHERGRAY, true);
+
+                                // Save Marker
+                                MarkerInfo.name = markername;
+                                MarkerInfo.position = markerpos;
+                                MarkersInfo.Add(MarkerInfo);
+
+                                MarkersinEvent.Add(markername);
+                            }
+                            break;
+
                         // Callback that triggers if the event has ended entirely (no more sounds have played)
                         case EVENT_CALLBACK_TYPE.STOPPED:
                             // Mark as done
@@ -537,7 +571,7 @@ public class Program
                 #endregion
 
                 // Set Callback (Unified, because otherwise one of them wouldn't run)
-                eventInstance.setCallback(EventCallback, EVENT_CALLBACK_TYPE.SOUND_PLAYED | EVENT_CALLBACK_TYPE.STOPPED);
+                eventInstance.setCallback(EventCallback, EVENT_CALLBACK_TYPE.SOUND_PLAYED | EVENT_CALLBACK_TYPE.TIMELINE_MARKER | EVENT_CALLBACK_TYPE.STOPPED);
                 eventInstance.start();// Play Sound
 
                 // Set volume to 0, because the following will kill your ears
@@ -580,8 +614,12 @@ public class Program
                 eventInstance.release();
                 #endregion
 
+                // EventisTimeline() func checks it in a way that Action Sheets return false to
+                // so might as well use it, plus add the other check
+                IsAction = FindEventType.EventisTimeline(eventInstance) ? IsAction : true;
+
                 // Save Event XML
-                Events.SaveEvents(eventname, bankfilename, SoundsInfo, IsAction);
+                Events.SaveEvents(eventname, bankfilename, SoundsInfo, MarkersInfo, IsAction);
             }
         }
 

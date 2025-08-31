@@ -5,7 +5,7 @@ using static XMLHelper;
 
 public class Parameters
 {
-    public static List<PARAMETER_DESCRIPTION> ParameterList = new List<PARAMETER_DESCRIPTION>();
+    public static List<PARAMETER_DESCRIPTION> ParameterList = [];
     public static void ParameterXML(PARAMETER_DESCRIPTION parameter, EventDescription evDesc)
     {
         Guid XMLGUID = FMODGUIDToSysGuid(parameter.guid);
