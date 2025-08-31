@@ -84,7 +84,7 @@ public class Program
     // Argument Values
     public static string bankFolder = "";
     public static string outputProjectPath = "";
-    public static bool verbose = true;
+    public static bool verbose = false;
     #endregion
 
     #region Helper Funcs
@@ -150,8 +150,13 @@ public class Program
         public Guid GUID;
         public double startpos;
         public double length;
+
+        // Which parameter they are set to
+        public string parametername;
+        public double parametervalue;
     }
 
+    // Structs for Markers on Timeline
     public struct EventMarkerInfo
     {
         public string name;
@@ -421,9 +426,8 @@ public class Program
                 File.AppendAllTextAsync(outputProjectPath + "/EventGUIDs.txt", $"\n{{{EventGUIDs[eventname]}}} {eventname}");
 
                 #region Get Parameters
-                string[] ParametersInEvent = new string[] { "" };
                 if (FindEventType.EventisParameter(eventDescription))
-                    FindEventType.GetParameterInfo(eventDescription, out ParametersInEvent);
+                    FindEventType.GetParameterInfo(eventDescription);
 
                 PushToConsoleLog($"Event GUID for {eventname}: {EventGUIDs[eventname]}");
 
@@ -472,7 +476,7 @@ public class Program
                 bool InitParameter = false;
                 int ParameterValue = 0;
                 int MaxParameterValue = 0;
-                List<string> ParameterList = ParametersInEvent.ToList();
+                List<string> ParameterList = FindEventType.ParameterArray;
                 int ParameterIndex = 0;
                 string ParameterName = "";
                 #endregion
@@ -518,7 +522,7 @@ public class Program
                             if (!SoundsinEvent.Contains(name))
                             {
                                 // Get Sound File used in Event
-                                PushToConsoleLog($"Sound Used: {truename}", GREEN, true);
+                                PushToConsoleLog($"\nSound Used: {truename}", GREEN, true);
                                 PushToConsoleLog($"Sound Length: {truelength}", GREEN, true);
                                 PushToConsoleLog($"Played at: {truestartpos}", GREEN, true);
 
@@ -533,6 +537,8 @@ public class Program
                                 SoundInfo.GUID = AudioFileGUIDs[bankfilename.Replace(".bank", "\\") + truename];
                                 SoundInfo.startpos = truestartpos;
                                 SoundInfo.length = truelength;
+                                SoundInfo.parametername = ParameterName;
+                                SoundInfo.parametervalue = ParameterValue;
                                 // Save info in a dictionary, since there could be many sounds
                                 SoundsInfo.Add(SoundInfo);
 
@@ -583,7 +589,9 @@ public class Program
                         // Callback that triggers if the event has ended entirely (no more sounds have played)
                         case EVENT_CALLBACK_TYPE.STOPPED:
                             // Mark as done
-                            Event_IsDone = true;
+                            // if its a parameter tho, wait for that check to finish
+                            if (!IsParameter)
+                                Event_IsDone = true;
                             break;
                         #endregion
                     }
@@ -598,7 +606,7 @@ public class Program
                 // Set volume to 0, because the following will kill your ears
                 eventInstance.setVolume(0f);
                 // Speed up Playback, because we don't care about actually listening to it
-                var playbackSpeed = 1000f;// should be 100x speed, thank god we aren't listening to it
+                var playbackSpeed = 100f;// should be 100x speed, thank god we aren't listening to it
                 eventInstance.setPitch(playbackSpeed);
 
                 // just in case it gets stuck
@@ -617,13 +625,13 @@ public class Program
                     if (timeout >= (EventLength / playbackSpeed) + 10000000)
                     {
                         // if no events, skip this shit
-                        if (ParameterList.Count == 0)
+                        if (ParameterList == null || ParameterList.Count == 0)
                             IsParameter = false;
 
                         if (IsParameter && !InitParameter)
                         {
                             ParameterName = ParameterList[ParameterIndex];
-                            PushToConsoleLog($"Checking Parameter: {ParameterName}", RED, true);
+                            PushToConsoleLog($"Checking Parameter: {ParameterName}", BROWN, true);
                             ParameterValue = FindEventType.GetMinParamValue(eventDescription, ParameterIndex);
                             MaxParameterValue = FindEventType.GetMaxParamValue(eventDescription, ParameterIndex);
                             // so this won't run anymore
@@ -684,7 +692,7 @@ public class Program
                 IsAction = FindEventType.EventisTimeline(eventInstance) ? IsAction : true;
 
                 // Save Event XML
-                Events.SaveEvents(eventname, bankfilename, SoundsInfo, MarkersInfo, IsAction);
+                Events.SaveEvents(eventname, bankfilename, SoundsInfo, MarkersInfo, IsAction, IsParameter);
             }
         }
 

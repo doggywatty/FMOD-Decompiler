@@ -5,6 +5,7 @@ using static Program;
 
 public class FindEventType
 {
+    public static List<string> ParameterArray = [];
     #region Check Types
     public static bool EventisTimeline(EventInstance evInst)
     {
@@ -48,26 +49,26 @@ public class FindEventType
     }
     #endregion
     #region Misc Parameter stuff
-    public static void GetParameterInfo(EventDescription evDesc, out string[] ParameterArray)
+    public static void GetParameterInfo(EventDescription evDesc)
     {
-        ParameterArray = new string[] { "" };
+        ParameterArray = [];
 
         if (evDesc.getParameterDescriptionCount(out int parameterCount) != FMOD.RESULT.OK || parameterCount == 0)
             return;
-
-        ParameterArray = new string[parameterCount];
 
         for (int i = 0; i < parameterCount; i++)
         {
             if (evDesc.getParameterDescriptionByIndex(i, out PARAMETER_DESCRIPTION parameter) == FMOD.RESULT.OK)
             {
+                // uh shit
+                string paramName = (string)parameter.name;
+                ParameterArray.Add(paramName);
+
                 // Make XML of the Parameter (if it wasn't made already)
                 if (!Parameters.ParameterList.Contains(parameter))
                 {
-                    string paramName = (string)parameter.name;
                     Parameters.ParameterXML(parameter, evDesc);
                     Parameters.ParameterList.Add(parameter);
-                    ParameterArray[i] = paramName;
                 }
             }
         }

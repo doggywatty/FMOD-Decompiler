@@ -5,7 +5,7 @@ using static XMLHelper;
 #pragma warning disable CS8602
 public class Events
 {
-    public static void SaveEvents(string eventname, string bankfilename, List<EventSoundInfo> SoundsinEvent, List<EventMarkerInfo> MarkersInfo, bool IsAction = false)
+    public static void SaveEvents(string eventname, string bankfilename, List<EventSoundInfo> SoundsinEvent, List<EventMarkerInfo> MarkersInfo, bool IsAction = false, bool IsParameter = false)
     {
         #region Init Main GUIDs
         // these change per XML, but not within the XML
