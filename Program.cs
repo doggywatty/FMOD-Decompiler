@@ -84,14 +84,16 @@ public class Program
     // Argument Values
     public static string bankFolder = "";
     public static string outputProjectPath = "";
-    public static bool verbose = true;
+    public static string projectname = "Generic-Project";
+    public static bool verbose = false;
+    public static bool IsGUI = false;
     #endregion
 
     #region Helper Funcs
     public static void PushToConsoleLog(string message, string color = "NONE", bool toLog = false)
     {
         // for some reason I can't just string color = NORMAL at the beginning because compiler cries
-        var truecolor = (color == "NONE") ? NORMAL : color;
+        var truecolor = (color == "NONE" || IsGUI) ? NORMAL : color;
 
         // Whitelisted Strings (for when not in verbose)
         // i just really dont want to make another optional arg
@@ -112,7 +114,7 @@ public class Program
         // Show Message on Console
         // Only if verbose is enabled, or if strings are in whitelist
         if (verbose || ifwhitelisted)
-            Console.WriteLine($"{truecolor}{message}{NORMAL}");
+            Console.WriteLine($"{truecolor}{message}{(!IsGUI ? NORMAL : "")}");
 
         // If also saving to log
         if (toLog)
@@ -173,28 +175,7 @@ public class Program
 
     public static async Task Main(string[] args)
     {
-        // initialize
-        GetConsoleMode(GetStdHandle(-11), out int mode);
-        SetConsoleMode(GetStdHandle(-11), mode | 0x4);
-        Console.Clear();
-
-        Console.WriteLine($"Welcome to the FMOD Bank Decompiler {GREEN}(Version 1.4.1){NORMAL}"
-        + $"\n\nby {OTHERGRAY}burnedpopcorn180{NORMAL}"
-        + $"\nand {BROWN}DogMatt{NORMAL}"
-
-        + $"\n\n{RED}Note that this Decompiler tries its best to recreate the original project file{NORMAL}"
-        + $"\n{RED}However, it won't give you a working recreation out of the box{NORMAL}"
-        + $"\n{RED}You most likely will have to tweak things like events to get a functional recreation{NORMAL}"
-
-        + $"\n{GREEN}With that being said, have fun{NORMAL}"
-
-        + $"\n"
-        );
-
-        // Long ass shit that we should just ignore
-        #region Arguments and Folders
-
-        // check arguments
+        #region Check Arguments
         for (int i = 0; i < args.Length; i++)
         {
             // check for --input argument
@@ -209,10 +190,20 @@ public class Program
                 outputProjectPath = args[i + 1];
                 i++; // Skip the next element (value for --output)
             }
+            // check the --output argument
+            else if (args[i] == "--name" && i + 1 < args.Length)
+            {
+                projectname = args[i + 1];
+                i++; // Skip the next element (value for --output)
+            }
             // check the --verbose flag
             else if (args[i] == "--verbose")
             {
                 verbose = true;
+            }
+            else if (args[i] == "--GUI")
+            {
+                IsGUI = true;
             }
             else
             {
@@ -221,7 +212,30 @@ public class Program
                 return;
             }
         }
+        #endregion
 
+        // initialize
+        if (!IsGUI)
+        {
+            GetConsoleMode(GetStdHandle(-11), out int mode);
+            SetConsoleMode(GetStdHandle(-11), mode | 0x4);
+            Console.Clear();
+        }
+
+        Console.WriteLine($"Welcome to the FMOD Bank Decompiler {GREEN}(Version 1.4.2){NORMAL}"
+        + $"\n\nby {OTHERGRAY}burnedpopcorn180{NORMAL}"
+        + $"\nand {BROWN}DogMatt{NORMAL}"
+
+        + $"\n\n{RED}Note that this Decompiler tries its best to recreate the original project file{NORMAL}"
+        + $"\n{RED}However, it won't give you a working recreation out of the box{NORMAL}"
+        + $"\n{RED}You most likely will have to tweak things like events to get a functional recreation{NORMAL}"
+
+        + $"\n{GREEN}With that being said, have fun{NORMAL}"
+
+        + $"\n"
+        );
+
+        #region Arguments and Folders
         // if no arguments were added
         if (args.Length == 0)
         {
@@ -261,13 +275,14 @@ public class Program
             PushToConsoleLog($"Output Folder does not exist", RED);
             PushToConsoleLog($"Continuing Anyways...", YELLOW);
         }
-
         #endregion
 
         // Get Project Name
-        string projectname = "Generic-Project";
-        Console.Write("Enter the Project Name: ");
-        projectname = Console.ReadLine();
+        if (projectname == "Generic-Project" && !IsGUI)
+        {
+            Console.Write("Enter the Project Name: ");
+            projectname = Console.ReadLine();
+        }
         var USESPACE = !verbose ? SPACE : "";
 
         if (projectname == "")
@@ -356,7 +371,7 @@ public class Program
 
             // get the list of events in the bank
             bank.getEventCount(out int eventCount);
-            PushToConsoleLog($"\nEvents Found in {bankFilePath}: {eventCount}\n", YELLOW, true);
+            PushToConsoleLog($"\nEvents Found: {eventCount}\n", YELLOW, true);
 
             // basically just the XML Files for most assets that references their given bank file
             #region Bank Specific XMLs

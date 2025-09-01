@@ -3,6 +3,7 @@
 using Fmod5Sharp;
 using Fmod5Sharp.FmodTypes;
 using System.Text;
+using System.Xml.Linq;
 using static Program;
 
 public class ExtractSoundAssets
@@ -38,7 +39,7 @@ public class ExtractSoundAssets
         var i = 0;
         // Set up dictionary
         Dictionary<string, string> SoundNameExt = new Dictionary<string, string>();
-
+        PushToConsoleLog($"Sounds Found: {bank.Samples.Count}", YELLOW);
         foreach (var bankSample in bank.Samples)
         {
             i++;
