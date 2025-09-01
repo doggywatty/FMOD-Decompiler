@@ -84,7 +84,7 @@ public class Program
     // Argument Values
     public static string bankFolder = "";
     public static string outputProjectPath = "";
-    public static bool verbose = false;
+    public static bool verbose = true;
     #endregion
 
     #region Helper Funcs
@@ -178,7 +178,7 @@ public class Program
         SetConsoleMode(GetStdHandle(-11), mode | 0x4);
         Console.Clear();
 
-        Console.WriteLine($"Welcome to the FMOD Bank Decompiler {GREEN}(Version 1.4.0){NORMAL}"
+        Console.WriteLine($"Welcome to the FMOD Bank Decompiler {GREEN}(Version 1.4.1){NORMAL}"
         + $"\n\nby {OTHERGRAY}burnedpopcorn180{NORMAL}"
         + $"\nand {BROWN}DogMatt{NORMAL}"
 
@@ -476,6 +476,9 @@ public class Program
                 List<EventMarkerInfo> MarkersInfo = [];
                 EventMarkerInfo MarkerInfo;
 
+                // Get length of All of the Event's Audio
+                eventDescription.getLength(out int EventLength);
+
                 // bool to check if it should be action
                 // we determine this by seeing if a sound is less than a second
                 // gotta do this because if its a timeline, it won't play in FMOD Studio
@@ -542,7 +545,7 @@ public class Program
                             // Adjust Start Pos if needed
                             if (AdjustStartPos)
                             {
-                                if (truestartpos != 0)
+                                if (truestartpos != 0 && (truestartpos - 1.962 > 0))//make sure adjusting won't make it negative
                                     truestartpos = truestartpos - 1.962;
                                 // if First Sound starts at zero, dont adjust for this one or future ones
                                 else if (truestartpos == 0 && FirstSound)
@@ -604,14 +607,15 @@ public class Program
                                 SoundsinEvent.Add(name);
                             }
                             #endregion
-                            // to skip sound and go to the end of it for next sound
-                            eventInstance.setTimelinePosition((int)loopend);
-
                             // do loop stuffs chud
                             if (SoundLoops.ContainsKey(truename))
-                                SoundLoops[truename] = SoundLoops[truename]++;
+                                SoundLoops[truename] = SoundLoops[truename] + 1;
                             else
                                 SoundLoops.Add(truename, 0);
+
+                            // to skip sound and go to the end of it for next sound
+                            if (SoundLoops[truename] < SoundsinEvent.Count && loopend < EventLength)//prevent stackoverflow by calling this too much
+                                eventInstance.setTimelinePosition((int)loopend);
 
                             break;
                         #endregion
@@ -626,12 +630,6 @@ public class Program
                                 PushToConsoleLog($"Found Marker!", OTHERGRAY, true);
                                 PushToConsoleLog($"Marker Name: {markername}", OTHERGRAY, true);
                                 PushToConsoleLog($"Marker Pos: {markerpos}", OTHERGRAY, true);
-
-                                if (IsParameter && ParameterValue > 0)
-                                {
-                                    PushToConsoleLog($"Marker triggered on Parameter: {ParameterName}", OTHERGRAY, true);
-                                    PushToConsoleLog($"Parameter Value when triggered: {ParameterValue}", OTHERGRAY, true);
-                                }
 
                                 // Save Marker
                                 MarkerInfo.name = markername;
@@ -668,8 +666,6 @@ public class Program
 
                 // just in case it gets stuck
                 int timeout = 0;
-                // Get length of All of the Event's Audio
-                eventDescription.getLength(out int EventLength);
 
                 #region Initial Parameter Check n Set
                 if (ParameterList == null || ParameterList.Count == 0)
