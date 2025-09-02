@@ -520,7 +520,7 @@ public class Program
                 #region Callback
                 // Here's basically all the Functions we can use now
                 // https://www.fmod.com/docs/2.03/api/core-api-sound.html
-                FMOD.RESULT EventCallback(EVENT_CALLBACK_TYPE type, IntPtr _unusedlmao, IntPtr parameterPtr)
+                FMOD.RESULT EventCallbackFunc(EVENT_CALLBACK_TYPE type, IntPtr _unusedlmao, IntPtr parameterPtr)
                 {
                     switch (type)
                     {
@@ -629,7 +629,7 @@ public class Program
                                 SoundLoops.Add(truename, 0);
 
                             // to skip sound and go to the end of it for next sound
-                            if (SoundLoops[truename] == 0 && loopend < EventLength)//prevent stackoverflow by calling this too much
+                            //if (SoundLoops[truename] == 0 && loopend < EventLength)//prevent stackoverflow by calling this too much
                                 eventInstance.setTimelinePosition((int)loopend);
 
                             break;
@@ -670,6 +670,7 @@ public class Program
                 #endregion
 
                 // Set Callback (Unified, because otherwise one of them wouldn't run)
+                EVENT_CALLBACK EventCallback = new(EventCallbackFunc);
                 eventInstance.setCallback(EventCallback, EVENT_CALLBACK_TYPE.SOUND_PLAYED | EVENT_CALLBACK_TYPE.TIMELINE_MARKER | EVENT_CALLBACK_TYPE.STOPPED);
                 eventInstance.start();// Play Sound
 
