@@ -251,7 +251,6 @@ public class Events
         }
         #endregion
 
-        // used to be MixerBusPannerGuid2, but is probably wrong
         SetupHeaderXML(xmlDoc, root, "MixerBusFader", $"{{{MixerBusFaderGuid2}}}", out XmlElement MixerBusFaderElement2);
         #endregion
 
