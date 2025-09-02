@@ -1,5 +1,4 @@
 ﻿// Extract Event Info and Create Event XML
-using System.Reflection;
 using System.Xml;
 using static Program;
 using static XMLHelper;
@@ -252,7 +251,8 @@ public class Events
         }
         #endregion
 
-        SetupHeaderXML(xmlDoc, root, "MixerBusFader", $"{{{MixerBusPannerGuid2}}}", out XmlElement MixerBusFaderElement2);
+        // used to be MixerBusPannerGuid2, but is probably wrong
+        SetupHeaderXML(xmlDoc, root, "MixerBusFader", $"{{{MixerBusFaderGuid2}}}", out XmlElement MixerBusFaderElement2);
         #endregion
 
         // Output Filepath

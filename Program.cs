@@ -222,7 +222,7 @@ public class Program
             Console.Clear();
         }
 
-        Console.WriteLine($"Welcome to the FMOD Bank Decompiler {GREEN}(Version 1.4.2){NORMAL}"
+        Console.WriteLine($"Welcome to the FMOD Bank Decompiler {GREEN}(Version 1.4.3){NORMAL}"
         + $"\n\nby {OTHERGRAY}burnedpopcorn180{NORMAL}"
         + $"\nand {BROWN}DogMatt{NORMAL}"
 
@@ -560,7 +560,7 @@ public class Program
                             // Adjust Start Pos if needed
                             if (AdjustStartPos)
                             {
-                                if (truestartpos != 0 && (truestartpos - 1.962 > 0))//make sure adjusting won't make it negative
+                                if (truestartpos != 0 && (truestartpos - 1.962 >= 0))//make sure adjusting won't make it negative
                                     truestartpos = truestartpos - 1.962;
                                 // if First Sound starts at zero, dont adjust for this one or future ones
                                 else if (truestartpos == 0 && FirstSound)
@@ -629,7 +629,7 @@ public class Program
                                 SoundLoops.Add(truename, 0);
 
                             // to skip sound and go to the end of it for next sound
-                            if (SoundLoops[truename] < SoundsinEvent.Count && loopend < EventLength)//prevent stackoverflow by calling this too much
+                            if (SoundLoops[truename] == 0 && loopend < EventLength)//prevent stackoverflow by calling this too much
                                 eventInstance.setTimelinePosition((int)loopend);
 
                             break;
