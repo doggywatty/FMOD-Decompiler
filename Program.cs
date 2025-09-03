@@ -543,7 +543,7 @@ public class Program
                             sound.getLength(out uint soundlength, FMOD.TIMEUNIT.MS);
 
                             // get loop points of sound (aka start and end points on timeline)
-                            sound.getLoopPoints(out uint unused, FMOD.TIMEUNIT.MS, out uint loopend, FMOD.TIMEUNIT.MS);
+                            sound.getLoopPoints(out uint unused, FMOD.TIMEUNIT.MS, out uint TimelinePos, FMOD.TIMEUNIT.MS);
 
                             // Get File Extension (from ExtractSounds.cs)
                             var fileExtension = "";
@@ -567,7 +567,7 @@ public class Program
                                     AdjustStartPos = false;
                             }
                             FirstSound = false;
-                            double truelooplength = (double)loopend / 1000;
+                            double truelooplength = (double)TimelinePos / 1000;
                             #endregion
                             #region Set Info
                             // If Sound hasn't been played yet
@@ -629,7 +629,7 @@ public class Program
                                 SoundLoops.Add(truename, 0);
 
                             // to skip sound and go to the end of it for next sound
-                            eventInstance.setTimelinePosition((int)loopend);
+                            eventInstance.setTimelinePosition((int)TimelinePos);
 
                             break;
                         #endregion
@@ -741,7 +741,11 @@ public class Program
                         {
                             ParameterValue++;
                             PushToConsoleLog($"Setting value for Parameter \"{ParameterName}\" to: {ParameterValue}", BROWN);
+
+                            // Go to next value
+                            // TODO - Fix Mem Leak that sometimes occurs when using this
                             eventInstance.setParameterByName(ParameterName, ParameterValue);
+
                             // reset timer
                             timeout = 0;
                         }
