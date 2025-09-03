@@ -16,7 +16,7 @@ public class Parameters
         string parmName = parameter.name;
 
         // add for event XML
-        ParametersGuid.Add(parmName, ParameterSettings);
+        ParametersGuid.TryAdd(parmName, ParameterSettings);
 
         #region First Segment (Setup)
         // Setup XML

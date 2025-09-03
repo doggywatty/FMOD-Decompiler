@@ -222,7 +222,7 @@ public class Program
             Console.Clear();
         }
 
-        Console.WriteLine($"Welcome to the FMOD Bank Decompiler {GREEN}(Version 1.4.3){NORMAL}"
+        Console.WriteLine($"Welcome to the FMOD Bank Decompiler {GREEN}(Version 1.4.4){NORMAL}"
         + $"\n\nby {OTHERGRAY}burnedpopcorn180{NORMAL}"
         + $"\nand {BROWN}DogMatt{NORMAL}"
 
@@ -629,8 +629,7 @@ public class Program
                                 SoundLoops.Add(truename, 0);
 
                             // to skip sound and go to the end of it for next sound
-                            //if (SoundLoops[truename] == 0 && loopend < EventLength)//prevent stackoverflow by calling this too much
-                                eventInstance.setTimelinePosition((int)loopend);
+                            eventInstance.setTimelinePosition((int)loopend);
 
                             break;
                         #endregion
@@ -670,7 +669,7 @@ public class Program
                 #endregion
 
                 // Set Callback (Unified, because otherwise one of them wouldn't run)
-                EVENT_CALLBACK EventCallback = new(EventCallbackFunc);
+                EVENT_CALLBACK EventCallback = new(EventCallbackFunc);// make it a var so GC doesn't clear it prematurely
                 eventInstance.setCallback(EventCallback, EVENT_CALLBACK_TYPE.SOUND_PLAYED | EVENT_CALLBACK_TYPE.TIMELINE_MARKER | EVENT_CALLBACK_TYPE.STOPPED);
                 eventInstance.start();// Play Sound
 
@@ -769,6 +768,7 @@ public class Program
 
                 // Stop sound if the while loop condition is met
                 // aka if it finishes extracting shit
+                eventInstance.setCallback(null, EVENT_CALLBACK_TYPE.ALL);//clear callback so its stops running and for GC to kill last callback instance
                 eventInstance.stop(STOP_MODE.IMMEDIATE);
                 eventInstance.release();
                 #endregion
@@ -780,6 +780,11 @@ public class Program
                 // Save Event XML
                 Events.SaveEvents(eventname, bankfilename, SoundsInfo, MarkersInfo, ParametersInfo, SoundLoops, IsAction);
             }
+
+            // Unload Bank File after its done
+            // DON'T UNLOAD Master.strings.bank OR Master.bank!!!
+            if (!bankfilename.Contains("Master"))
+                bank.unload();
         }
 
         #region Finish
@@ -791,6 +796,7 @@ public class Program
         PushToConsoleLog($"Exported Project is at {outputProjectPath}", GREEN);
 
         // Clean up the FMOD Studio system
+        studioSystem.unloadAll();
         studioSystem.release();
         #endregion
     }
