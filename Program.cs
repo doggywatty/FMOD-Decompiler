@@ -2,24 +2,22 @@
 using System.Runtime.InteropServices;
 public class Program
 {
-    #region Compiler Warning bullshit
+	#region Compiler Warning bullshit
+		#pragma warning disable CS1998
+		#pragma warning disable CS4014
+		#pragma warning disable CS8600
+		#pragma warning disable CS8601
+		#pragma warning disable CS8602
+		#pragma warning disable CS8603
+		#pragma warning disable CS8604
+		#pragma warning disable CS8605
+		#pragma warning disable CS8625
+	#endregion
 
-	#pragma warning disable CS1998
-	#pragma warning disable CS4014
-	#pragma warning disable CS8600
-	#pragma warning disable CS8601
-	#pragma warning disable CS8602
-	#pragma warning disable CS8603
-	#pragma warning disable CS8604
-	#pragma warning disable CS8605
-	#pragma warning disable CS8625
-
-    #endregion
-
-    #region Colored Text
-    // thank you https://stackoverflow.com/questions/2743260/is-it-possible-to-write-to-the-console-in-colour-in-net
-    public static string SPACE = "\r                                            "; // shortcut for when not verbose
-    public static string NORMAL = Console.IsOutputRedirected ? "" : "\x1b[39m";
+	#region Colored Text
+	// thank you https://stackoverflow.com/questions/2743260/is-it-possible-to-write-to-the-console-in-colour-in-net
+	public static string SPACE = "\r                                            "; // shortcut for when not verbose
+	public static string NORMAL = Console.IsOutputRedirected ? "" : "\x1b[39m";
 	public static string RED = Console.IsOutputRedirected ? "" : "\x1b[91m";
 	public static string GREEN = Console.IsOutputRedirected ? "" : "\x1b[92m";
 	public static string YELLOW = Console.IsOutputRedirected ? "" : "\x1b[93m";
@@ -178,38 +176,26 @@ public class Program
 		#region Check Arguments
 		for (int i = 0; i < args.Length; i++)
 		{
-			// check for --input argument
-			if (args[i] == "--input" && i + 1 < args.Length)
+			switch (args[i])
 			{
-				bankFolder = args[i + 1];
-				i++; // Skip the next element (value for --input)
-			}
-			// check the --output argument
-			else if (args[i] == "--output" && i + 1 < args.Length)
-			{
-				outputProjectPath = args[i + 1];
-				i++; // Skip the next element (value for --output)
-			}
-			// check the --output argument
-			else if (args[i] == "--name" && i + 1 < args.Length)
-			{
-				projectname = args[i + 1];
-				i++; // Skip the next element (value for --output)
-			}
-			// check the --verbose flag
-			else if (args[i] == "--verbose")
-			{
-				verbose = true;
-			}
-			else if (args[i] == "--GUI")
-			{
-				IsGUI = true;
-			}
-			else
-			{
-				// Handle missing arguments
-				Console.Write($"Missing argument: {args[i]}");
-				return;
+				case "--input" when i + 1 < args.Length:
+					bankFolder = args[++i];
+					break;
+				case "--output" when i + 1 < args.Length:
+					outputProjectPath = args[++i];
+					break;
+				case "--name" when i + 1 < args.Length:
+					projectname = args[++i];
+					break;
+				case "--verbose":
+					verbose = true;
+					break;
+				case "--GUI":
+					IsGUI = true;
+					break;
+				default:
+					Console.WriteLine($"Invalid or missing value for argument: {args[i]}");
+					return;
 			}
 		}
 		#endregion
@@ -699,8 +685,8 @@ public class Program
 					// Restart timeline for this parameter value.
 					eventInstance.setTimelinePosition(0);
 
-                    // so this won't run anymore
-                    InitParameter = true;
+					// so this won't run anymore
+					InitParameter = true;
 				}
 				#endregion
 
@@ -734,8 +720,8 @@ public class Program
 							// Restart timeline for this parameter value.
 							eventInstance.setTimelinePosition(0);
 
-                            // so this won't run anymore
-                            InitParameter = true;
+							// so this won't run anymore
+							InitParameter = true;
 						}
 						#endregion
 
@@ -759,15 +745,15 @@ public class Program
 							ParameterValue++;
 							PushToConsoleLog($"Setting value for Parameter \"{ParameterName}\" to: {ParameterValue}", BROWN);
 
-                            // Go to next value
-                            eventInstance.setParameterByID(ParameterID, ParameterValue);
+							// Go to next value
+							eventInstance.setParameterByID(ParameterID, ParameterValue);
 
 							// Restart timeline for each parameter step so sounds for that value are evaluated.
 							eventInstance.setTimelinePosition(0);
 
-                            // reset timer
-                            timeoutTimer.Restart();
-                        }
+							// reset timer
+							timeoutTimer.Restart();
+						}
 						// If Parameter Value has reached its end
 						else if (MaxParameterValue == ParameterValue && IsParameter)
 						{
@@ -780,9 +766,9 @@ public class Program
 								ParameterIndex++;
 								// redo the cycle
 								InitParameter = false;
-                                // reset timer
+								// reset timer
 								timeoutTimer.Restart();
-                            }
+							}
 						}
 					}
 				}
@@ -857,7 +843,7 @@ public class Program
 				string fullMessage = displayMsg + "	" + sequence[sequenceCode, counterValue];
 
 				// ensure last line is clear
-				Console.Write("\r													");
+				Console.Write("\r                                                    ");
 
 				// Write the new spinner message while clearing last line
 				Console.Write("\r" + fullMessage);
