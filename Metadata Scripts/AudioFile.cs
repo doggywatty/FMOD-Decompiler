@@ -46,32 +46,16 @@ public class AudioFile
         SaveXML(xmlDoc, filePath);
     }
 
-    #region Find Sound Length
-    // needed because FMOD5Sharp has no way of doing it, and we're not connected to the FMOD API/Bank here
+    // needed because FMOD5Sharp has no way of doing it
     static float GetAudioLength(string filePath)
     {
-        string fileExtension = Path.GetExtension(filePath).ToLower();
-
-        // Handle WAV file
-        if (fileExtension == ".wav")
-            return GetWavDuration(filePath);
-        // Handle OGG file
-        else if (fileExtension == ".ogg")
-            return GetOggDuration(filePath);
-        // Unsupported format     uh no
-        else
-            throw new NotSupportedException("Unsupported file format.");
-    }
-
-    static float GetWavDuration(string filePath)
-    {
-        using (var reader = new WaveFileReader(filePath))
-            return (float)reader.TotalTime.TotalSeconds;
-    }
-    static float GetOggDuration(string filePath)
-    {
-        using (var vorbis = new VorbisReader(filePath))
-            return (float)vorbis.TotalTime.TotalSeconds;
+        dynamic reader;
+        switch (Path.GetExtension(filePath).ToLower())
+        {
+            case ".wav": reader = new WaveFileReader(filePath); break;
+            case ".ogg": reader = new VorbisReader(filePath); break;
+            default: return 0;
+        }
+        return (float)reader.TotalTime.TotalSeconds;
     }
 }
-#endregion

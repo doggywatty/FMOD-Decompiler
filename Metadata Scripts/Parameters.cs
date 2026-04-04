@@ -1,10 +1,11 @@
 ﻿using System.Xml;
-using FMOD.Studio;
 using static Program;
 using static XMLHelper;
 
 public class Parameters
 {
+    // TEMPPP
+    /*
     public static List<PARAMETER_DESCRIPTION> ParameterList = [];
     public static Dictionary<string, Guid> ParametersGuid = [];
     public static void ParameterXML(PARAMETER_DESCRIPTION parameter, EventDescription evDesc)
@@ -117,4 +118,5 @@ public class Parameters
         // Save
         SaveXML(xmlDoc, filePath);
     }
+    */
 }

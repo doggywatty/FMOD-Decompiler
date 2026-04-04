@@ -1,5 +1,6 @@
-﻿using FMOD.Studio;
+﻿using Fmod5Sharp.FmodTypes;
 using System.Runtime.InteropServices;
+
 public class Program
 {
 	#region Compiler Warning bullshit
@@ -119,27 +120,10 @@ public class Program
 			File.AppendAllTextAsync(outputProjectPath + "/log.txt", "\n" + message);
  
 	}
-	// get random GUIDs for some stuff
-	public static Guid GetRandomGUID()
-	{
-		// Generate a new GUID
+
+	// Create Random GUIDs
+	public static Guid GetRandomGUID() {
 		return Guid.NewGuid();
-	}
-
-	// FMOD.GUID to System.Guid Converter
-	public static Guid FMODGUIDToSysGuid(FMOD.GUID fmodGuid)
-	{
-		// create byte array
-		byte[] bytes = new byte[16];
-
-		// copy FMOD.GUID Struct Data into the correct positions
-		BitConverter.GetBytes(fmodGuid.Data1).CopyTo(bytes, 0);   // Data1 goes into positions 0-3
-		BitConverter.GetBytes(fmodGuid.Data2).CopyTo(bytes, 4);   // Data2 goes into positions 4-7
-		BitConverter.GetBytes(fmodGuid.Data3).CopyTo(bytes, 8);   // Data3 goes into positions 8-11
-		BitConverter.GetBytes(fmodGuid.Data4).CopyTo(bytes, 12);  // Data4 goes into positions 12-15
-
-		// return output as System.Guid
-		return new Guid(bytes);
 	}
 	#endregion
 
@@ -235,12 +219,12 @@ public class Program
 		// If user input nothing
 		if (bankFolder == "")
 		{
-			Console.Write($"No Bank file path provided\nQuitting...");
+            PushToConsoleLog($"ERROR: No Bank file path provided\nQuitting...", RED);
 			return;
 		}
 		if (outputProjectPath == "")
 		{
-			Console.Write($"No Output file path provided\nQuitting...");
+            PushToConsoleLog($"ERROR: No Output file path provided\nQuitting...", RED);
 			return;
 		}
 
@@ -251,16 +235,14 @@ public class Program
 		// If bank folder doesn't exist
 		if (!Directory.Exists(bankFolder))
 		{
-			PushToConsoleLog($"Bank Folder does not exist\nQuitting...", RED);
+			PushToConsoleLog($"ERROR: Bank Folder does not exist\nQuitting...", RED);
 			return;
 		}
 
 		// If output folder doesn't exist, warn user
 		if (!Directory.Exists(bankFolder))
-		{
-			PushToConsoleLog($"Output Folder does not exist", RED);
-			PushToConsoleLog($"Continuing Anyways...", YELLOW);
-		}
+			PushToConsoleLog($"WARNING: Output Folder does not exist\nContinuing Anyways...", YELLOW);
+
 		#endregion
 
 		// Get Project Name
@@ -306,14 +288,6 @@ public class Program
 		MasterXMLs.Create_FSPROFile(projectname);
 
 		#endregion
-
-		// create the FMOD Studio system
-		FMOD.Studio.System studioSystem;
-		FMOD.Studio.System.create(out studioSystem);
-		studioSystem.initialize(512, INITFLAGS.NORMAL, FMOD.INITFLAGS.NORMAL, IntPtr.Zero);
-
-		PushToConsoleLog($"Loading Banks...", YELLOW);
-
 		#region Built-in XML Files
 		// this is basically just stuff that is ALWAYS gonna be in a FSPro Project
 
@@ -336,465 +310,74 @@ public class Program
 		MasterXMLs.Create_TagsXML();
 		MasterXMLs.Create_WorkspaceXML();
 
-		#endregion
+        #endregion
 
-		// load all the banks in the specified folder
-		foreach (string bankFilePath in Directory.GetFiles(bankFolder, "*.bank"))
+        // load all the banks in the specified folder
+        PushToConsoleLog($"Loading Banks...", YELLOW);
+		// (but get Master.strings first)
+        var FolderFiles = Directory.GetFiles(bankFolder, "*.bank")
+			.OrderByDescending(f => Path.GetFileName(f).Equals("Master.strings.bank", StringComparison.OrdinalIgnoreCase));
+
+        #region Idiot Proof Checks
+        if (Directory.GetFiles(bankFolder, "*.fsb").Length > 0)
+        {
+            // prevent user from using FSB4 files, since this tool obviously doesn't support that
+            PushToConsoleLog("ERROR: Input is unsupported (FSB4)\nQuitting...", RED);
+            return;
+        }
+        if (!FolderFiles.Any())
+        {
+            // prevent user from using FSB4 files, since this tool obviously doesn't support that
+            PushToConsoleLog("ERROR: No .bank files were found\nQuitting...", RED);
+            return;
+        }
+        if (!File.Exists($"{bankFolder}/Master.strings.bank"))
+        {
+            PushToConsoleLog("ERROR: Master.strings.bank is not present\nQuitting...", RED);
+            return;
+        }
+        #endregion
+
+        foreach (string bankFilePath in FolderFiles)
 		{
-			studioSystem.loadBankFile(bankFilePath, LOAD_BANK_FLAGS.NORMAL, out Bank bank);
+            var bank = FModBankParser.FModBankParser.LoadSoundBank(new FileInfo(bankFilePath));
+			string bankName = bank.BankName;
 
-			// just filename
-			string bankfilename = Path.GetFileName(bankFilePath);
-			PushToConsoleLog($"{USESPACE}\nLoaded Bank: {bankfilename}", GREEN);
+            PushToConsoleLog($"Loaded Bank: {bankName} (GUID: {bank.GetBankGuid()})", GREEN);
+            PushToConsoleLog($"Bank Version: {bank.BankInfo.FileVersion}", GREEN);
 
-			// if bank loaded is Master.strings.bank, stop and continue to next bank
-			// as it never has anything useful to extract
-			if (bankfilename == "Master.strings.bank")
-				continue;
+			if (bankName == "Master.strings.bank") continue;
 
-			// Extract Sounds to /Assets folder
-			ExtractSoundAssets.ExtractSoundFiles(bankFilePath, bankfilename);
-
-			// get the list of events in the bank
-			bank.getEventCount(out int eventCount);
-			PushToConsoleLog($"\nEvents Found: {eventCount}\n", YELLOW, true);
+            PushToConsoleLog($"Event Count: {bank.EventNodes.Count}", GREEN);
 
 			// basically just the XML Files for most assets that references their given bank file
 			#region Bank Specific XMLs
-			if (bankfilename != "Master.bank")// Master.bank has already been added, so skip it
+			if (bankName != "Master.bank")// Master.bank has already been added, so skip it
 			{
 				// For Bank Asset XML
-				BankSpecificGUIDs.Add(bankfilename + "_Asset", GetRandomGUID());
-				MasterXMLs.Create_BankAssetXML(bankfilename);
+				BankSpecificGUIDs.Add(bankName + "_Asset", GetRandomGUID());
+				MasterXMLs.Create_BankAssetXML(bankName);
 
 				// For Bank File XML
-				BankSpecificGUIDs.Add(bankfilename + "_Bank", GetRandomGUID());
-				MasterXMLs.Create_BankFileXML(bankfilename);
+				BankSpecificGUIDs.Add(bankName + "_Bank", GetRandomGUID());
+				MasterXMLs.Create_BankFileXML(bankName);
 			}
 			#endregion
 
-			// Start doing the actual extraction parts
-			bank.getEventList(out EventDescription[] eventDescriptions);
-
-			// clear organization everytime a bank file is loaded
-			// so event:/music/folder and event:/sfx/folder dont merge to /music
-			EventFolder.AllEvents.Clear();
-			EventFolderGUIDs.Clear();
-
-			#region Get Event Folders
-			// if there are no events, just skip the entire bank
-			if (eventDescriptions is null)
-				continue;
-
-			foreach (var eventDescription in eventDescriptions)
+			// Spinner for when --verbose was not used
+			if (!verbose && !SpinnerInit)
 			{
-				// get event path
-				if (eventDescription.getPath(out string eventname) != FMOD.RESULT.OK)
-					continue;
+				// no await here, because we want it to continue
+				StartSpinnerAsync("Extracting Bank Info...", SpinnerPattern, 1000, SpinnerKill.Token);
 
-				// Spinner for when --verbose was not used
-				if (!verbose && SpinnerInit == false)
-				{
-					// no await here, because we want it to continue
-					StartSpinnerAsync("Saving Events...", SpinnerPattern, 1000, SpinnerKill.Token);
-
-					// ensure this doesn't get called twice
-					SpinnerInit = true;
-				}
-
-				// add event name to save later
-				EventFolder.AllEvents.Add(eventname);
-			}
-			// Extract Event Folders
-			if (EventFolder.AllEvents.Count != 0)
-				EventFolder.ExtractEventFolders(outputProjectPath + "/Metadata/EventFolder");
-			#endregion
-
-			// process each event in the bank
-			foreach (var eventDescription in eventDescriptions)
-			{
-				// create event instance
-				if (eventDescription.createInstance(out EventInstance eventInstance) != FMOD.RESULT.OK)
-					continue;
-
-				// get event path
-				if (eventDescription.getPath(out string eventname) != FMOD.RESULT.OK)
-					continue;
-
-				// get event GUID
-				if (eventDescription.getID(out FMOD.GUID eventID) != FMOD.RESULT.OK) 
-					continue;
-
-				// make guid into a guid we can actually use, not fmod's bullshit
-				Guid clean_eventID = FMODGUIDToSysGuid(eventID);
-
-				PushToConsoleLog($"\nSaving Event: {eventname}", YELLOW, true);
-
-				// add GUID to event
-				EventGUIDs.TryAdd(eventname, clean_eventID); // you can get the GUID for a given event with EventGUIDs["event:/music/w2/graveyard"]
-
-				// Add all events to txt
-				File.AppendAllTextAsync(outputProjectPath + "/EventGUIDs.txt", $"\n{{{EventGUIDs[eventname]}}} {eventname}");
-
-				#region Get Parameters
-				if (FindEventType.EventisParameter(eventDescription))
-					FindEventType.GetParameterInfo(eventDescription);
-
-				PushToConsoleLog($"Event GUID for {eventname}: {EventGUIDs[eventname]}");
-
-				// event types
-				if (FindEventType.EventisParameter(eventDescription))
-					PushToConsoleLog($"Event Sheet Type: Parameter\n{FindEventType.DisplayParameterInfo(eventDescription)}", OTHERGRAY, true);
-				else if (FindEventType.EventisTimeline(eventInstance))
-					PushToConsoleLog($"Event Sheet Type: Timeline", OTHERGRAY, true);
-				else
-					PushToConsoleLog($"Event Sheet Type: Action", OTHERGRAY, true);
-				#endregion
-				#region Get Internal Event MetaData
-				// So basically what this is doing is that it's playing every sound in the event
-				// so we can retrieve info on the sound such as sound file names
-				// becase that's the only other way to extract this info for some reason
-
-				#region Init These vars idk
-				// force it to wait until event end callback returns
-				bool Event_IsDone = false;
-
-				// List that holds all names of sounds that have already been played
-				List<string> SoundsinEvent = [];
-
-				// List that holds all names of markers
-				List<string> MarkersinEvent = [];
-
-				// Save Sound Info to struct
-				List<EventSoundInfo> SoundsInfo = [];
-				EventSoundInfo SoundInfo;
-
-				// Save Parameter Info to struct
-				List<EventParameterInfo> ParametersInfo = [];
-				EventParameterInfo ParameterInfo;
-
-				// Save Marker Info to struct
-				List<EventMarkerInfo> MarkersInfo = [];
-				EventMarkerInfo MarkerInfo;
-
-				// Get length of All of the Event's Audio
-				eventDescription.getLength(out int EventLength);
-
-				// bool to check if it should be action
-				// we determine this by seeing if a sound is less than a second
-				// gotta do this because if its a timeline, it won't play in FMOD Studio
-				bool IsAction = false;
-				bool LockAction = false;
-
-				// Sometimes Sound starts at 1.962 seconds late into the timeline
-				// Adjust for that when needed
-				bool AdjustStartPos = true;
-				bool FirstSound = true;
-
-				// Parameter stuffs
-				bool IsParameter = FindEventType.EventisParameter(eventDescription);
-				bool InitParameter = false;
-				int ParameterValue = 0;
-				int MaxParameterValue = 0;
-				List<string> ParameterList = FindEventType.ParameterArray;
-				int ParameterIndex = 0;
-				string ParameterName = string.Empty;
-				PARAMETER_ID ParameterID = new();
-
-				// if int is higher than 0, it loops
-				Dictionary<string, int> SoundLoops = [];
-				#endregion
-				#region Callback
-				// Here's basically all the Functions we can use now
-				// https://www.fmod.com/docs/2.03/api/core-api-sound.html
-				FMOD.RESULT EventCallbackFunc(EVENT_CALLBACK_TYPE type, IntPtr _unusedlmao, IntPtr parameterPtr)
-				{
-					switch (type)
-					{
-						#region Sound Played Callback
-						// Callback that triggers once a single sound is played in the event
-						// (Can trigger many times depending on how many sounds there are)
-						case EVENT_CALLBACK_TYPE.SOUND_PLAYED:
-							#region Get Info
-							FMOD.Sound sound = new(parameterPtr);
-							if (sound.getName(out string name, 1024) != FMOD.RESULT.OK)
-							{
-								PushToConsoleLog($"ERROR! - Failed to get Sound Name!", RED, true);
-								break;
-							}
-
-							// Get Starting Position of sound currently playing
-							eventInstance.getTimelinePosition(out int currentPosition);
-
-							// get length of sound in milliseconds
-							sound.getLength(out uint soundlength, FMOD.TIMEUNIT.MS);
-
-							// get loop points of sound (aka start and end points on timeline)
-							sound.getLoopPoints(out uint unused, FMOD.TIMEUNIT.MS, out uint TimelinePos, FMOD.TIMEUNIT.MS);
-
-							// Get File Extension (from ExtractSounds.cs)
-							var fileExtension = "";
-							// get sound names and their extensions from the current bank file
-							Dictionary<string, string> SoundNameExt = ExtractSoundAssets.SoundsinBanks[bankfilename];
-							// if sound was extracted and exists, get its extension
-							if (SoundNameExt.ContainsKey(name))
-								fileExtension = "." + SoundNameExt[name];
-
-							var truename = name + fileExtension;
-							// Get precise values (values with decimals)
-							double truelength = (double)soundlength / 1000;
-							double truestartpos = (double)currentPosition / 1000;
-							// Adjust Start Pos if needed
-							if (AdjustStartPos)
-							{
-								if (truestartpos != 0 && (truestartpos - 1.962 >= 0))//make sure adjusting won't make it negative
-									truestartpos = truestartpos - 1.962;
-								// if First Sound starts at zero, dont adjust for this one or future ones
-								else if (truestartpos == 0 && FirstSound)
-									AdjustStartPos = false;
-							}
-							FirstSound = false;
-							double truelooplength = (double)TimelinePos / 1000;
-							#endregion
-							#region Set Info
-							// If Sound hasn't been played yet
-							if (!SoundsinEvent.Contains(name))
-							{
-								// Get Sound File used in Event
-								PushToConsoleLog($"\nSound Used: {truename}", GREEN, true);
-								PushToConsoleLog($"Sound Length: {truelength}", GREEN, true);
-								PushToConsoleLog($"Played at: {truestartpos}", GREEN, true);
-
-								if (IsParameter && ParameterValue > 0) 
-								{
-									PushToConsoleLog($"Sound triggered on Parameter: {ParameterName}", GREEN, true);
-									PushToConsoleLog($"Parameter Value when triggered: {ParameterValue}", GREEN, true);
-								}
-
-								// Add Important Sound Info to Struct
-								SoundInfo.name = truename;
-								SoundInfo.GUID = AudioFileGUIDs[bankfilename.Replace(".bank", "\\") + truename];
-								SoundInfo.startpos = truestartpos;
-								SoundInfo.length = truelength;
-								// Save info in a dictionary, since there could be many sounds
-								SoundsInfo.Add(SoundInfo);
-
-								// Add Parameter Info to Struct
-								if (ParameterName != string.Empty)
-								{
-									ParameterInfo.name = ParameterName;
-									ParameterInfo.GUID = Parameters.ParametersGuid[ParameterName];
-									ParameterInfo.value = ParameterValue;
-									ParameterInfo.start = truestartpos;
-									ParameterInfo.length = truelooplength;
-									ParametersInfo.Add(ParameterInfo);
-								}
-
-								// If sound is less than a second long, make it an Action Sheet
-								// Or else it won't play in FMOD Studio
-								if (!LockAction)
-								{
-									if (SoundInfo.length < 1)
-										IsAction = true;
-									// If another sound in the same event is larger than that however, ensure it is Timeline
-									else
-									{
-										IsAction = false;
-										// ensure that IsAction can't be set to true anymore
-										LockAction = true;
-									}
-								}
-
-								// Flag as played
-								SoundsinEvent.Add(name);
-							}
-							#endregion
-							// do loop stuffs chud
-							if (SoundLoops.ContainsKey(truename))
-								SoundLoops[truename] = SoundLoops[truename] + 1;
-							else
-								SoundLoops.Add(truename, 0);
-							break;
-						#endregion
-						#region Marker Callback
-						// Callback for when it detects it passed a Marker
-						case EVENT_CALLBACK_TYPE.TIMELINE_MARKER:
-							var marker = (TIMELINE_MARKER_PROPERTIES)Marshal.PtrToStructure(parameterPtr, typeof(TIMELINE_MARKER_PROPERTIES));
-							string markername = (string)marker.name;
-							double markerpos = (double)marker.position / 1000;
-							if (!MarkersinEvent.Contains(markername))
-							{
-								PushToConsoleLog($"Found Marker!", OTHERGRAY, true);
-								PushToConsoleLog($"Marker Name: {markername}", OTHERGRAY, true);
-								PushToConsoleLog($"Marker Pos: {markerpos}", OTHERGRAY, true);
-
-								// Save Marker
-								MarkerInfo.name = markername;
-								MarkerInfo.position = markerpos;
-								MarkersInfo.Add(MarkerInfo);
-
-								MarkersinEvent.Add(markername);
-							}
-							break;
-						#endregion
-						#region Finish Event Callback
-						// Callback that triggers if the event has ended entirely (no more sounds have played)
-						case EVENT_CALLBACK_TYPE.STOPPED:
-							// Mark as done
-							// if its a parameter tho, wait for that check to finish
-							if (!IsParameter)
-								Event_IsDone = true;
-							break;
-						#endregion
-					}
-					return FMOD.RESULT.OK;
-				}
-				#endregion
-
-				// Set Callback (Unified, because otherwise one of them wouldn't run)
-				EVENT_CALLBACK EventCallback = new(EventCallbackFunc);// make it a var so GC doesn't clear it prematurely
-				eventInstance.setCallback(EventCallback, EVENT_CALLBACK_TYPE.SOUND_PLAYED | EVENT_CALLBACK_TYPE.TIMELINE_MARKER | EVENT_CALLBACK_TYPE.STOPPED);
-				eventInstance.start();// Play Sound
-
-				// Set volume to 0, because the following will kill your ears
-				eventInstance.setVolume(0f);
-				// Speed up Playback, because we don't care about actually listening to it
-				var playbackSpeed = 100f;// should be 100x speed, thank god we aren't listening to it
-				eventInstance.setPitch(playbackSpeed);
-
-				// just in case it gets stuck
-				var timeoutTimer = System.Diagnostics.Stopwatch.StartNew();
-
-				#region Initial Parameter Check n Set
-				if (ParameterList == null || ParameterList.Count == 0)
-					IsParameter = false;
-
-				if (IsParameter && !InitParameter)
-				{
-					ParameterName = ParameterList[ParameterIndex];
-					PushToConsoleLog($"Checking Parameter: {ParameterName}", BROWN, true);
-					ParameterValue = FindEventType.GetMinParamValue(eventDescription, ParameterIndex);
-					MaxParameterValue = FindEventType.GetMaxParamValue(eventDescription, ParameterIndex);
-
-					if (eventDescription.getParameterDescriptionByIndex(ParameterIndex, out PARAMETER_DESCRIPTION parameter) == FMOD.RESULT.OK)
-						ParameterID = parameter.id;
-
-					// Apply the initial value as well (usually min) so value 0 isn't skipped.
-					eventInstance.setParameterByID(ParameterID, ParameterValue);
-
-					// Restart timeline for this parameter value.
-					eventInstance.setTimelinePosition(0);
-
-					// so this won't run anymore
-					InitParameter = true;
-				}
-				#endregion
-
-				// Updates FMOD System until event has ended
-				#region Wait for Callbacks
-				while (!Event_IsDone)
-				{
-					studioSystem.update();
-
-					// Timeout, that triggers when the event should've ended (accounting for speedup as well)
-					// plus about a second
-					// EventLength is in milliseconds, so add ~1 second grace time.
-					if (timeoutTimer.Elapsed.TotalMilliseconds >= (EventLength / playbackSpeed) + 1000)
-					{
-						#region Looping Parameter Check n Set
-						if (ParameterList == null || ParameterList.Count == 0)
-							IsParameter = false;
-
-						if (IsParameter && !InitParameter)
-						{
-							ParameterName = ParameterList[ParameterIndex];
-							PushToConsoleLog($"Checking Parameter: {ParameterName}", BROWN, true);
-							ParameterValue = FindEventType.GetMinParamValue(eventDescription, ParameterIndex);
-							MaxParameterValue = FindEventType.GetMaxParamValue(eventDescription, ParameterIndex);
-							if (eventDescription.getParameterDescriptionByIndex(ParameterIndex, out PARAMETER_DESCRIPTION parameter) == FMOD.RESULT.OK)
-								ParameterID = parameter.id;
-
-							// Apply the initial value as well (usually min) so value 0 isn't skipped.
-							eventInstance.setParameterByID(ParameterID, ParameterValue);
-
-							// Restart timeline for this parameter value.
-							eventInstance.setTimelinePosition(0);
-
-							// so this won't run anymore
-							InitParameter = true;
-						}
-						#endregion
-
-						// If not Parameter
-						if (!IsParameter)
-						{
-							// if event just had no audio files in it
-							if (EventLength == 0 && SoundsinEvent.Count == 0)
-								PushToConsoleLog($"ERROR! - Event has no audio!", RED, true);
-							// if no sounds played at all, but the event still has length
-							else if (SoundsinEvent.Count == 0 && EventLength != 0)
-								PushToConsoleLog($"ERROR! - Internal Event Metadata failed to load!", RED, true);
-							else
-								PushToConsoleLog($"Internal Event Checking Timed Out...", NORMAL, true);
-
-							break;
-						}
-						// If Parameter Value hasn't reached its Max, go onto next value
-						else if (MaxParameterValue > ParameterValue && IsParameter)
-						{
-							ParameterValue++;
-							PushToConsoleLog($"Setting value for Parameter \"{ParameterName}\" to: {ParameterValue}", BROWN);
-
-							// Go to next value
-							eventInstance.setParameterByID(ParameterID, ParameterValue);
-
-							// Restart timeline for each parameter step so sounds for that value are evaluated.
-							eventInstance.setTimelinePosition(0);
-
-							// reset timer
-							timeoutTimer.Restart();
-						}
-						// If Parameter Value has reached its end
-						else if (MaxParameterValue == ParameterValue && IsParameter)
-						{
-							// if no more parameters to check, leave cycle
-							if ((ParameterList.Count - 1) <= ParameterIndex)
-								break;
-							else
-							{
-								// move onto next parameter
-								ParameterIndex++;
-								// redo the cycle
-								InitParameter = false;
-								// reset timer
-								timeoutTimer.Restart();
-							}
-						}
-					}
-				}
-				#endregion
-
-				// Stop sound if the while loop condition is met
-				// aka if it finishes extracting shit
-				eventInstance.setCallback(null, EVENT_CALLBACK_TYPE.ALL);//clear callback so its stops running and for GC to kill last callback instance
-				eventInstance.stop(STOP_MODE.IMMEDIATE);
-				eventInstance.release();
-				GC.KeepAlive(EventCallback); // ensure delegate isn't collected before event cleanup is fully done
-				#endregion
-
-				// EventisTimeline() func checks it in a way that Action Sheets return false to
-				// so might as well use it, plus add the other check
-				IsAction = FindEventType.EventisTimeline(eventInstance) ? IsAction : true;
-
-				// Save Event XML
-				Events.SaveEvents(eventname, bankfilename, SoundsInfo, MarkersInfo, ParametersInfo, SoundLoops, IsAction);
+				// ensure this doesn't get called twice
+				SpinnerInit = true;
 			}
 
-			// Unload Bank File after its done
-			// DON'T UNLOAD Master.strings.bank OR Master.bank!!!
-			if (!bankfilename.Contains("Master"))
-				bank.unload();
-		}
+			// Export all Sounds
+			foreach (FmodSoundBank sndBank in bank.SoundBankData)
+                ExtractSoundAssets.ExtractSoundFiles(sndBank, bankName);
+        }
 
 		#region Finish
 		// if not verbose, stop spinner
@@ -803,10 +386,6 @@ public class Program
 
 		PushToConsoleLog($"{USESPACE}\nConversion Complete!", GREEN);
 		PushToConsoleLog($"Exported Project is at {outputProjectPath}", GREEN);
-
-		// Clean up the FMOD Studio system
-		studioSystem.unloadAll();
-		studioSystem.release();
 		#endregion
 	}
 

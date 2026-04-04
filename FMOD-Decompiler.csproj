@@ -21,26 +21,12 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Fmod5Sharp" Version="3.0.1" />
     <PackageReference Include="FModBankParser" Version="1.2.0" />
-    <PackageReference Include="NAudio" Version="2.2.1" />
+    <PackageReference Include="NAudio" Version="2.3.0" />
     <PackageReference Include="NVorbis" Version="0.10.5" />
   </ItemGroup>
 
   <ItemGroup>
     <Resource Include="icon.ico" />
   </ItemGroup>
-
-  <!-- Copy FMOD DLLs when running a test build -->
-  <Target Name="PostBuild" AfterTargets="PostBuildEvent">
-    <Copy SourceFiles="DLLs\fmod.dll" DestinationFolder="$(OutDir)" />
-    <Copy SourceFiles="DLLs\fmodstudio.dll" DestinationFolder="$(OutDir)" />
-  </Target>
-
-	<!-- Copy FMOD DLLs when publishing a build -->
-  <Target Name="PostPublish" AfterTargets="Publish">
-	<Copy SourceFiles="DLLs\fmod.dll" DestinationFolder="$(PublishDir)" />
-	<Copy SourceFiles="DLLs\fmodstudio.dll" DestinationFolder="$(PublishDir)" />
-  </Target>
-
 </Project>

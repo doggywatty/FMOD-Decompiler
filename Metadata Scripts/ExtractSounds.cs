@@ -1,8 +1,4 @@
-﻿// shit that extracts sounds from banks
-// https://github.com/SamboyCoding/Fmod5Sharp
-using Fmod5Sharp;
-using Fmod5Sharp.FmodTypes;
-using System.Text;
+﻿using Fmod5Sharp.FmodTypes;
 using static Program;
 
 public class ExtractSoundAssets
@@ -12,38 +8,23 @@ public class ExtractSoundAssets
     public static Dictionary<string, Dictionary<string, string>> SoundsinBanks = [];
 
     // originally from https://github.com/SamboyCoding/Fmod5Sharp/blob/master/BankExtractor/Program.cs
-    public static void ExtractSoundFiles(string bankPath, string bankfilename)
+    public static void ExtractSoundFiles(FmodSoundBank bank, string bankfilename)
     {
         string outPath = outputProjectPath + "/Assets";
-
-        var bytes = File.ReadAllBytes(bankPath);
-        var index = bytes.AsSpan().IndexOf(Encoding.ASCII.GetBytes("FSB5"));
-
-        if (index > 0)
-            bytes = bytes.AsSpan(index).ToArray();
-
-        // Try to safely get sounds from bank file
-        bool success = FsbLoader.TryLoadFsbFromByteArray(bytes, out FmodSoundBank? bank);
-        if (!success || bank is null)
-        {
-            PushToConsoleLog($"ERROR! - Failed to extract sounds from {bankfilename}!", RED);
-            return;
-        }
-
-        var outDir = Directory.CreateDirectory(outPath + $"/{bankfilename.Replace(".bank", "")}/");
+        var outDir = Directory.CreateDirectory($"{outPath}/{bankfilename.Replace(".bank", "")}/");
 
         PushToConsoleLog($"\nExtracting Sound Files from {bankfilename}...\n", YELLOW);
 
         var i = 0;
         // Set up dictionary
-        Dictionary<string, string> SoundNameExt = new Dictionary<string, string>();
+        Dictionary<string, string> SoundNameExt = [];
         PushToConsoleLog($"Sounds Found: {bank.Samples.Count}", YELLOW);
         foreach (var bankSample in bank.Samples)
         {
             i++;
             var name = bankSample.Name ?? $"UnknownSound-{i}";
 
-            if (!bankSample.RebuildAsStandardFileFormat(out var data, out var extension))
+            if (!bankSample.RebuildAsStandardFileFormat(out byte[]? data, out string? extension))
             {
                 PushToConsoleLog($"ERROR! - Failed to Extract Sound {name}!", RED);
                 continue;
@@ -58,16 +39,14 @@ public class ExtractSoundAssets
             File.WriteAllBytes(filePath, data);
             PushToConsoleLog($"Extracted Sound {name}.{extension}", CYAN);
 
-            List<FmodSample> samples = bank.Samples;
-
             // set defaults for frequency and channels
             int frequency = 44100;
             uint numChannels = 2;
 
             // get true values from sound files
             // although it fails sometimes, idk its weird
-            try { frequency = samples[i]?.Metadata?.Frequency ?? 44100; } catch { }
-            try { numChannels = samples[i]?.Metadata?.Channels ?? 2; } catch { }
+            try { frequency = bank.Samples[i]?.Metadata?.Frequency ?? 44100; } catch { }
+            try { numChannels = bank.Samples[i]?.Metadata?.Channels ?? 2; } catch { }
 
             // add to xml
             AudioFile.AudioFileXML(outPath, filePath, frequency, numChannels);
