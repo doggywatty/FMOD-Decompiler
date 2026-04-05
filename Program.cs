@@ -1,5 +1,4 @@
 ﻿using Fmod5Sharp.FmodTypes;
-using FModBankParser;
 using FModBankParser.Nodes;
 using FModBankParser.Objects;
 using System.Runtime.InteropServices;
@@ -71,15 +70,14 @@ public class Program
 	public static Guid Master3GUID = GetRandomGUID();// for Master.XML (effect)
 
 	// these keep track of all randomly generated GUIDs, so we can call them back if needed elsewhere
-	public static Dictionary<string, Guid> EventGUIDs = [];
 	public static Dictionary<string, Guid> EventFolderGUIDs = [];
 	public static Dictionary<string, Guid> AudioFileGUIDs = [];
-	public static Dictionary<string, Guid> BankSpecificGUIDs = [];
-	#endregion
+    public static Dictionary<FModGuid, Guid> WavGUIDs = [];
+    #endregion
 
-	#region Initialize Main Variables
-	// For Spinner
-	public static CancellationTokenSource SpinnerKill = new();
+    #region Initialize Main Variables
+    // For Spinner
+    public static CancellationTokenSource SpinnerKill = new();
 
 	// Argument Values
 	public static string bankFolder = "";
@@ -356,8 +354,39 @@ public class Program
                 MasterXMLs.Create_BankFileXML(bankGuid, bank.BankName.Replace(".bank", ""));
             }
             #endregion
-            #region Event stuff
-            PushToConsoleLog($"Event Count: {bank.EventNodes.Count}", GREEN);
+            #region Audio Stuff
+            // Associate WavEntries with their Audio File
+			// really annoying that this is the only real way i can think of to associate them
+			// also sucks that the audio files themselves can't have their original Guids
+			// but that's FMOD for ya
+            foreach (FModGuid WavGuid in bank.WavEntries.Keys) 
+			{
+				WaveformResourceNode Wav = bank.WavEntries[WavGuid];
+
+				// get the sound bank that the wav is pointing to
+				FmodSoundBank bankWithWAV = bank.SoundBankData.ToArray()[Wav.SoundBankIndex];
+				// get the wav's audio sample with its index
+				FmodSample WAVsample = bankWithWAV.Samples[Wav.SubsoundIndex];
+
+				// since many WavEntries can reference the same audio file
+				// create a new Guid for the audio file if its a new one
+				if (!AudioFileGUIDs.TryGetValue(WAVsample.Name, out Guid SavedGuid))
+				{
+					Guid GUID = GetRandomGUID();
+					AudioFileGUIDs.Add(WAVsample.Name, GUID);
+					WavGUIDs.Add(WavGuid, GUID);
+				}
+				// if it was previously referenced, don't set a new one and get the old one
+				else
+                    WavGUIDs.Add(WavGuid, SavedGuid);
+            }
+
+            // Export all Sounds
+            foreach (FmodSoundBank sndBank in bank.SoundBankData)
+                ExtractSoundAssets.ExtractSoundFiles(sndBank, bankName);
+			#endregion
+			#region Event Stuff
+			PushToConsoleLog($"Event Count: {bank.EventNodes.Count}", GREEN);
 
 			foreach (FModGuid eGuid in bank.EventNodes.Keys)
 			{
@@ -374,10 +403,6 @@ public class Program
                     PushToConsoleLog($"WARNING: Event Path could not be resolved for Event ID ({Event.BaseGuid})", YELLOW);
             }
 			#endregion
-
-			// Export all Sounds
-			foreach (FmodSoundBank sndBank in bank.SoundBankData)
-                ExtractSoundAssets.ExtractSoundFiles(sndBank, bankName);
         }
 
 		#region Finish

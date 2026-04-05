@@ -163,9 +163,10 @@ public class Events
 				AddPropertyElement(xmlDoc, SoundElement, "length", $"{s.Length}");
 				//AddPropertyElement(xmlDoc, SoundElement, "looping", $"true");// probably can't be done
 
-				// TODO - link audiofile GUID
-				// this might be an issue...
-				//AddRelationshipElement(xmlDoc, SoundElement, "audioFile", $"{{{sound.GUID}}}");
+				// link audiofile GUID
+				// im pretty sure FTriggerBox Guid is the same as the WavEntry Guid, so this should work, but idk
+				// this very well might not work
+				AddRelationshipElement(xmlDoc, SoundElement, "audioFile", $"{{{WavGUIDs[s.Guid]}}}");
 			}
 		}
 		#endregion

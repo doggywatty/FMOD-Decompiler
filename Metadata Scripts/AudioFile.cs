@@ -6,27 +6,16 @@ using static XMLHelper;
 
 public class AudioFile
 {
-    // NOTE
-    // GUIDs for these ones are only referenced by themselves, or in events
-    // but i doubt we can extract much from events, so yeah
-    // If we can extract what audio files are used in events tho, we can use AudioFileGUIDs
     public static void AudioFileXML(string outputpath, string soundfilepath, int frequency, uint channels)
     {
-        // Save GUID for this File
         var relativepath = Path.GetRelativePath(outputpath, soundfilepath);
-        if (!AudioFileGUIDs.ContainsKey(relativepath))
-            AudioFileGUIDs.Add(relativepath, GetRandomGUID());
-        else //just in case there's a duplicate, ignore
-        {
-            PushToConsoleLog($"WARNING: Sound file {relativepath} is a duplicate\nSkipping...", YELLOW);
-            return;
-        }
+        var SoundName = Path.GetFileNameWithoutExtension(relativepath);
 
         // Setup XML
         SetupXML(out XmlDocument xmlDoc, out XmlElement root);
 
         // Add GUID of Current AudioFile XML
-        SetupHeaderXML(xmlDoc, root, "AudioFile", $"{{{AudioFileGUIDs[relativepath]}}}", out XmlElement objectElement);
+        SetupHeaderXML(xmlDoc, root, "AudioFile", $"{{{AudioFileGUIDs[SoundName]}}}", out XmlElement objectElement);
 
         // Add AudioFile info
         AddPropertyElement(xmlDoc, objectElement, "assetPath", relativepath.Replace("\\", "/"));// because it was backwards
@@ -39,7 +28,7 @@ public class AudioFile
 
         xmlDoc.AppendChild(root);
 
-        SaveXML(xmlDoc, $"{outputProjectPath}/Metadata/AudioFile/{{{AudioFileGUIDs[relativepath]}}}.xml");
+        SaveXML(xmlDoc, $"{outputProjectPath}/Metadata/AudioFile/{{{AudioFileGUIDs[SoundName]}}}.xml");
     }
 
     // needed because FMOD5Sharp has no way of doing it
