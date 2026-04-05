@@ -35,7 +35,8 @@ public class Parameters
         // "1" == Discrete
         // "2" == Labeled (requires some more stuff)
 
-        if (Param.Labels.Length > 0) // Labeled
+        // if Labeled
+        if (Param.Labels.Length > 0)
         {
             // mark as labelled
             AddPropertyElement(xmlDoc, ParamElement, "parameterType", "2");
@@ -51,6 +52,28 @@ public class Parameters
             }
 
             ParamElement.AppendChild(propElement);
+        }
+        // if using Built-in Types
+        else
+        { 
+            int realType = (uint)Param.Type switch
+            {
+                0x1 => 3, // Distance
+                0x4 => 4, // Direction
+                0x5 => 5, // Elevation
+                0x2 => 6, // Event Cone Angle
+                0x3 => 7, // Event Orientation
+                0x7 => 8, // Speed (Relative)
+                0x8 => 9, // Speed (Absolute)
+                0x9 => 10, // Distance (Normalized)
+
+                _ => 0 // default to Continuious
+
+                // Listener Orientation is unknown, since Fmod Studio doesn't use it
+                // it would probably be 11 though (if its even valid anymore)
+            };
+
+            AddPropertyElement(xmlDoc, ParamElement, "parameterType", $"{realType}");
         }
         // TODO - can Continuious or Discrete be determined?
 
