@@ -251,24 +251,20 @@ public class Events
 
 	#region Get Event Names
 	// Get Folder above
-	public static string GetHigherEventFolder(string eventname)
+	public static string GetHigherEventFolder(string EventPath)
 	{
-        // Get the subfolders
-        List<string> folders = [.. eventname.Split('/')];
-		folders.RemoveAt(0); // Remove "event:"
-		folders.RemoveAt(folders.Count - 1); // Remove the last part (it's not a folder)
-
-		return (folders.Count >= 1) 
+        List<string> folders = SplitEventPath(EventPath);
+        return (folders.Count >= 1) 
 			? $"{EventFolderGUIDs[folders[^1] + $"{folders.Count - 1}"]}" // if like event:/music/soundtest/pause, or event:/soundtest/pause, get /soundtest
             : $"{MasterEventFolderGUID}"; // else if like event:/sound, get Master Folder
 
     }
 
 	// Get Shortened Name
-	public static string GetName(string eventname)
+	public static string GetName(string EventPath)
 	{
         // Get the last part (event name)
-        List<string> folders = [.. eventname.Split('/')];
+        List<string> folders = [.. EventPath.Split('/')];
 		return $"{folders[^1]}";
 	}
 	#endregion

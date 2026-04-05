@@ -4,52 +4,45 @@ using static XMLHelper;
 
 public class EventFolder
 {
-    // used in main
-    public static List<string> AllEvents = [];
-
     #region Find All Event Folders
-    public static void ExtractEventFolders(string filePath) 
+    public static void ExtractEventFolders(string EventPath) 
     {
         // figure out all subfolders from an event path and make an XML for each subfolder
         // aka event:/music/soundtest/pause
         //            ^folder ^folder  ^event (ignore event)
 
-        foreach (string path in AllEvents)
+        List<string> folders = SplitEventPath(EventPath);
+
+        // goes through every subfolder in cleansed path (ex: /music and /soundtest)
+        int folder_level = 0;
+        foreach (var folder in folders)
         {
-            // Get the subfolders by splitting by "/"
-            List<string> folders = [.. path.Split('/')];
-            folders.RemoveAt(0); // Remove "event:"
-            folders.RemoveAt(folders.Count - 1); // Remove the last part (it's not a folder)
-
-            // goes through every subfolder in cleansed path (ex: /music and /soundtest)
-            int folder_level = 0;
-            foreach (var folder in folders)
+            if (!EventFolderGUIDs.ContainsKey(folder + $"{folder_level}"))
             {
-                if (!EventFolderGUIDs.ContainsKey(folder + $"{folder_level}"))
-                {
-                    PushToConsoleLog($"Saving Event Folder: /{folder}", MAGENTA);
+                PushToConsoleLog($"Saving Event Folder: /{folder}", MAGENTA);
 
-                    // Create GUID for "folder"
-                    EventFolderGUIDs.TryAdd(folder + $"{folder_level}", GetRandomGUID());
+                // Create GUID for "folder"
+                EventFolderGUIDs.TryAdd(folder + $"{folder_level}", GetRandomGUID());
 
-                    // Create XML
-                    EventFolderXML(filePath, folder, folders, folder_level);
-                }
-                // increase after every folder
-                folder_level++;
+                // Create XML
+                EventFolderXML(folder, folders, folder_level);
             }
+            // increase after every folder
+            folder_level++;
         }
     }
     #endregion
     #region Event Folder XML
-    static void EventFolderXML(string directorypath, string folderName, List<string> folders, int folder_level)
+    static void EventFolderXML(string folderName, List<string> folders, int folder_level)
     {
+        Guid eFolderGuid = EventFolderGUIDs[folderName + $"{folder_level}"];
+
         // Setup XML
         SetupXML(out XmlDocument xmlDoc, out XmlElement root);
         xmlDoc.AppendChild(root);
 
         // Create Header and Link its own GUID to itself
-        SetupHeaderXML(xmlDoc, root, "EventFolder", $"{{{EventFolderGUIDs[folderName + $"{folder_level}"]}}}", out XmlElement objectElement);
+        SetupHeaderXML(xmlDoc, root, "EventFolder", $"{{{eFolderGuid}}}", out XmlElement objectElement);
 
         // Set its Folder Name
         AddPropertyElement(xmlDoc, objectElement, "name", folderName);
@@ -62,7 +55,7 @@ public class EventFolder
         if (folders[0] != folderName)
         {
             // Get GUID of Higher Folder
-            var higher_folder = folder_level - 1;
+            int higher_folder = folder_level - 1;
             // Link it
             linkGUID = $"{{{EventFolderGUIDs[folders[higher_folder] + $"{higher_folder}"]}}}";
         }
@@ -70,7 +63,7 @@ public class EventFolder
         AddRelationshipElement(xmlDoc, objectElement, "folder", linkGUID);
 
         // Save the XML document to File
-        SaveXML(xmlDoc, $"{directorypath}/{{{EventFolderGUIDs[folderName + $"{folder_level}"]}}}.xml");
+        SaveXML(xmlDoc, $"{outputProjectPath}/Metadata/EventFolder/{{{eFolderGuid}}}.xml");
     }
     #endregion
 }

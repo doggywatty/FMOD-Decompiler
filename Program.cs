@@ -120,7 +120,7 @@ public class Program
 
 		// If also saving to log
 		if (toLog)
-			File.AppendAllTextAsync(outputProjectPath + "/log.txt", "\n" + message);
+			File.AppendAllTextAsync($"{outputProjectPath}/log.txt", "\n" + message);
  
 	}
 
@@ -128,34 +128,15 @@ public class Program
 	public static Guid GetRandomGUID() {
 		return Guid.NewGuid();
 	}
-	#endregion
 
-	#region Event Structs
-	// Struct for Sounds on Timeline
-	public struct EventSoundInfo
+	public static List<string> SplitEventPath(string EventPath)
 	{
-		public string name;
-		public Guid GUID;
-		public double startpos;
-		public double length;
-	}
-
-	// Structs for Markers on Timeline
-	public struct EventMarkerInfo
-	{
-		public string name;
-		public double position;
-	}
-
-	// Structs for Parameters on Timeline
-	public struct EventParameterInfo
-	{
-		public string name;
-		public Guid GUID;
-		public double value;
-		public double start;
-		public double length;
-	}
+        // Get the subfolders by splitting by "/"
+        List<string> folders = [.. EventPath.Split('/')];
+        folders.RemoveAt(0); // Remove "event:"
+        folders.RemoveAt(folders.Count - 1); // Remove the last part (it's not a folder)
+		return folders;
+    }
 	#endregion
 
 	public static async Task Main(string[] args)
@@ -195,7 +176,7 @@ public class Program
 			Console.Clear();
 		}
 
-		Console.WriteLine($"Welcome to the FMOD Bank Decompiler {GREEN}(Version 1.4.4){NORMAL}"
+		Console.WriteLine($"Welcome to the FMOD Bank Decompiler {GREEN}(Version 2.0.0 DEV){NORMAL}"
 		+ $"\n\nby {OTHERGRAY}burnedpopcorn180{NORMAL}"
 		+ $"\nand {BROWN}DogMatt{NORMAL}"
 
@@ -363,6 +344,9 @@ public class Program
 
 			// Start actual extraction
 
+			// Clear previous bank stuff
+			EventFolderGUIDs.Clear();
+
             // basically just the XML Files for most assets that references their given bank file
             // Master.bank has already been added, so skip it
             #region Bank Specific XMLs
@@ -375,21 +359,19 @@ public class Program
             #region Event stuff
             PushToConsoleLog($"Event Count: {bank.EventNodes.Count}", GREEN);
 
-			// first get event folders
 			foreach (FModGuid eGuid in bank.EventNodes.Keys)
 			{
 				EventNode Event = bank.EventNodes[eGuid];
-				// TODO
-            }
-
-			// after event folders, do actual events
-            foreach (FModGuid eGuid in bank.EventNodes.Keys)
-            {
-                EventNode Event = bank.EventNodes[eGuid];
 
 				if (!StringTable.TryGetString(Event.BaseGuid, out string EventPath))
+				{
+					// Create XMLs for the Event Path (if they don't exist already)
+					EventFolder.ExtractEventFolders(EventPath);
+					// Create XML for the event
 					Events.EventXML(Event, EventPath, bank);
-				else { }//TODO
+				}
+				else
+                    PushToConsoleLog($"WARNING: Event Path could not be resolved for Event ID ({Event.BaseGuid})", YELLOW);
             }
 			#endregion
 
