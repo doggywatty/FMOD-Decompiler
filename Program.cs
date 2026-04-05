@@ -361,19 +361,21 @@ public class Program
 			// but that's FMOD for ya
             foreach (FModGuid WavGuid in bank.WavEntries.Keys) 
 			{
+				// get wav node
 				WaveformResourceNode Wav = bank.WavEntries[WavGuid];
+				string? WavSampleName =
+					bank.SoundBankData[Wav.SoundBankIndex] // get bank which has the WavEntry
+					.Samples[Wav.SubsoundIndex] // get WavEntry's associated Sample
+					.Name; // get Sample Name (that's all we need)
 
-				// get the sound bank that the wav is pointing to
-				FmodSoundBank bankWithWAV = bank.SoundBankData.ToArray()[Wav.SoundBankIndex];
-				// get the wav's audio sample with its index
-				FmodSample WAVsample = bankWithWAV.Samples[Wav.SubsoundIndex];
+				if (WavSampleName is null) continue;
 
 				// since many WavEntries can reference the same audio file
 				// create a new Guid for the audio file if its a new one
-				if (!AudioFileGUIDs.TryGetValue(WAVsample.Name, out Guid SavedGuid))
+				if (!AudioFileGUIDs.TryGetValue(WavSampleName, out Guid SavedGuid))
 				{
 					Guid GUID = GetRandomGUID();
-					AudioFileGUIDs.Add(WAVsample.Name, GUID);
+					AudioFileGUIDs.Add(WavSampleName, GUID);
 					WavGUIDs.Add(WavGuid, GUID);
 				}
 				// if it was previously referenced, don't set a new one and get the old one
