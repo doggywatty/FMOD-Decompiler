@@ -350,8 +350,9 @@ public class Program
             #region Bank Specific XMLs
             if (bankName != "Master.bank")
             {
-                MasterXMLs.Create_BankAssetXML(bankName.Replace(".bank", "/"));
-                MasterXMLs.Create_BankFileXML(bankGuid, bank.BankName.Replace(".bank", ""));
+				string truebankName = bankName.Replace(".bank", "/");
+                MasterXMLs.Create_BankAssetXML(truebankName);
+                MasterXMLs.Create_BankFileXML(bankGuid, truebankName);
             }
             #endregion
             #region Audio Stuff
@@ -368,19 +369,20 @@ public class Program
 					.Samples[Wav.SubsoundIndex] // get WavEntry's associated Sample
 					.Name; // get Sample Name (that's all we need)
 
-				if (WavSampleName is null) continue;
+				if (WavSampleName is null) 
+					continue;
 
 				// since many WavEntries can reference the same audio file
 				// create a new Guid for the audio file if its a new one
-				if (!AudioFileGUIDs.TryGetValue(WavSampleName, out Guid SavedGuid))
+				if (!AudioFileGUIDs.TryGetValue(WavSampleName, out Guid SavedAudioFileGuid))
 				{
-					Guid GUID = GetRandomGUID();
-					AudioFileGUIDs.Add(WavSampleName, GUID);
-					WavGUIDs.Add(WavGuid, GUID);
+					Guid AudioFileGuid = GetRandomGUID();
+					AudioFileGUIDs.Add(WavSampleName, AudioFileGuid);
+					WavGUIDs.Add(WavGuid, AudioFileGuid);
 				}
 				// if it was previously referenced, don't set a new one and get the old one
 				else
-                    WavGUIDs.Add(WavGuid, SavedGuid);
+                    WavGUIDs.Add(WavGuid, SavedAudioFileGuid);
             }
 
             // Export all Sounds
