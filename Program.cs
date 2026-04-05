@@ -336,30 +336,19 @@ public class Program
 				continue;
 			}
 
-			// Spinner for when --verbose was not used
-			if (!verbose)
-				StartSpinnerAsync("Extracting Bank Info...", new Random().Next(2), 1000, SpinnerKill.Token);
+            // Clear previous bank stuff
+            EventFolderGUIDs.Clear();
+			AudioFileGUIDs.Clear();
 
-			// Start actual extraction
+            // Spinner for when --verbose was not used
+            if (!verbose)
+                StartSpinnerAsync("Extracting Bank Info...", new Random().Next(2), 1000, SpinnerKill.Token);
 
-			// Clear previous bank stuff
-			EventFolderGUIDs.Clear();
-
-            // basically just the XML Files for most assets that references their given bank file
-            // Master.bank has already been added, so skip it
-            #region Bank Specific XMLs
-            if (bankName != "Master.bank")
-            {
-				string truebankName = bankName.Replace(".bank", "/");
-                MasterXMLs.Create_BankAssetXML(truebankName);
-                MasterXMLs.Create_BankFileXML(bankGuid, truebankName);
-            }
-            #endregion
-            #region Audio Stuff
             // Associate WavEntries with their Audio File
-			// really annoying that this is the only real way i can think of to associate them
-			// also sucks that the audio files themselves can't have their original Guids
-			// but that's FMOD for ya
+            #region Setup WavEntries
+            // really annoying that this is the only real way i can think of to associate them
+            // also sucks that the audio files themselves can't have their original Guids
+            // but that's FMOD for ya
             foreach (FModGuid WavGuid in bank.WavEntries.Keys) 
 			{
 				// get wav node
@@ -388,9 +377,21 @@ public class Program
             // Export all Sounds
             foreach (FmodSoundBank sndBank in bank.SoundBankData)
                 ExtractSoundAssets.ExtractSoundFiles(sndBank, bankName);
-			#endregion
-			#region Event Stuff
-			PushToConsoleLog($"Event Count: {bank.EventNodes.Count}", GREEN);
+            #endregion
+
+            // Start actual extraction
+            #region Bank Specific XMLs
+            // basically just the XML Files for most assets that references their given bank file
+            // Master.bank has already been added, so skip it
+            if (bankName != "Master.bank")
+            {
+                string truebankName = bankName.Replace(".bank", "/");
+                MasterXMLs.Create_BankAssetXML(truebankName);
+                MasterXMLs.Create_BankFileXML(bankGuid, truebankName);
+            }
+            #endregion
+            #region Event Stuff
+            PushToConsoleLog($"Event Count: {bank.EventNodes.Count}", GREEN);
 
 			foreach (FModGuid eGuid in bank.EventNodes.Keys)
 			{
@@ -407,11 +408,14 @@ public class Program
                     PushToConsoleLog($"WARNING: Event Path could not be resolved for Event ID ({Event.BaseGuid})", YELLOW);
             }
 			#endregion
-        }
+			// Parameters
+			foreach (FModGuid p in bank.ParameterNodes.Keys)
+				Parameters.ParameterXML(bank.ParameterNodes[p]);
+		}
 
-		#region Finish
-		// if not verbose, stop spinner
-		if (!verbose)
+        #region Finish
+        // if not verbose, stop spinner
+        if (!verbose)
 			SpinnerKill.Cancel();
 
 		PushToConsoleLog($"{USESPACE}\nConversion Complete!", GREEN);
