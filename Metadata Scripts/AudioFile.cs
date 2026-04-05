@@ -18,7 +18,7 @@ public class AudioFile
             AudioFileGUIDs.Add(relativepath, GetRandomGUID());
         else //just in case there's a duplicate, ignore
         {
-            PushToConsoleLog($"WARNING! - Duplicate Sound file found: " + relativepath + "\nSkipping...");
+            PushToConsoleLog($"WARNING: Sound file {relativepath} is a duplicate\nSkipping...", YELLOW);
             return;
         }
 
@@ -29,7 +29,7 @@ public class AudioFile
         SetupHeaderXML(xmlDoc, root, "AudioFile", $"{{{AudioFileGUIDs[relativepath]}}}", out XmlElement objectElement);
 
         // Add AudioFile info
-        AddPropertyElement(xmlDoc, objectElement, "assetPath", relativepath.Replace("\\","/"));// because it was backwards
+        AddPropertyElement(xmlDoc, objectElement, "assetPath", relativepath.Replace("\\", "/"));// because it was backwards
         AddPropertyElement(xmlDoc, objectElement, "frequencyInKHz", (frequency / 1000).ToString());
         AddPropertyElement(xmlDoc, objectElement, "channelCount", channels.ToString());
         AddPropertyElement(xmlDoc, objectElement, "length", GetAudioLength(soundfilepath).ToString());
@@ -39,15 +39,11 @@ public class AudioFile
 
         xmlDoc.AppendChild(root);
 
-        // XML File Path
-        string filePath = outputProjectPath + "/Metadata/AudioFile/" + $"{{{AudioFileGUIDs[relativepath]}}}" + ".xml";
-
-        // Save
-        SaveXML(xmlDoc, filePath);
+        SaveXML(xmlDoc, $"{outputProjectPath}/Metadata/AudioFile/{{{AudioFileGUIDs[relativepath]}}}.xml");
     }
 
     // needed because FMOD5Sharp has no way of doing it
-    static float GetAudioLength(string filePath)
+    private static float GetAudioLength(string filePath)
     {
         dynamic reader;
         switch (Path.GetExtension(filePath).ToLower())

@@ -7,19 +7,17 @@ public class EventFolder
     // used in main
     public static List<string> AllEvents = [];
 
+    #region Find All Event Folders
     public static void ExtractEventFolders(string filePath) 
     {
         // figure out all subfolders from an event path and make an XML for each subfolder
         // aka event:/music/soundtest/pause
         //            ^folder ^folder  ^event (ignore event)
 
-        foreach (var path in AllEvents)
+        foreach (string path in AllEvents)
         {
-            // Split the path by "/"
-            var pathParts = path.Split('/');
-
-            // Get the subfolders
-            var folders = new List<string>(pathParts);
+            // Get the subfolders by splitting by "/"
+            List<string> folders = [.. path.Split('/')];
             folders.RemoveAt(0); // Remove "event:"
             folders.RemoveAt(folders.Count - 1); // Remove the last part (it's not a folder)
 
@@ -42,6 +40,8 @@ public class EventFolder
             }
         }
     }
+    #endregion
+    #region Event Folder XML
     static void EventFolderXML(string directorypath, string folderName, List<string> folders, int folder_level)
     {
         // Setup XML
@@ -55,7 +55,7 @@ public class EventFolder
         AddPropertyElement(xmlDoc, objectElement, "name", folderName);
 
         // Get GUID of Higher Folder
-        var linkGUID = $"{{{MasterEventFolderGUID}}}";// Default to MasterEventFolder
+        string linkGUID = $"{{{MasterEventFolderGUID}}}";// Default to MasterEventFolder
 
         // check if current folder isn't a root event folder (like event:/music/)
         // because those have to use default
@@ -69,9 +69,8 @@ public class EventFolder
         // Link the GUID of the folder above it
         AddRelationshipElement(xmlDoc, objectElement, "folder", linkGUID);
 
-        string filePath = directorypath + $"/{{{EventFolderGUIDs[folderName + $"{folder_level}"]}}}.xml";
-
         // Save the XML document to File
-        SaveXML(xmlDoc, filePath);
+        SaveXML(xmlDoc, $"{directorypath}/{{{EventFolderGUIDs[folderName + $"{folder_level}"]}}}.xml");
     }
+    #endregion
 }

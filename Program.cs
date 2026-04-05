@@ -1,4 +1,7 @@
 ﻿using Fmod5Sharp.FmodTypes;
+using FModBankParser;
+using FModBankParser.Nodes;
+using FModBankParser.Objects;
 using System.Runtime.InteropServices;
 
 public class Program
@@ -76,9 +79,7 @@ public class Program
 
 	#region Initialize Main Variables
 	// For Spinner
-	public static CancellationTokenSource SpinnerKill = new CancellationTokenSource();
-	public static bool SpinnerInit = false;
-	public static int SpinnerPattern = new Random().Next(2);
+	public static CancellationTokenSource SpinnerKill = new();
 
 	// Argument Values
 	public static string bankFolder = "";
@@ -86,10 +87,12 @@ public class Program
 	public static string projectname = "Generic-Project";
 	public static bool verbose = false;
 	public static bool IsGUI = false;
-	#endregion
 
-	#region Helper Funcs
-	public static void PushToConsoleLog(string message, string color = "NONE", bool toLog = false)
+	public static FRadixTreePacked? StringTable = null;
+    #endregion
+
+    #region Helper Funcs
+    public static void PushToConsoleLog(string message, string color = "NONE", bool toLog = false)
 	{
 		// for some reason I can't just string color = NORMAL at the beginning because compiler cries
 		var truecolor = (color == "NONE" || IsGUI) ? NORMAL : color;
@@ -338,41 +341,57 @@ public class Program
         }
         #endregion
 
+		// go through all bank files in folder
         foreach (string bankFilePath in FolderFiles)
 		{
             var bank = FModBankParser.FModBankParser.LoadSoundBank(new FileInfo(bankFilePath));
 			string bankName = bank.BankName;
+			FModGuid bankGuid = bank.BankInfo.BaseGuid;
 
-            PushToConsoleLog($"Loaded Bank: {bankName} (GUID: {bank.GetBankGuid()})", GREEN);
+            PushToConsoleLog($"Loaded Bank: {bankName} (GUID: {bankGuid})", GREEN);
             PushToConsoleLog($"Bank Version: {bank.BankInfo.FileVersion}", GREEN);
 
-			if (bankName == "Master.strings.bank") continue;
-
-            PushToConsoleLog($"Event Count: {bank.EventNodes.Count}", GREEN);
-
-			// basically just the XML Files for most assets that references their given bank file
-			#region Bank Specific XMLs
-			if (bankName != "Master.bank")// Master.bank has already been added, so skip it
+			if (bankName == "Master.strings.bank")
 			{
-				// For Bank Asset XML
-				BankSpecificGUIDs.Add(bankName + "_Asset", GetRandomGUID());
-				MasterXMLs.Create_BankAssetXML(bankName);
-
-				// For Bank File XML
-				BankSpecificGUIDs.Add(bankName + "_Bank", GetRandomGUID());
-				MasterXMLs.Create_BankFileXML(bankName);
+				StringTable = bank.StringTable.RadixTree;
+				continue;
 			}
-			#endregion
 
 			// Spinner for when --verbose was not used
-			if (!verbose && !SpinnerInit)
-			{
-				// no await here, because we want it to continue
-				StartSpinnerAsync("Extracting Bank Info...", SpinnerPattern, 1000, SpinnerKill.Token);
+			if (!verbose)
+				StartSpinnerAsync("Extracting Bank Info...", new Random().Next(2), 1000, SpinnerKill.Token);
 
-				// ensure this doesn't get called twice
-				SpinnerInit = true;
-			}
+			// Start actual extraction
+
+            // basically just the XML Files for most assets that references their given bank file
+            // Master.bank has already been added, so skip it
+            #region Bank Specific XMLs
+            if (bankName != "Master.bank")
+            {
+                MasterXMLs.Create_BankAssetXML(bankName.Replace(".bank", "/"));
+                MasterXMLs.Create_BankFileXML(bankGuid, bank.BankName.Replace(".bank", ""));
+            }
+            #endregion
+            #region Event stuff
+            PushToConsoleLog($"Event Count: {bank.EventNodes.Count}", GREEN);
+
+			// first get event folders
+			foreach (FModGuid eGuid in bank.EventNodes.Keys)
+			{
+				EventNode Event = bank.EventNodes[eGuid];
+				// TODO
+            }
+
+			// after event folders, do actual events
+            foreach (FModGuid eGuid in bank.EventNodes.Keys)
+            {
+                EventNode Event = bank.EventNodes[eGuid];
+
+				if (!StringTable.TryGetString(Event.BaseGuid, out string EventPath))
+					Events.EventXML(Event, EventPath, bank);
+				else { }//TODO
+            }
+			#endregion
 
 			// Export all Sounds
 			foreach (FmodSoundBank sndBank in bank.SoundBankData)

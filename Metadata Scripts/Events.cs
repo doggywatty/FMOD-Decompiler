@@ -1,16 +1,17 @@
-﻿// Extract Event Info and Create Event XML
+﻿using FModBankParser;
+using FModBankParser.Nodes;
 using System.Xml;
 using static Program;
 using static XMLHelper;
 #pragma warning disable CS8602
 public class Events
 {
-	public static void SaveEvents(string eventname, string bankfilename, List<EventSoundInfo> SoundsinEvent, List<EventMarkerInfo> MarkersInfo, List<EventParameterInfo> ParametersInfo, Dictionary<string, int> SoundLoops, bool IsAction = false)
+	public static void EventXML(EventNode Event, string EventPath, FModReader ParentBank)
 	{
-		#region Init Main GUIDs
-		// these change per XML, but not within the XML
-		// so they should be here, and not public static
-		Guid EventMixerGuid = GetRandomGUID();
+        #region Init Main GUIDs
+        // these change per XML, but not within the XML
+        // so they should be here, and not public static
+        Guid EventMixerGuid = GetRandomGUID();
 		Guid MasterTrackGuid = GetRandomGUID();
 		Guid MixerInputGuid = GetRandomGUID();
 		Guid EventAutomatablePropertiesGuid = GetRandomGUID();
@@ -23,82 +24,21 @@ public class Events
 		Guid MixerBusPannerGuid2 = GetRandomGUID();
 		Guid MixerBusFaderGuid1 = GetRandomGUID();
 		Guid MixerBusFaderGuid2 = GetRandomGUID();
-		#endregion
-		#region AudioFile Init
-		var SoundsPresent = SoundsinEvent != null && SoundsinEvent.Count != 0;
-		Guid[] multisoundGUIDs = [];
-		var LoopingSounds = new List<EventSoundInfo>();
-		bool UseSoundLoopRegions = false;
-		Guid[] SoundLoopRegionGUIDs = [];
-		if (SoundsPresent)
-		{
-			multisoundGUIDs = new Guid[SoundsinEvent.Count];
-			var i = 0;
-			foreach (var s in SoundsinEvent)
-			{
-				multisoundGUIDs[i] = GetRandomGUID();
-				i++;
 
-				if (SoundLoops.ContainsKey(s.name) && SoundLoops[s.name] > 0)
-					LoopingSounds.Add(s);
-			}
-
-			// If multiple sounds loop in the same event, use explicit Loop Regions instead
-			// of setting "looping" on each SingleSound module.
-			UseSoundLoopRegions = LoopingSounds.Count > 1;
-			if (UseSoundLoopRegions)
-			{
-				SoundLoopRegionGUIDs = new Guid[LoopingSounds.Count];
-				for (i = 0; i < LoopingSounds.Count; i++)
-					SoundLoopRegionGUIDs[i] = GetRandomGUID();
-			}
-		}
-		// Only use when Action
-		Guid MultiSoundGuid = GetRandomGUID();
 		Guid ActionSheetGuid = GetRandomGUID();
 		#endregion
-		#region Marker Init
-		var MarkersPresent = MarkersInfo != null && MarkersInfo.Count != 0;
-		Guid[] MarkerGUIDs = [];
-		if (MarkersPresent)
-		{
-			MarkerGUIDs = new Guid[MarkersInfo.Count];
-			var i = 0;
-			foreach (var m in MarkersInfo)
-			{
-				MarkerGUIDs[i] = GetRandomGUID();
-				i++;
-			}
-		}
-		#endregion
-		#region Parameter Init
-		var ParametersPresent = ParametersInfo != null && ParametersInfo.Count != 0;
-		Guid[] ParameterGUIDs = [], ParameterConditionGUIDs = [];
-		if (ParametersPresent)
-		{
-			ParameterGUIDs = new Guid[ParametersInfo.Count];
-			ParameterConditionGUIDs = new Guid[ParametersInfo.Count];
-			var i = 0;
-			foreach (var p in ParametersInfo)
-			{
-				ParameterGUIDs[i] = GetRandomGUID();
-				ParameterConditionGUIDs[i] = GetRandomGUID();
-				i++;
-			}
-		}
-		#endregion
 
-		// Setup XML
-		SetupXML(out XmlDocument xmlDoc, out XmlElement root);
+        // Setup XML
+        SetupXML(out XmlDocument xmlDoc, out XmlElement root);
 		xmlDoc.AppendChild(root);
 
 		#region Main Event Info Links
-		SetupHeaderXML(xmlDoc, root, "Event", $"{{{EventGUIDs[eventname]}}}", out XmlElement EventElement);
+		SetupHeaderXML(xmlDoc, root, "Event", $"{{{Event.BaseGuid}}}", out XmlElement EventElement);
 		//											   get shortened event name out of event path
-		AddPropertyElement(xmlDoc, EventElement, "name", GetName(eventname));
+		AddPropertyElement(xmlDoc, EventElement, "name", GetName(EventPath));
 		AddPropertyElement(xmlDoc, EventElement, "outputFormat", "0");
 		//														  get name of folder containing the event
-		AddRelationshipElement(xmlDoc, EventElement, "folder", $"{{{GetHigherEventFolder(eventname)}}}");
+		AddRelationshipElement(xmlDoc, EventElement, "folder", $"{{{GetHigherEventFolder(EventPath)}}}");
 		AddRelationshipElement(xmlDoc, EventElement, "mixer", $"{{{EventMixerGuid}}}");
 		AddRelationshipElement(xmlDoc, EventElement, "masterTrack", $"{{{MasterTrackGuid}}}");
 		AddRelationshipElement(xmlDoc, EventElement, "mixerInput", $"{{{MixerInputGuid}}}");
@@ -106,10 +46,10 @@ public class Events
 		AddRelationshipElement(xmlDoc, EventElement, "markerTracks", $"{{{MarkerTrackGuid}}}");
 		AddRelationshipElement(xmlDoc, EventElement, "timeline", $"{{{TimelineGuid}}}");
 		// Add Action Sheet if it is one
-		if (SoundsPresent && IsAction)
-			AddRelationshipElement(xmlDoc, EventElement, "parameters", $"{{{ActionSheetGuid}}}");
+		//if (SoundsPresent && IsAction)
+		//	AddRelationshipElement(xmlDoc, EventElement, "parameters", $"{{{ActionSheetGuid}}}");
 		//														  connects event to its original bank file
-		AddRelationshipElement(xmlDoc, EventElement, "banks", $"{{{BankSpecificGUIDs[bankfilename + "_Bank"]}}}");
+		AddRelationshipElement(xmlDoc, EventElement, "banks", $"{{{ParentBank.BankInfo.BaseGuid}}}");
 		#endregion
 
 		#region Event Info
@@ -118,12 +58,14 @@ public class Events
 
 		#region Master Track
 		SetupHeaderXML(xmlDoc, root, "MasterTrack", $"{{{MasterTrackGuid}}}", out XmlElement MasterTrackElement);
+		/*
 		// if audiofile on timeline (and isn't Action)
 		if (SoundsPresent && !IsAction)
 			AddMultiRelationshipElement(xmlDoc, MasterTrackElement, "modules", multisoundGUIDs);
 		// else if sounds and is Action
 		else if (SoundsPresent && IsAction)
 			AddRelationshipElement(xmlDoc, MasterTrackElement, "modules", $"{{{MultiSoundGuid}}}");
+		*/
 		#endregion
 
 		AddRelationshipElement(xmlDoc, MasterTrackElement, "mixerGroup", $"{{{EventMixerMasterGuid}}}");
@@ -141,6 +83,7 @@ public class Events
 
 		#region Timeline Header (empty if no sounds or markers)
 		SetupHeaderXML(xmlDoc, root, "Timeline", $"{{{TimelineGuid}}}", out XmlElement TimelineElement);
+		/*
 		// if there are sounds, but timeline
 		if (SoundsPresent && !IsAction)
 			AddMultiRelationshipElement(xmlDoc, TimelineElement, "modules", multisoundGUIDs);
@@ -156,15 +99,18 @@ public class Events
 		if (UseSoundLoopRegions)
 			TimelineMarkerGuids.AddRange(SoundLoopRegionGUIDs);
 		if (TimelineMarkerGuids.Count > 0)
-			AddMultiRelationshipElement(xmlDoc, TimelineElement, "markers", TimelineMarkerGuids.ToArray());
+			AddMultiRelationshipElement(xmlDoc, TimelineElement, "markers", [.. TimelineMarkerGuids]);
+		*/
 		#endregion
 
 		// Main Action Sheet Header
+		/*
 		if (SoundsPresent && IsAction) 
 		{
 			SetupHeaderXML(xmlDoc, root, "ActionSheet", $"{{{ActionSheetGuid}}}", out XmlElement ActionSheetElement);
 			AddRelationshipElement(xmlDoc, ActionSheetElement, "modules", $"{{{MultiSoundGuid}}}");
 		}
+		*/
 
 		SetupHeaderXML(xmlDoc, root, "EventMixerMaster", $"{{{EventMixerMasterGuid}}}", out XmlElement EventMixerMasterElement);
 		AddRelationshipElement(xmlDoc, EventMixerMasterElement, "effectChain", $"{{{MixerBusEffectChainGuid2}}}");
@@ -172,13 +118,16 @@ public class Events
 		AddRelationshipElement(xmlDoc, EventMixerMasterElement, "mixer", $"{{{EventMixerGuid}}}");
 
 		// Action Sheet Header for Sounds
+		/*
 		if (SoundsPresent && IsAction)
 		{
 			SetupHeaderXML(xmlDoc, root, "MultiSound", $"{{{MultiSoundGuid}}}", out XmlElement MultiSoundElement);
 			AddMultiRelationshipElement(xmlDoc, MultiSoundElement, "sounds", multisoundGUIDs);
 		}
+		*/
 
 		#region Index Single Sounds
+		/*
 		if (SoundsPresent)
 		{
 			var i = 0;
@@ -200,6 +149,7 @@ public class Events
 				i++;
 			}
 		}
+		*/
 		#endregion
 
 		SetupHeaderXML(xmlDoc, root, "MixerBusEffectChain", $"{{{MixerBusEffectChainGuid1}}}", out XmlElement MixerBusEffectChainElement1);
@@ -210,6 +160,7 @@ public class Events
 
 		// Mainly used for Magnet Regions with Parameters, but could be used for normal Loop regions
 		#region Index Loop Regions
+		/*
 		if (UseSoundLoopRegions)
 		{
 			var i = 0;
@@ -244,9 +195,11 @@ public class Events
 				i++;
 			}
 		}
+		*/
 		#endregion
 
 		#region Index Markers
+		/*
 		if (MarkersPresent)
 		{
 			var i = 0;
@@ -260,6 +213,7 @@ public class Events
 				i++;
 			}
 		}
+		*/
 		#endregion
 
 		SetupHeaderXML(xmlDoc, root, "MixerBusEffectChain", $"{{{MixerBusEffectChainGuid2}}}", out XmlElement MixerBusEffectChainElement2);
@@ -270,6 +224,7 @@ public class Events
 		SetupHeaderXML(xmlDoc, root, "MixerBusFader", $"{{{MixerBusFaderGuid1}}}", out XmlElement MixerBusFaderElement1);
 
 		#region Index Parameter Conditions for Loop Regions
+		/*
 		if (ParametersPresent)
 		{
 			var i = 0;
@@ -284,47 +239,37 @@ public class Events
 				i++;
 			}
 		}
+		*/
 		#endregion
 
 		SetupHeaderXML(xmlDoc, root, "MixerBusFader", $"{{{MixerBusFaderGuid2}}}", out XmlElement MixerBusFaderElement2);
 		#endregion
 
-		// Output Filepath
-		string filePath = outputProjectPath + $"/Metadata/Event/{{{EventGUIDs[eventname]}}}.xml";
-
 		// Save the XML document to a file
-		SaveXML(xmlDoc, filePath);
+		SaveXML(xmlDoc, $"{outputProjectPath}/Metadata/Event/{{{Event.BaseGuid}}}.xml");
 	}
 
 	#region Get Event Names
 	// Get Folder above
 	public static string GetHigherEventFolder(string eventname)
 	{
-		// Split the path by "/"
-		var pathParts = eventname.Split('/');
-
-		// Get the subfolders
-		var folders = new List<string>(pathParts);
+        // Get the subfolders
+        List<string> folders = [.. eventname.Split('/')];
 		folders.RemoveAt(0); // Remove "event:"
 		folders.RemoveAt(folders.Count - 1); // Remove the last part (it's not a folder)
 
-		// if like event:/music/soundtest/pause, or event:/soundtest/pause, get /soundtest
-		if (folders.Count >= 1)
-			return $"{EventFolderGUIDs[folders[folders.Count - 1] + $"{folders.Count - 1}"]}";
-		// else if like event:/sound, get Master Folder
-		else
-			return $"{MasterEventFolderGUID}";
-	}
+		return (folders.Count >= 1) 
+			? $"{EventFolderGUIDs[folders[^1] + $"{folders.Count - 1}"]}" // if like event:/music/soundtest/pause, or event:/soundtest/pause, get /soundtest
+            : $"{MasterEventFolderGUID}"; // else if like event:/sound, get Master Folder
+
+    }
 
 	// Get Shortened Name
 	public static string GetName(string eventname)
 	{
-		// Split the path by "/"
-		var pathParts = eventname.Split('/');
-
-		// Get the last part (event name)
-		var folders = new List<string>(pathParts);
-		return $"{folders[folders.Count - 1]}";
+        // Get the last part (event name)
+        List<string> folders = [.. eventname.Split('/')];
+		return $"{folders[^1]}";
 	}
 	#endregion
 }

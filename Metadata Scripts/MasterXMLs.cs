@@ -1,4 +1,6 @@
-﻿using System.Xml;
+﻿using FModBankParser;
+using FModBankParser.Objects;
+using System.Xml;
 using static Program;
 using static XMLHelper;
 
@@ -279,11 +281,8 @@ public class MasterXMLs
     #endregion
 
     #region XML Files per each Bank File
-    public static void Create_BankFileXML(string bankfilename)
+    public static void Create_BankFileXML(FModGuid BankGUID, string BankName)
     {
-        var BankGUID = BankSpecificGUIDs[bankfilename + "_Bank"];
-        var BankName = bankfilename.Replace(".bank", "");
-
         // Setup XML
         SetupXML(out XmlDocument xmlDoc, out XmlElement root);
 
@@ -293,18 +292,14 @@ public class MasterXMLs
 
         xmlDoc.AppendChild(root);
 
-        // XML File Path
-        string filePath = outputProjectPath + $"/Metadata/Bank/{{{BankGUID}}}.xml";
-
         // Save
-        SaveXML(xmlDoc, filePath);
+        SaveXML(xmlDoc, $"{outputProjectPath}/Metadata/Bank/{{{BankGUID}}}.xml");
     }
 
     //Connects stuff like Audio Files to their original Bank File
-    public static void Create_BankAssetXML(string bankfilename)
+    public static void Create_BankAssetXML(string BankName)
     {
-        var BankGUID = BankSpecificGUIDs[bankfilename + "_Asset"];
-        var BankName = bankfilename.Replace(".bank", "/");// Replace Music.bank to be Music/ (to set it as a valid folder)
+        Guid BankGUID = GetRandomGUID();
 
         // Setup XML
         SetupXML(out XmlDocument xmlDoc, out XmlElement root);
@@ -315,11 +310,8 @@ public class MasterXMLs
 
         xmlDoc.AppendChild(root);
 
-        // XML File Path
-        string filePath = outputProjectPath + $"/Metadata/Asset/{{{BankGUID}}}.xml";
-
         // Save
-        SaveXML(xmlDoc, filePath);
+        SaveXML(xmlDoc, $"{outputProjectPath}/Metadata/Asset/{{{BankGUID}}}.xml");
     }
     #endregion
 
@@ -330,10 +322,7 @@ public class MasterXMLs
         SetupXML(out XmlDocument xmlDoc, out XmlElement root);
         xmlDoc.AppendChild(root);
 
-        // XML File Path
-        string filePath = outputProjectPath + $"/{projectname}.fspro";
-
         // Save
-        SaveXML(xmlDoc, filePath);
+        SaveXML(xmlDoc, $"{outputProjectPath}/{projectname}.fspro");
     }
 }
