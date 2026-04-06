@@ -1,5 +1,6 @@
 ﻿using FModBankParser;
 using FModBankParser.Nodes;
+using FModBankParser.Nodes.ModulatorSubnodes;
 using System.Xml;
 using static Program;
 using static XMLHelper;
@@ -139,6 +140,10 @@ public class Events
 		*/
 
 		SetupHeaderXML(xmlDoc, root, "EventMixerMaster", $"{{{EventMixerMasterGuid}}}", out XmlElement EventMixerMasterElement);
+		// see if there's modulators connected to this event
+		List<ModulatorNode> Modulators = [.. ParentBank.ModulatorNodes.Values.Where(m => m.OwnerGuid == Event.BaseGuid)];
+		if (Modulators.Count > 0) // add references to modulators if there are
+			AddMultiRelationshipElement(xmlDoc, EventMixerMasterElement, "modulators", [.. Modulators.Select(m => m.BaseGuid.ToGuid())]);
 		AddRelationshipElement(xmlDoc, EventMixerMasterElement, "effectChain", $"{{{MixerBusEffectChainGuid2}}}");
 		AddRelationshipElement(xmlDoc, EventMixerMasterElement, "panner", $"{{{MixerBusPannerGuid2}}}");
 		AddRelationshipElement(xmlDoc, EventMixerMasterElement, "mixer", $"{{{EventMixerGuid}}}");
@@ -177,6 +182,99 @@ public class Events
 		// Empty for now
 		SetupHeaderXML(xmlDoc, root, "MixerBusPanner", $"{{{MixerBusPannerGuid1}}}", out XmlElement MixerBusPannerElement1);
 
+        #region Modulators
+        if (Modulators.Count > 0)
+        {
+            foreach (ModulatorNode Mod in Modulators)
+            {
+                string ModPropType = (uint)Mod.PropertyType switch
+                {
+                    0x0 => "normal", // unknown
+                    0x1 => "volume",
+                    _ => "volume",
+                };
+
+				switch ((int)Mod.Type)
+				{
+					case 0: // ADSR
+						{
+							ADSRModulatorNode? SubNode = (ADSRModulatorNode?)Mod.Subnode;
+							if (SubNode is null) break;
+                            SetupHeaderXML(xmlDoc, root, "ADSRModulator", $"{{{Mod.BaseGuid}}}", out XmlElement ADSRModulatorElement);
+							AddPropertyElement(xmlDoc, ADSRModulatorElement, "nameOfPropertyBeingModulated", ModPropType);
+                            AddPropertyElement(xmlDoc, ADSRModulatorElement, "initialValue", $"{SubNode.InitialValue}");
+							if (SubNode.AttackTime != 1000)
+								AddPropertyElement(xmlDoc, ADSRModulatorElement, "attackTime", $"{SubNode.AttackTime}");
+							if (SubNode.PeakValue != 1)
+								AddPropertyElement(xmlDoc, ADSRModulatorElement, "peakValue", $"{SubNode.PeakValue}");
+                            if (SubNode.HoldTime != 1000)
+                                AddPropertyElement(xmlDoc, ADSRModulatorElement, "holdTime", $"{SubNode.HoldTime}");
+                            if (SubNode.DecayTime != 1000)
+                                AddPropertyElement(xmlDoc, ADSRModulatorElement, "decayTime", $"{SubNode.DecayTime}");
+                            if (SubNode.SustainValue != 1)
+                                AddPropertyElement(xmlDoc, ADSRModulatorElement, "sustainValue", $"{SubNode.SustainValue}");
+                            if (SubNode.ReleaseTime != 1000)
+                                AddPropertyElement(xmlDoc, ADSRModulatorElement, "releaseTime", $"{SubNode.ReleaseTime}");
+							if (SubNode.FinalValue != null)
+								AddPropertyElement(xmlDoc, ADSRModulatorElement, "finalValue", $"{SubNode.FinalValue}");
+                            break;
+                        }
+                    case 1: // Random
+                        {
+							// NOTE - This only works for newer FMOD Studio versions
+							//			since Min and Max are no longer used
+                            RandomModulatorNode? SubNode = (RandomModulatorNode?)Mod.Subnode;
+                            if (SubNode is null) break;
+                            SetupHeaderXML(xmlDoc, root, "RandomizerModulator", $"{{{Mod.BaseGuid}}}", out XmlElement RandomizerModulatorElement);
+                            AddPropertyElement(xmlDoc, RandomizerModulatorElement, "nameOfPropertyBeingModulated", ModPropType);
+							if (SubNode.Amount != 0)
+								AddPropertyElement(xmlDoc, RandomizerModulatorElement, "amount", $"{SubNode.Amount}");
+                            break;
+                        }
+					// can't do Envelope (2) because yeah
+					case 3: // LFO
+						{
+                            LFOModulatorNode? SubNode = (LFOModulatorNode?)Mod.Subnode;
+                            if (SubNode is null) break;
+                            SetupHeaderXML(xmlDoc, root, "LFOModulator", $"{{{Mod.BaseGuid}}}", out XmlElement LFOModulatorElement);
+                            AddPropertyElement(xmlDoc, LFOModulatorElement, "nameOfPropertyBeingModulated", ModPropType);
+							if (SubNode.Shape != 0) // Sine
+								AddPropertyElement(xmlDoc, LFOModulatorElement, "shape", $"{SubNode.Shape}");
+							if (SubNode.Rate != 0.50)
+								AddPropertyElement(xmlDoc, LFOModulatorElement, "rate", $"{SubNode.Rate}");
+                            if (SubNode.Phase != 0)
+                                AddPropertyElement(xmlDoc, LFOModulatorElement, "phase", $"{SubNode.Phase}");
+                            AddPropertyElement(xmlDoc, LFOModulatorElement, "depth", $"{SubNode.Amount}"); // misnamed for some reason
+                            AddPropertyElement(xmlDoc, LFOModulatorElement, "direction", $"{SubNode.Direction}");
+                            break;
+						}
+                    // can't do Seek (4) YAYYYY fucking why
+                    case 5: // SpectralSidechain
+                        {
+                            SpectralSidechainModulatorNode? SubNode = (SpectralSidechainModulatorNode?)Mod.Subnode;
+                            if (SubNode is null) break;
+                            SetupHeaderXML(xmlDoc, root, "SidechainModulator", $"{{{Mod.BaseGuid}}}", out XmlElement SidechainModulatorElement);
+                            AddPropertyElement(xmlDoc, SidechainModulatorElement, "nameOfPropertyBeingModulated", ModPropType);
+                            if (SubNode.Mode == 0) // if RMS Mode
+                                AddPropertyElement(xmlDoc, SidechainModulatorElement, "levelMode", "1"); // the values are swapped?????
+                            if (SubNode.Amount != 0)
+                                AddPropertyElement(xmlDoc, SidechainModulatorElement, "amount", $"{SubNode.Amount}");
+                            if (SubNode.AttackTime != 100)
+                                AddPropertyElement(xmlDoc, SidechainModulatorElement, "attackTime", $"{SubNode.AttackTime}");
+                            if (SubNode.ReleaseTime != 200)
+                                AddPropertyElement(xmlDoc, SidechainModulatorElement, "releaseTime", $"{SubNode.ReleaseTime}");
+                            if (SubNode.ThresholdMinimum != -24)
+                                AddPropertyElement(xmlDoc, SidechainModulatorElement, "minimumThreshold", $"{SubNode.ThresholdMinimum}");
+                            if (SubNode.ThresholdMaximum != -6)
+                                AddPropertyElement(xmlDoc, SidechainModulatorElement, "maximumThreshold", $"{SubNode.ThresholdMaximum}");
+
+							// TODO - there's a Guid that this modulator has, but idk how to get it on my test project, sooooo
+                            break;
+                        }
+                }
+            }
+        }
+		#endregion
 		#region Sustain Points
 		if (eTimeline.SustainPoints.Length > 0)
         {
