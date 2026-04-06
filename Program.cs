@@ -397,7 +397,7 @@ public class Program
 			{
 				EventNode Event = bank.EventNodes[eGuid];
 
-				if (!StringTable.TryGetString(Event.BaseGuid, out string EventPath))
+				if (StringTable.TryGetString(Event.BaseGuid, out string EventPath))
 				{
 					// Create XMLs for the Event Path (if they don't exist already)
 					EventFolder.ExtractEventFolders(EventPath);
@@ -408,8 +408,14 @@ public class Program
                     PushToConsoleLog($"WARNING: Event Path could not be resolved for Event ID ({Event.BaseGuid})", YELLOW);
             }
 			#endregion
-			// Parameters
-			foreach (FModGuid p in bank.ParameterNodes.Keys)
+
+			// Snapshots
+			Snapshots.SnapshotGroupXML([.. bank.SnapshotNodes.Keys.Select(s => s.ToGuid())]);
+            foreach (FModGuid s in bank.SnapshotNodes.Keys)
+                Snapshots.SnapshotXML(bank.SnapshotNodes[s]);
+
+            // Parameters
+            foreach (FModGuid p in bank.ParameterNodes.Keys)
 				Parameters.ParameterXML(bank.ParameterNodes[p]);
 		}
 
