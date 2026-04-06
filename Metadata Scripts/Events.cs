@@ -1,6 +1,7 @@
 ﻿using FModBankParser;
 using FModBankParser.Nodes;
 using FModBankParser.Nodes.ModulatorSubnodes;
+using FModBankParser.Objects;
 using System.Xml;
 using static Program;
 using static XMLHelper;
@@ -26,13 +27,35 @@ public class Events
 		Guid MixerBusFaderGuid2 = GetRandomGUID();
 
 		Guid ActionSheetGuid = GetRandomGUID();
+        #endregion
+
+        // get the event's timeline (where all the sound and markers are stored)
+        TimelineNode eTimeline = ParentBank.TimelineNodes[Event.TimelineGuid];
+
+        #region Index Timeline Resources
+        List<Guid> SoundModules = [];
+        if (eTimeline.TriggerBoxes.Length > 0)
+			foreach (var s in eTimeline.TriggerBoxes)
+				SoundModules.Add(s.Guid.ToGuid());
+
+        Dictionary<FSustainPoint, Guid> SustainPoints = [];
+        if (eTimeline.SustainPoints.Length > 0)
+			foreach (var s in eTimeline.SustainPoints)
+				SustainPoints.Add(s, GetRandomGUID());
+
+		List<Guid> Markers = [];
+        if (eTimeline.TimelineNamedMarkers.Length > 0)
+            foreach (var m in eTimeline.TimelineNamedMarkers)
+                Markers.Add(m.BaseGuid.ToGuid());
+
+		List<Guid> TempoMarkers = [];
+        if (eTimeline.TimelineTempoMarkers.Length > 0)
+            foreach (var m in eTimeline.TimelineTempoMarkers)
+                TempoMarkers.Add(m.BaseGuid.ToGuid());
 		#endregion
 
-		// get the event's timeline (where all the sound and markers are stored)
-		TimelineNode eTimeline = ParentBank.TimelineNodes[Event.TimelineGuid];
-
-        // Setup XML
-        SetupXML(out XmlDocument xmlDoc, out XmlElement root);
+		// Setup XML
+		SetupXML(out XmlDocument xmlDoc, out XmlElement root);
 		xmlDoc.AppendChild(root);
 
 		#region Main Event Info Links
@@ -61,14 +84,12 @@ public class Events
 
 		#region Master Track
 		SetupHeaderXML(xmlDoc, root, "MasterTrack", $"{{{MasterTrackGuid}}}", out XmlElement MasterTrackElement);
-		/*
 		// if audiofile on timeline (and isn't Action)
-		if (SoundsPresent && !IsAction)
-			AddMultiRelationshipElement(xmlDoc, MasterTrackElement, "modules", multisoundGUIDs);
+		if (SoundModules.Count > 0)// && !IsAction)
+			AddMultiRelationshipElement(xmlDoc, MasterTrackElement, "modules", [.. SoundModules]);
 		// else if sounds and is Action
-		else if (SoundsPresent && IsAction)
-			AddRelationshipElement(xmlDoc, MasterTrackElement, "modules", $"{{{MultiSoundGuid}}}");
-		*/
+		//else if (SoundsPresent && IsAction)
+		//	AddRelationshipElement(xmlDoc, MasterTrackElement, "modules", $"{{{MultiSoundGuid}}}");
 		#endregion
 
 		AddRelationshipElement(xmlDoc, MasterTrackElement, "mixerGroup", $"{{{EventMixerMasterGuid}}}");
@@ -98,25 +119,24 @@ public class Events
 
 		#region Timeline Header (empty if no sounds or markers)
 		SetupHeaderXML(xmlDoc, root, "Timeline", $"{{{eTimeline.BaseGuid}}}", out XmlElement TimelineElement);
-		/*
 		// if there are sounds, but timeline
-		if (SoundsPresent && !IsAction)
-			AddMultiRelationshipElement(xmlDoc, TimelineElement, "modules", multisoundGUIDs);
+		if (SoundModules.Count > 0) //&& !IsAction)
+			AddMultiRelationshipElement(xmlDoc, TimelineElement, "modules", [.. SoundModules]);
 		// else if there are sounds, and action sheet
-		else if (SoundsPresent && IsAction)
-			AddPropertyElement(xmlDoc, TimelineElement, "isProxyEnabled", "false");
+		//else if (SoundsPresent && IsAction)
+		//	AddPropertyElement(xmlDoc, TimelineElement, "isProxyEnabled", "false");
 
-		// Add Markers + Parameter Regions plus optional Sound Loop Regions to Timeline
+		// Add references to elements onto Timeline
 		List<Guid> TimelineMarkerGuids = [];
-		if (MarkersPresent)
-			TimelineMarkerGuids.AddRange(MarkerGUIDs);
-		if (ParametersPresent)
-			TimelineMarkerGuids.AddRange(ParameterGUIDs);
-		if (UseSoundLoopRegions)
-			TimelineMarkerGuids.AddRange(SoundLoopRegionGUIDs);
+		if (SustainPoints.Count > 0)
+			TimelineMarkerGuids.AddRange(SustainPoints.Values);
+		if (Markers.Count > 0)
+			TimelineMarkerGuids.AddRange(Markers);
+		if (TempoMarkers.Count > 0)
+			TimelineMarkerGuids.AddRange(TempoMarkers);
+
 		if (TimelineMarkerGuids.Count > 0)
 			AddMultiRelationshipElement(xmlDoc, TimelineElement, "markers", [.. TimelineMarkerGuids]);
-		*/
 		#endregion
 		#region Event Parameters (might have to revisit)
 		if (Event.ParameterLayouts.Length > 0) 
@@ -280,8 +300,7 @@ public class Events
         {
             foreach (var s in eTimeline.SustainPoints)
             {
-                // TODO - GetRandomGUID is TEMP, since it needs to be added to Markers element (in Timeline element)
-                SetupHeaderXML(xmlDoc, root, "SustainPoint", $"{{{GetRandomGUID()}}}", out XmlElement SustainPointElement);
+                SetupHeaderXML(xmlDoc, root, "SustainPoint", $"{{{SustainPoints[s]}}}", out XmlElement SustainPointElement);
                 AddPropertyElement(xmlDoc, SustainPointElement, "position", $"{s.Position}");
                 AddRelationshipElement(xmlDoc, SustainPointElement, "timeline", $"{{{eTimeline.BaseGuid}}}");
                 AddRelationshipElement(xmlDoc, SustainPointElement, "markerTrack", $"{{{MarkerTrackGuid}}}");
@@ -294,7 +313,6 @@ public class Events
         {
             foreach (var m in eTimeline.TimelineNamedMarkers)
             {
-				// TODO - add to markers element
 				string XMLHeader = (m.Length > 0) ? "LoopRegion" : "NamedMarker"; // Either Region or normal marker
                 SetupHeaderXML(xmlDoc, root, XMLHeader, $"{{{m.BaseGuid}}}", out XmlElement NamedMarkerElement);
                 AddPropertyElement(xmlDoc, NamedMarkerElement, "position", $"{m.Position}");
@@ -324,7 +342,6 @@ public class Events
         {
             foreach (var m in eTimeline.TimelineTempoMarkers)
             {
-				// TODO - add to markers element
                 SetupHeaderXML(xmlDoc, root, "TempoMarker", $"{{{m.BaseGuid}}}", out XmlElement TempoMarkerElement);
                 AddPropertyElement(xmlDoc, TempoMarkerElement, "position", $"{m.Position}");
                 AddPropertyElement(xmlDoc, TempoMarkerElement, "tempo", $"{m.Tempo}");
