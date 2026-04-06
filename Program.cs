@@ -408,11 +408,17 @@ public class Program
                     PushToConsoleLog($"WARNING: Event Path could not be resolved for Event ID ({Event.BaseGuid})", YELLOW);
             }
 			#endregion
-
-			// Snapshots
-			Snapshots.SnapshotGroupXML([.. bank.SnapshotNodes.Keys.Select(s => s.ToGuid())]);
-            foreach (FModGuid s in bank.SnapshotNodes.Keys)
-                Snapshots.SnapshotXML(bank.SnapshotNodes[s]);
+			#region Snapshots
+			Dictionary<FModGuid, int> Snaps = [];
+			foreach (FModGuid s in bank.SnapshotNodes.Keys)
+			{
+				SnapshotNode Snap = bank.SnapshotNodes[s];
+				Snaps[Snap.BaseGuid] = Snap.Priority;
+                Snapshots.SnapshotXML(Snap);
+			}
+            // get all snapshots in a list, then order them by priority, and also convert to System.Guid
+            Snapshots.SnapshotGroupXML([.. Snaps.OrderBy(s => s.Value).Select(s => s.Key.ToGuid())]);
+            #endregion
 
             // Parameters
             foreach (FModGuid p in bank.ParameterNodes.Keys)
