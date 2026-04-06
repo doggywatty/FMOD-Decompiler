@@ -5,20 +5,12 @@ using static XMLHelper;
 
 public class Parameters
 {
-    private struct ParamFlags
+    private struct ParamFlags(string type)
     {
-        public string Type { get; set; }
-        public bool IsGlobal { get; set; }
-        public bool IsReadOnly { get; set; }
-        public bool IsHeld { get; set; }
-
-        public ParamFlags(string type)
-        {
-            Type = type;
-            IsGlobal = false;
-            IsReadOnly = false;
-            IsHeld = false;
-        }
+        public string Type { get; set; } = type;
+        public bool IsGlobal { get; set; } = false;
+        public bool IsReadOnly { get; set; } = false;
+        public bool IsHeld { get; set; } = false;
     }
 
     public static void ParameterXML(ParameterNode Param)
