@@ -35,33 +35,48 @@ public class XMLHelper
         root.AppendChild(propertyElement);
     }
 
+    public static void AddMultiPropertyElement(XmlDocument xmlDoc, XmlElement root, string name, string[] values)
+    {
+        var propertyElement = xmlDoc.CreateElement("property");
+        propertyElement.SetAttribute("name", name);
+
+        foreach (string value in values)
+        {
+            var valueElement = xmlDoc.CreateElement("value");
+            valueElement.InnerText = value;
+            propertyElement.AppendChild(valueElement);
+        }
+
+        root.AppendChild(propertyElement);
+    }
+
     // Used to link back to another XML File using its GUID
     // Or to link to a section of the XML File using a GUID
     public static void AddRelationshipElement(XmlDocument xmlDoc, XmlElement root, string name, string value)
     {
-        var propertyElement = xmlDoc.CreateElement("relationship");
-        propertyElement.SetAttribute("name", name);
+        var relationshipElement = xmlDoc.CreateElement("relationship");
+        relationshipElement.SetAttribute("name", name);
 
         var distinationElement = xmlDoc.CreateElement("destination");
         distinationElement.InnerText = value;
 
-        propertyElement.AppendChild(distinationElement);
-        root.AppendChild(propertyElement);
+        relationshipElement.AppendChild(distinationElement);
+        root.AppendChild(relationshipElement);
     }
 
     public static void AddMultiRelationshipElement(XmlDocument xmlDoc, XmlElement root, string name, Guid[] values)
     {
-        var propertyElement = xmlDoc.CreateElement("relationship");
-        propertyElement.SetAttribute("name", name);
+        var relationshipElement = xmlDoc.CreateElement("relationship");
+        relationshipElement.SetAttribute("name", name);
 
-        foreach (var value in values)
+        foreach (Guid value in values)
         {
             var distinationElement = xmlDoc.CreateElement("destination");
             distinationElement.InnerText = $"{{{value}}}";
-            propertyElement.AppendChild(distinationElement);
+            relationshipElement.AppendChild(distinationElement);
         }
 
-        root.AppendChild(propertyElement);
+        root.AppendChild(relationshipElement);
     }
     #endregion
 

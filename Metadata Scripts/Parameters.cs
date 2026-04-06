@@ -25,6 +25,7 @@ public class Parameters
         #region Parameter Segment
         SetupHeaderXML(xmlDoc, root, "GameParameter", $"{{{Param.BaseGuid}}}", out XmlElement ParamElement);
 
+        // Main Properties
         AddPropertyElement(xmlDoc, ParamElement, "initialValue", $"{Param.DefaultValue}");
         if (Param.Minimum != 0)
             AddPropertyElement(xmlDoc, ParamElement, "minimum", $"{Param.Minimum}");
@@ -42,16 +43,7 @@ public class Parameters
             AddPropertyElement(xmlDoc, ParamElement, "parameterType", "2");
 
             // add labels
-            var propElement = xmlDoc.CreateElement("property");
-            propElement.SetAttribute("name", "enumerationLabels");
-            foreach (string Label in Param.Labels)
-            {
-                var labelElement = xmlDoc.CreateElement("value");
-                labelElement.InnerText = Label;
-                propElement.AppendChild(labelElement);
-            }
-
-            ParamElement.AppendChild(propElement);
+            AddMultiPropertyElement(xmlDoc, ParamElement, "enumerationLabels", Param.Labels);
         }
         // if using Built-in Types
         else
@@ -77,9 +69,13 @@ public class Parameters
         }
         // TODO - can Continuious or Discrete be determined?
 
-        // TODO - idk default value
-        AddPropertyElement(xmlDoc, ParamElement, "seekSpeed", $"{Param.SeekSpeed}"); // "1"
-        AddPropertyElement(xmlDoc, ParamElement, "seekSpeedDescending", $"{Param.SeekSpeedDown}"); // "2"
+        // Other Properties
+        if (Param.Velocity != 0)
+            AddPropertyElement(xmlDoc, ParamElement, "velocity", $"{Param.Velocity}");
+        if (Param.SeekSpeed != 0)
+            AddPropertyElement(xmlDoc, ParamElement, "seekSpeed", $"{Param.SeekSpeed}");
+        if (Param.SeekSpeedDown != 0)
+            AddPropertyElement(xmlDoc, ParamElement, "seekSpeedDescending", $"{Param.SeekSpeedDown}");
 
         // idk what this is, probably not gonna be added
         //AddPropertyElement(xmlDoc, ParamElement, "isExposedRecursively", "false");
