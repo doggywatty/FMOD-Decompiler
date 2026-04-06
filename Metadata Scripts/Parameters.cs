@@ -5,6 +5,22 @@ using static XMLHelper;
 
 public class Parameters
 {
+    private struct ParamFlags
+    {
+        public string Type { get; set; }
+        public bool IsGlobal { get; set; }
+        public bool IsReadOnly { get; set; }
+        public bool IsHeld { get; set; }
+
+        public ParamFlags(string type)
+        {
+            Type = type;
+            IsGlobal = false;
+            IsReadOnly = false;
+            IsHeld = false;
+        }
+    }
+
     public static void ParameterXML(ParameterNode Param)
     {
         Guid XMLGUID = GetRandomGUID();
@@ -21,7 +37,6 @@ public class Parameters
         // Link to Parameter Settings in Second Segment below
         AddRelationshipElement(xmlDoc, PresetElement, "parameter", $"{{{Param.BaseGuid}}}");
         #endregion
-
         #region Parameter Segment
         SetupHeaderXML(xmlDoc, root, "GameParameter", $"{{{Param.BaseGuid}}}", out XmlElement ParamElement);
 
@@ -33,44 +48,19 @@ public class Parameters
             AddPropertyElement(xmlDoc, ParamElement, "maximum", $"{Param.Maximum}");
 
         #region Resolve Parameter Types
-        string ParamFlags = (byte)Param.Flags switch
+        ParamFlags ParamData = new((Param.Flags & 0x28) switch
         {
-            0x00 => "Continuous, Local",
-            0x04 => "Continuous, Local", // in bo noise idk
-            0x10 => "Continuous, Local, ReadOnly",
-            0x02 => "Continuous, Local, IsHeld",
-            0x12 => "Continuous, Local, ReadOnly, IsHeld",
-
-            0x01 => "Continuous, Global",
-            0x05 => "Continuous, Global", // in bo noise idk
-            0x11 => "Continuous, Global, ReadOnly",
-            0x03 => "Continuous, Global, IsHeld",
-            0x13 => "Continuous, Global, ReadOnly, IsHeld",
-
-            0x08 => "Discrete, Local",
-            0x18 => "Discrete, Local, ReadOnly",
-            0x0A => "Discrete, Local, IsHeld",
-            0x1A => "Discrete, Local, ReadOnly, IsHeld",
-
-            0x09 => "Discrete, Global",
-            0x19 => "Discrete, Global, ReadOnly",
-            0x0B => "Discrete, Global, IsHeld",
-            0x1B => "Discrete, Global, ReadOnly, IsHeld",
-
-            0x28 => "Labeled, Local",
-            0x38 => "Labeled, Local, ReadOnly",
-            0x2A => "Labeled, Local, IsHeld",
-            0x3A => "Labeled, Local, ReadOnly, IsHeld",
-
-            0x29 => "Labeled, Global",
-            0x39 => "Labeled, Global, ReadOnly",
-            0x2B => "Labeled, Global, IsHeld",
-            0x3B => "Labeled, Global, ReadOnly, IsHeld",
-
-            _ => "UNKNOWN",
+            0x20 or 0x28 => "Labeled",
+            0x08 => "Discrete",
+            _ => "Continuous"
+        })
+        {
+            IsGlobal = (Param.Flags & 0x01) != 0,
+            IsHeld = (Param.Flags & 0x02) != 0,
+            IsReadOnly = (Param.Flags & 0x10) != 0
         };
 
-        int ParamType = (uint)Param.Type switch
+        int BuiltinParamType = (uint)Param.Type switch
         {
             0x1 => 3, // Distance
             0x4 => 4, // Direction
@@ -88,31 +78,28 @@ public class Parameters
         #endregion
         #region XML Parameter Types
         // if Labeled
-        if (Param.Labels.Length > 0 && ParamFlags.Contains("Labeled"))
+        if (Param.Labels.Length > 0 && ParamData.Type == "Labeled")
         {
-            // mark as labelled
             AddPropertyElement(xmlDoc, ParamElement, "parameterType", "2"); // "2" == Labeled
-
-            // add labels
-            AddMultiPropertyElement(xmlDoc, ParamElement, "enumerationLabels", Param.Labels);
+            AddMultiPropertyElement(xmlDoc, ParamElement, "enumerationLabels", Param.Labels); // add labels
         }
         // if Discrete
-        else if (ParamFlags.Contains("Discrete"))
+        else if (ParamData.Type == "Discrete")
             AddPropertyElement(xmlDoc, ParamElement, "parameterType", "1"); // "1" == Discrete
         // if using Built-in Types
-        else if (ParamType != -1)
-            AddPropertyElement(xmlDoc, ParamElement, "parameterType", $"{ParamType}");
+        else if (BuiltinParamType != -1)
+            AddPropertyElement(xmlDoc, ParamElement, "parameterType", $"{BuiltinParamType}");
         // if Continuious (or unknown)
         else
             AddPropertyElement(xmlDoc, ParamElement, "parameterType", "0"); // "0" == Continuious
         #endregion
 
         // Other Properties
-        if (ParamFlags.Contains("Global")) 
+        if (ParamData.IsGlobal) 
             AddPropertyElement(xmlDoc, ParamElement, "isGlobal", "true");
-        if (ParamFlags.Contains("ReadOnly")) 
+        if (ParamData.IsReadOnly) 
             AddPropertyElement(xmlDoc, ParamElement, "isReadOnly", "true");
-        if (ParamFlags.Contains("IsHeld"))
+        if (ParamData.IsHeld)
             AddPropertyElement(xmlDoc, ParamElement, "isHeld", "true");
 
         if (Param.Velocity != 0)
@@ -121,9 +108,6 @@ public class Parameters
             AddPropertyElement(xmlDoc, ParamElement, "seekSpeed", $"{Param.SeekSpeed}");
         if (Param.SeekSpeedDown != 0)
             AddPropertyElement(xmlDoc, ParamElement, "seekSpeedDescending", $"{Param.SeekSpeedDown}");
-
-        // idk what this is, probably not gonna be added
-        //AddPropertyElement(xmlDoc, ParamElement, "isExposedRecursively", "false");
         #endregion
 
         xmlDoc.AppendChild(root);
