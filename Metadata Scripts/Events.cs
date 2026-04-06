@@ -186,12 +186,13 @@ public class Events
 				if (s.StartTime != 0) 
 					AddPropertyElement(xmlDoc, SoundElement, "start", $"{s.StartTime}");
 				AddPropertyElement(xmlDoc, SoundElement, "length", $"{s.Length}");
-				//AddPropertyElement(xmlDoc, SoundElement, "looping", $"true");// probably can't be done
+                //AddPropertyElement(xmlDoc, SoundElement, "looping", $"true");// probably can't be done
 
-				// link audiofile GUID
-				// im pretty sure FTriggerBox Guid is the same as the WavEntry Guid, so this should work, but idk
-				// this very well might not work
-				AddRelationshipElement(xmlDoc, SoundElement, "audioFile", $"{{{WavGUIDs[s.Guid]}}}");
+                // link audiofile GUID
+                // im pretty sure FTriggerBox Guid is the same as the WavEntry Guid, so this should work, but idk
+                // this very well might not work
+                if (WavGUIDs.ContainsKey(s.Guid))
+                    AddRelationshipElement(xmlDoc, SoundElement, "audioFile", $"{{{WavGUIDs[s.Guid]}}}");
 			}
 		}
 		#endregion
@@ -321,7 +322,8 @@ public class Events
                 if (m.Length > 0) 
 					AddPropertyElement(xmlDoc, NamedMarkerElement, "length", $"{m.Length}");
 
-                AddPropertyElement(xmlDoc, NamedMarkerElement, "name", $"{m.Name}");
+				if (m.Name != string.Empty)
+					AddPropertyElement(xmlDoc, NamedMarkerElement, "name", $"{m.Name}");
 
                 // Normal = 0, Loop = 1, Magnet = 2
 				// 1 is default

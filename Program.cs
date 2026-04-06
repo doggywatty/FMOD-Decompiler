@@ -263,7 +263,8 @@ public class Program
 		Directory.CreateDirectory(outputProjectPath + "/Metadata/ParameterPresetFolder");
 		Directory.CreateDirectory(outputProjectPath + "/Metadata/ProfilerFolder");
 		Directory.CreateDirectory(outputProjectPath + "/Metadata/SandboxFolder");
-		Directory.CreateDirectory(outputProjectPath + "/Metadata/SnapshotGroup");
+        Directory.CreateDirectory(outputProjectPath + "/Metadata/Snapshot");
+        Directory.CreateDirectory(outputProjectPath + "/Metadata/SnapshotGroup");
 		Directory.CreateDirectory(outputProjectPath + "/Metadata/Event");
 
 		// Main FSPro File
@@ -341,7 +342,7 @@ public class Program
 			AudioFileGUIDs.Clear();
 
             // Spinner for when --verbose was not used
-            if (!verbose)
+            if (verbose)
                 StartSpinnerAsync("Extracting Bank Info...", new Random().Next(2), 1000, SpinnerKill.Token);
 
             // Associate WavEntries with their Audio File
@@ -367,11 +368,11 @@ public class Program
 				{
 					Guid AudioFileGuid = GetRandomGUID();
 					AudioFileGUIDs.Add(WavSampleName, AudioFileGuid);
-					WavGUIDs.Add(WavGuid, AudioFileGuid);
+					WavGUIDs.TryAdd(WavGuid, AudioFileGuid);
 				}
 				// if it was previously referenced, don't set a new one and get the old one
 				else
-                    WavGUIDs.Add(WavGuid, SavedAudioFileGuid);
+                    WavGUIDs.TryAdd(WavGuid, SavedAudioFileGuid);
             }
 
             // Export all Sounds

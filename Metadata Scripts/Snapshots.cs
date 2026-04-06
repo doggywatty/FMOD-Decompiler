@@ -31,7 +31,8 @@ public class Snapshots
         AddRelationshipElement(xmlDoc, SnapElement, "snapshotMasterTrack", $"{{{SnapshotMasterTrackGUID}}}");
 
         SetupHeaderXML(xmlDoc, root, "EventAutomatableProperties", $"{{{AutomatablePropertiesGUID}}}", out XmlElement AutoPropElement);
-        AddPropertyElement(xmlDoc, AutoPropElement, "snapshotIntensity", $"{Snap.Intensity}");
+        if (Snap.Intensity != 100)
+            AddPropertyElement(xmlDoc, AutoPropElement, "snapshotIntensity", $"{Snap.Intensity}");
 
         SetupHeaderXML(xmlDoc, root, "MarkerTrack", $"{{{MarkerTrackGUID}}}", out _);
         SetupHeaderXML(xmlDoc, root, "Timeline", $"{{{TimelineGUID}}}", out _);
