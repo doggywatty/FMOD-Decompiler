@@ -214,8 +214,7 @@ public class Events
                     0x1 => "volume",
                     _ => "volume",
                 };
-
-				switch ((int)Mod.Type)
+                switch ((int)Mod.Type)
 				{
 					case 0: // ADSR
 						{

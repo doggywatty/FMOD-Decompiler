@@ -72,12 +72,12 @@ public class Program
 	// these keep track of all randomly generated GUIDs, so we can call them back if needed elsewhere
 	public static Dictionary<string, Guid> EventFolderGUIDs = [];
 	public static Dictionary<string, Guid> AudioFileGUIDs = [];
-    public static Dictionary<FModGuid, Guid> WavGUIDs = [];
-    #endregion
+	public static Dictionary<FModGuid, Guid> WavGUIDs = [];
+	#endregion
 
-    #region Initialize Main Variables
-    // For Spinner
-    public static CancellationTokenSource SpinnerKill = new();
+	#region Initialize Main Variables
+	// For Spinner
+	public static CancellationTokenSource SpinnerKill = new();
 
 	// Argument Values
 	public static string bankFolder = "";
@@ -87,10 +87,10 @@ public class Program
 	public static bool IsGUI = false;
 
 	public static FRadixTreePacked? StringTable = null;
-    #endregion
+	#endregion
 
-    #region Helper Funcs
-    public static void PushToConsoleLog(string message, string color = "NONE", bool toLog = false)
+	#region Helper Funcs
+	public static void PushToConsoleLog(string message, string color = "NONE", bool toLog = false)
 	{
 		// for some reason I can't just string color = NORMAL at the beginning because compiler cries
 		var truecolor = (color == "NONE" || IsGUI) ? NORMAL : color;
@@ -123,18 +123,16 @@ public class Program
 	}
 
 	// Create Random GUIDs
-	public static Guid GetRandomGUID() {
-		return Guid.NewGuid();
-	}
+	public static Guid GetRandomGUID() => Guid.NewGuid();
 
 	public static List<string> SplitEventPath(string EventPath)
 	{
-        // Get the subfolders by splitting by "/"
-        List<string> folders = [.. EventPath.Split('/')];
-        folders.RemoveAt(0); // Remove "event:"
-        folders.RemoveAt(folders.Count - 1); // Remove the last part (it's not a folder)
+		// Get the subfolders by splitting by "/"
+		List<string> folders = [.. EventPath.Split('/')];
+		folders.RemoveAt(0); // Remove "event:"
+		folders.RemoveAt(folders.Count - 1); // Remove the last part (it's not a folder)
 		return folders;
-    }
+	}
 	#endregion
 
 	public static async Task Main(string[] args)
@@ -189,7 +187,12 @@ public class Program
 
 		#region Arguments and Folders
 		// if no arguments were added
-		if (args.Length == 0)
+		if (args.Length >= 2)
+		{
+			bankFolder = args[0];
+			outputProjectPath = args[1];
+		}
+		else
 		{
 			Console.Write("Enter the path to the Bank Folder: ");
 			bankFolder = Console.ReadLine();
@@ -198,32 +201,29 @@ public class Program
 			outputProjectPath = Console.ReadLine();
 		}
 
-		// If user input nothing
-		if (bankFolder == "")
+		// clean and Validate (Trim whitespace and remove quotes)
+		bankFolder = bankFolder?.Replace("\"", "").Trim();
+		outputProjectPath = outputProjectPath?.Replace("\"", "").Trim();
+
+		if (string.IsNullOrWhiteSpace(bankFolder))
 		{
-            PushToConsoleLog($"ERROR: No Bank file path provided\nQuitting...", RED);
+			PushToConsoleLog($"ERROR: No Bank file path provided\nQuitting...", RED);
 			return;
 		}
-		if (outputProjectPath == "")
+		if (string.IsNullOrWhiteSpace(outputProjectPath))
 		{
-            PushToConsoleLog($"ERROR: No Output file path provided\nQuitting...", RED);
+			PushToConsoleLog($"ERROR: No Output file path provided\nQuitting...", RED);
 			return;
 		}
 
-		// remove any qoutes in the strings, just in case
-		bankFolder = bankFolder.Replace("\"", "");
-		outputProjectPath = outputProjectPath.Replace("\"", "");
-
-		// If bank folder doesn't exist
+		// directory validation
 		if (!Directory.Exists(bankFolder))
 		{
-			PushToConsoleLog($"ERROR: Bank Folder does not exist\nQuitting...", RED);
+			PushToConsoleLog($"ERROR: Bank Folder does not exist: {bankFolder}\nQuitting...", RED);
 			return;
 		}
-
-		// If output folder doesn't exist, warn user
-		if (!Directory.Exists(bankFolder))
-			PushToConsoleLog($"WARNING: Output Folder does not exist\nContinuing Anyways...", YELLOW);
+		if (!Directory.Exists(outputProjectPath))
+			PushToConsoleLog("WARNING: Output Folder does not exist\nContinuing Anyways...", YELLOW);
 
 		#endregion
 
@@ -263,8 +263,8 @@ public class Program
 		Directory.CreateDirectory(outputProjectPath + "/Metadata/ParameterPresetFolder");
 		Directory.CreateDirectory(outputProjectPath + "/Metadata/ProfilerFolder");
 		Directory.CreateDirectory(outputProjectPath + "/Metadata/SandboxFolder");
-        Directory.CreateDirectory(outputProjectPath + "/Metadata/Snapshot");
-        Directory.CreateDirectory(outputProjectPath + "/Metadata/SnapshotGroup");
+		Directory.CreateDirectory(outputProjectPath + "/Metadata/Snapshot");
+		Directory.CreateDirectory(outputProjectPath + "/Metadata/SnapshotGroup");
 		Directory.CreateDirectory(outputProjectPath + "/Metadata/Event");
 
 		// Main FSPro File
@@ -293,43 +293,43 @@ public class Program
 		MasterXMLs.Create_TagsXML();
 		MasterXMLs.Create_WorkspaceXML();
 
-        #endregion
+		#endregion
 
-        // load all the banks in the specified folder
-        PushToConsoleLog($"Loading Banks...", YELLOW);
+		// load all the banks in the specified folder
+		PushToConsoleLog($"Loading Banks...", YELLOW);
 		// (but get Master.strings first)
-        var FolderFiles = Directory.GetFiles(bankFolder, "*.bank")
+		var FolderFiles = Directory.GetFiles(bankFolder, "*.bank")
 			.OrderByDescending(f => Path.GetFileName(f).Equals("Master.strings.bank", StringComparison.OrdinalIgnoreCase));
 
-        #region Idiot Proof Checks
-        if (Directory.GetFiles(bankFolder, "*.fsb").Length > 0)
-        {
-            // prevent user from using FSB4 files, since this tool obviously doesn't support that
-            PushToConsoleLog("ERROR: Input is unsupported (FSB4)\nQuitting...", RED);
-            return;
-        }
-        if (!FolderFiles.Any())
-        {
-            // prevent user from using FSB4 files, since this tool obviously doesn't support that
-            PushToConsoleLog("ERROR: No .bank files were found\nQuitting...", RED);
-            return;
-        }
-        if (!File.Exists($"{bankFolder}/Master.strings.bank"))
-        {
-            PushToConsoleLog("ERROR: Master.strings.bank is not present\nQuitting...", RED);
-            return;
-        }
-        #endregion
+		#region Idiot Proof Checks
+		if (Directory.GetFiles(bankFolder, "*.fsb").Length > 0)
+		{
+			// prevent user from using FSB4 files, since this tool obviously doesn't support that
+			PushToConsoleLog("ERROR: Input is unsupported (FSB4)\nQuitting...", RED);
+			return;
+		}
+		if (!FolderFiles.Any())
+		{
+			// prevent user from using FSB4 files, since this tool obviously doesn't support that
+			PushToConsoleLog("ERROR: No .bank files were found\nQuitting...", RED);
+			return;
+		}
+		if (!File.Exists($"{bankFolder}/Master.strings.bank"))
+		{
+			PushToConsoleLog("ERROR: Master.strings.bank is not present\nQuitting...", RED);
+			return;
+		}
+		#endregion
 
 		// go through all bank files in folder
-        foreach (string bankFilePath in FolderFiles)
+		foreach (string bankFilePath in FolderFiles)
 		{
-            var bank = FModBankParser.FModBankParser.LoadSoundBank(new FileInfo(bankFilePath));
+			var bank = FModBankParser.FModBankParser.LoadSoundBank(new FileInfo(bankFilePath));
 			string bankName = bank.BankName;
 			FModGuid bankGuid = bank.BankInfo.BaseGuid;
 
-            PushToConsoleLog($"Loaded Bank: {bankName} (GUID: {bankGuid})", GREEN);
-            PushToConsoleLog($"Bank Version: {bank.BankInfo.FileVersion}", GREEN);
+			PushToConsoleLog($"Loaded Bank: {bankName} (GUID: {bankGuid})", GREEN);
+			PushToConsoleLog($"Bank Version: {bank.BankInfo.FileVersion}", GREEN);
 
 			if (bankName == "Master.strings.bank")
 			{
@@ -337,20 +337,20 @@ public class Program
 				continue;
 			}
 
-            // Clear previous bank stuff
-            EventFolderGUIDs.Clear();
+			// Clear previous bank stuff
+			EventFolderGUIDs.Clear();
 			AudioFileGUIDs.Clear();
 
-            // Spinner for when --verbose was not used
-            if (verbose)
-                StartSpinnerAsync("Extracting Bank Info...", new Random().Next(2), 1000, SpinnerKill.Token);
+			// Spinner for when --verbose was not used
+			if (verbose)
+				StartSpinnerAsync("Extracting Bank Info...", new Random().Next(2), 1000, SpinnerKill.Token);
 
-            // Associate WavEntries with their Audio File
-            #region Setup WavEntries
-            // really annoying that this is the only real way i can think of to associate them
-            // also sucks that the audio files themselves can't have their original Guids
-            // but that's FMOD for ya
-            foreach (FModGuid WavGuid in bank.WavEntries.Keys) 
+			// Associate WavEntries with their Audio File
+			#region Setup WavEntries
+			// really annoying that this is the only real way i can think of to associate them
+			// also sucks that the audio files themselves can't have their original Guids
+			// but that's FMOD for ya
+			foreach (FModGuid WavGuid in bank.WavEntries.Keys) 
 			{
 				// get wav node
 				WaveformResourceNode Wav = bank.WavEntries[WavGuid];
@@ -372,27 +372,28 @@ public class Program
 				}
 				// if it was previously referenced, don't set a new one and get the old one
 				else
-                    WavGUIDs.TryAdd(WavGuid, SavedAudioFileGuid);
-            }
+					WavGUIDs.TryAdd(WavGuid, SavedAudioFileGuid);
+			}
 
-            // Export all Sounds
-            foreach (FmodSoundBank sndBank in bank.SoundBankData)
-                ExtractSoundAssets.ExtractSoundFiles(sndBank, bankName);
-            #endregion
+			// Export all Sounds
+			foreach (FmodSoundBank sndBank in bank.SoundBankData)
+				ExtractSoundAssets.ExtractSoundFiles(sndBank, bankName);
+			#endregion
 
-            // Start actual extraction
-            #region Bank Specific XMLs
-            // basically just the XML Files for most assets that references their given bank file
-            // Master.bank has already been added, so skip it
-            if (bankName != "Master.bank")
-            {
-                string truebankName = bankName.Replace(".bank", "/");
-                MasterXMLs.Create_BankAssetXML(truebankName);
-                MasterXMLs.Create_BankFileXML(bankGuid, truebankName);
-            }
-            #endregion
-            #region Event Stuff
-            PushToConsoleLog($"Event Count: {bank.EventNodes.Count}", GREEN);
+			// Start actual extraction
+			#region Bank Specific XMLs
+			// basically just the XML Files for most assets that references their given bank file
+			// Master.bank has already been added, so skip it
+			if (bankName != "Master.bank")
+			{
+				string truebankName = bankName.Replace(".bank", "/");
+				MasterXMLs.Create_BankAssetXML(truebankName);
+				MasterXMLs.Create_BankFileXML(bankGuid, truebankName);
+			}
+			#endregion
+
+			#region Event Stuff
+			PushToConsoleLog($"Event Count: {bank.EventNodes.Count}", GREEN);
 
 			foreach (FModGuid eGuid in bank.EventNodes.Keys)
 			{
@@ -406,8 +407,8 @@ public class Program
 					Events.EventXML(Event, EventPath, bank);
 				}
 				else
-                    PushToConsoleLog($"WARNING: Event Path could not be resolved for Event ID ({Event.BaseGuid})", YELLOW);
-            }
+					PushToConsoleLog($"WARNING: Event Path could not be resolved for Event ID ({Event.BaseGuid})", YELLOW);
+			}
 			#endregion
 			#region Snapshots
 			Dictionary<FModGuid, int> Snaps = [];
@@ -415,20 +416,20 @@ public class Program
 			{
 				SnapshotNode Snap = bank.SnapshotNodes[s];
 				Snaps[Snap.BaseGuid] = Snap.Priority;
-                Snapshots.SnapshotXML(Snap);
+				Snapshots.SnapshotXML(Snap);
 			}
-            // get all snapshots in a list, then order them by priority, and also convert to System.Guid
-            Snapshots.SnapshotGroupXML([.. Snaps.OrderBy(s => s.Value).Select(s => s.Key.ToGuid())]);
-            #endregion
+			// get all snapshots in a list, then order them by priority, and also convert to System.Guid
+			Snapshots.SnapshotGroupXML([.. Snaps.OrderBy(s => s.Value).Select(s => s.Key.ToGuid())]);
+			#endregion
 
-            // Parameters
-            foreach (FModGuid p in bank.ParameterNodes.Keys)
+			// Parameters
+			foreach (FModGuid p in bank.ParameterNodes.Keys)
 				Parameters.ParameterXML(bank.ParameterNodes[p]);
 		}
 
-        #region Finish
-        // if not verbose, stop spinner
-        if (!verbose)
+		#region Finish
+		// if not verbose, stop spinner
+		if (!verbose)
 			SpinnerKill.Cancel();
 
 		PushToConsoleLog($"{USESPACE}\nConversion Complete!", GREEN);
