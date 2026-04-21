@@ -1,5 +1,6 @@
 ﻿using FModBankParser;
 using FModBankParser.Nodes;
+using FModBankParser.Nodes.Instruments;
 using FModBankParser.Nodes.ModulatorSubnodes;
 using FModBankParser.Objects;
 using System.Xml;
@@ -34,9 +35,14 @@ public class Events
 
         #region Index Timeline Resources
         List<Guid> SoundModules = [];
-        if (eTimeline.TriggerBoxes.Length > 0)
-			foreach (var s in eTimeline.TriggerBoxes)
+        if (eTimeline.TimeLockedTriggerBoxes.Length > 0)
+			foreach (var s in eTimeline.TimeLockedTriggerBoxes)
 				SoundModules.Add(s.Guid.ToGuid());
+
+        List<Guid> NestModules = [];
+        if (eTimeline.TriggerBoxes.Length > 0)
+            foreach (var n in eTimeline.TriggerBoxes)
+                NestModules.Add(n.Guid.ToGuid());
 
         Dictionary<FSustainPoint, Guid> SustainPoints = [];
         if (eTimeline.SustainPoints.Length > 0)
@@ -119,12 +125,16 @@ public class Events
 
 		#region Timeline Header (empty if no sounds or markers)
 		SetupHeaderXML(xmlDoc, root, "Timeline", $"{{{eTimeline.BaseGuid}}}", out XmlElement TimelineElement);
-		// if there are sounds, but timeline
-		if (SoundModules.Count > 0) //&& !IsAction)
-			AddMultiRelationshipElement(xmlDoc, TimelineElement, "modules", [.. SoundModules]);
-		// else if there are sounds, and action sheet
-		//else if (SoundsPresent && IsAction)
-		//	AddPropertyElement(xmlDoc, TimelineElement, "isProxyEnabled", "false");
+
+        // Add references to elements onto Timeline
+        List<Guid> TimelineModuleGuids = [];
+        if (SoundModules.Count > 0)
+            TimelineModuleGuids.AddRange(SoundModules);
+        if (NestModules.Count > 0)
+            TimelineModuleGuids.AddRange(NestModules);
+
+        if (TimelineModuleGuids.Count > 0)
+            AddMultiRelationshipElement(xmlDoc, TimelineElement, "modules", [.. TimelineModuleGuids]);
 
 		// Add references to elements onto Timeline
 		List<Guid> TimelineMarkerGuids = [];
@@ -177,17 +187,40 @@ public class Events
 		}
 		*/
 
-		#region TODO - i actually think this is CMDB/EVIB (Nested Event)
+		#region Commands and Nested Events
 		if (eTimeline.TriggerBoxes.Length > 0)
 		{
 			foreach (var s in eTimeline.TriggerBoxes)
 			{
-				string XMLHeader = "CommandSound";
+                if (ParentBank.InstrumentNodes.TryGetValue(s.Guid, out BaseInstrumentNode? Instrument))
+				{
+					switch (Instrument)
+					{
+						case EventInstrumentNode e: // Nested Event
+							{
+								SetupHeaderXML(xmlDoc, root, "EventSound", $"{{{s.Guid}}}", out XmlElement NestElement);
+								if (s.StartTime != 0)
+									AddPropertyElement(xmlDoc, NestElement, "start", $"{GetValue(s.StartTime)}");
+								AddPropertyElement(xmlDoc, NestElement, "length", $"{GetValue(s.Length)}");
 
-                SetupHeaderXML(xmlDoc, root, XMLHeader, $"{{{s.Guid}}}", out XmlElement SoundElement);
-				if (s.StartTime != 0) 
-					AddPropertyElement(xmlDoc, SoundElement, "start", $"{GetValue(s.StartTime)}");
-				AddPropertyElement(xmlDoc, SoundElement, "length", $"{GetValue(s.Length)}");
+                                AddRelationshipElement(xmlDoc, NestElement, "event", $"{{{e.EventGuid}}}");
+                            }
+							break;
+
+                        case CommandInstrumentNode c: // Command
+							{
+								SetupHeaderXML(xmlDoc, root, "CommandSound", $"{{{s.Guid}}}", out XmlElement CommandElement);
+								if (s.StartTime != 0)
+									AddPropertyElement(xmlDoc, CommandElement, "start", $"{GetValue(s.StartTime)}");
+								AddPropertyElement(xmlDoc, CommandElement, "length", $"{GetValue(s.Length)}");
+
+                                AddPropertyElement(xmlDoc, CommandElement, "commandType", $"{c.CommandType}");
+                                AddPropertyElement(xmlDoc, CommandElement, "targetValue", $"{c.Value}");
+                                AddRelationshipElement(xmlDoc, CommandElement, "commandTarget", $"{{{c.TargetGuid}}}");
+                            }
+                            break;
+                    }
+                }
 			}
 		}
         #endregion
