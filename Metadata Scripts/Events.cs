@@ -361,7 +361,7 @@ public class Events
         {
             foreach (var m in eTimeline.TimelineNamedMarkers)
             {
-                TransitionRegionNode? TransRegion = (TransitionRegionNode)ParentBank.TransitionNodes.First(t => ((TransitionRegionNode)t.Value).DestinationGuid == m.BaseGuid).Value;
+                TransitionRegionNode? TransRegion = (TransitionRegionNode)ParentBank.TransitionNodes.FirstOrDefault(t => ((TransitionRegionNode)t.Value).DestinationGuid == m.BaseGuid).Value;
 
                 string XMLHeader = (m.Length > 0) ? "LoopRegion" : "NamedMarker"; // Either Region or normal marker
                 SetupHeaderXML(xmlDoc, root, XMLHeader, $"{{{m.BaseGuid}}}", out XmlElement NamedMarkerElement);
