@@ -168,8 +168,8 @@ public class Events
 		AddRelationshipElement(xmlDoc, EventMixerMasterElement, "panner", $"{{{MixerBusPannerGuid2}}}");
 		AddRelationshipElement(xmlDoc, EventMixerMasterElement, "mixer", $"{{{EventMixerGuid}}}");
 
-        // Action Sheet Header for Sounds
-        /*
+		// Action Sheet Header for Sounds
+		/*
 		if (SoundsPresent && IsAction)
 		{
 			SetupHeaderXML(xmlDoc, root, "MultiSound", $"{{{MultiSoundGuid}}}", out XmlElement MultiSoundElement);
@@ -177,16 +177,29 @@ public class Events
 		}
 		*/
 
-        #region Single Sound Modules
-        // TODO - i actually think this is CMDB/EVIB (Nested Event)
-        if (eTimeline.TriggerBoxes.Length > 0)
+		#region TODO - i actually think this is CMDB/EVIB (Nested Event)
+		if (eTimeline.TriggerBoxes.Length > 0)
 		{
 			foreach (var s in eTimeline.TriggerBoxes)
 			{
-				SetupHeaderXML(xmlDoc, root, "SingleSound", $"{{{s.Guid}}}", out XmlElement SoundElement);
+				string XMLHeader = "CommandSound";
+
+                SetupHeaderXML(xmlDoc, root, XMLHeader, $"{{{s.Guid}}}", out XmlElement SoundElement);
 				if (s.StartTime != 0) 
 					AddPropertyElement(xmlDoc, SoundElement, "start", $"{GetValue(s.StartTime)}");
 				AddPropertyElement(xmlDoc, SoundElement, "length", $"{GetValue(s.Length)}");
+			}
+		}
+        #endregion
+        #region Single Sound Modules
+        if (eTimeline.TimeLockedTriggerBoxes.Length > 0)
+        {
+            foreach (var s in eTimeline.TimeLockedTriggerBoxes)
+            {
+                SetupHeaderXML(xmlDoc, root, "SingleSound", $"{{{s.Guid}}}", out XmlElement SoundElement);
+                if (s.StartTime != 0)
+                    AddPropertyElement(xmlDoc, SoundElement, "start", $"{GetValue(s.StartTime)}");
+                AddPropertyElement(xmlDoc, SoundElement, "length", $"{GetValue(s.Length)}");
                 //AddPropertyElement(xmlDoc, SoundElement, "looping", $"true");// probably can't be done
 
                 // link audiofile GUID
@@ -194,11 +207,11 @@ public class Events
                 // this very well might not work
                 if (WavGUIDs.TryGetValue(s.Guid, out Guid AudioGuid))
                     AddRelationshipElement(xmlDoc, SoundElement, "audioFile", $"{{{AudioGuid}}}");
-			}
-		}
-		#endregion
+            }
+        }
+        #endregion
 
-		SetupHeaderXML(xmlDoc, root, "MixerBusEffectChain", $"{{{MixerBusEffectChainGuid1}}}", out XmlElement MixerBusEffectChainElement1);
+        SetupHeaderXML(xmlDoc, root, "MixerBusEffectChain", $"{{{MixerBusEffectChainGuid1}}}", out XmlElement MixerBusEffectChainElement1);
 		AddRelationshipElement(xmlDoc, MixerBusEffectChainElement1, "effects", $"{{{MixerBusFaderGuid1}}}");
 
 		// Empty for now
