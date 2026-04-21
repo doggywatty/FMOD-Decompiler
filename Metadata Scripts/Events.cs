@@ -2,6 +2,7 @@
 using FModBankParser.Nodes;
 using FModBankParser.Nodes.Instruments;
 using FModBankParser.Nodes.ModulatorSubnodes;
+using FModBankParser.Nodes.Transitions;
 using FModBankParser.Objects;
 using System.Xml;
 using static Program;
@@ -360,7 +361,9 @@ public class Events
         {
             foreach (var m in eTimeline.TimelineNamedMarkers)
             {
-				string XMLHeader = (m.Length > 0) ? "LoopRegion" : "NamedMarker"; // Either Region or normal marker
+                TransitionRegionNode? TransRegion = (TransitionRegionNode)ParentBank.TransitionNodes.First(t => ((TransitionRegionNode)t.Value).DestinationGuid == m.BaseGuid).Value;
+
+                string XMLHeader = (m.Length > 0) ? "LoopRegion" : "NamedMarker"; // Either Region or normal marker
                 SetupHeaderXML(xmlDoc, root, XMLHeader, $"{{{m.BaseGuid}}}", out XmlElement NamedMarkerElement);
                 AddPropertyElement(xmlDoc, NamedMarkerElement, "position", $"{GetValue(m.Position)}");
 
@@ -371,11 +374,19 @@ public class Events
 				if (m.Name != string.Empty)
 					AddPropertyElement(xmlDoc, NamedMarkerElement, "name", $"{m.Name}");
 
-                // Normal = 0, Loop = 1, Magnet = 2
-				// 1 is default
-				// TODO - we can set it to Loop or Magnet if we can find out their type
-                if (m.Length > 0)
-                    AddPropertyElement(xmlDoc, NamedMarkerElement, "looping", "0");
+				if (TransRegion != null && m.Length > 0)
+				{
+                    // Normal = 0, Loop = 1, Magnet = 2
+                    int RegionType = TransRegion.Flags switch
+                    {
+                        0x00 or 0x01 => 0,
+                        0x02 => 1,
+                        0x10 or 0x14 => 2,
+                        _ => 0,
+                    };
+					if (RegionType != 1)
+						AddPropertyElement(xmlDoc, NamedMarkerElement, "looping", $"{RegionType}");
+				}
 
                 AddRelationshipElement(xmlDoc, NamedMarkerElement, "timeline", $"{{{eTimeline.BaseGuid}}}");
                 AddRelationshipElement(xmlDoc, NamedMarkerElement, "markerTrack", $"{{{MarkerTrackGuid}}}");
