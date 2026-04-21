@@ -125,6 +125,9 @@ public class Program
 	// Create Random GUIDs
 	public static Guid GetRandomGUID() => Guid.NewGuid();
 
+	// because some things need to be converted like this
+	public static double GetValue(dynamic val) => ((int)val) / 48000.0;
+
 	public static List<string> SplitEventPath(string EventPath)
 	{
 		// Get the subfolders by splitting by "/"

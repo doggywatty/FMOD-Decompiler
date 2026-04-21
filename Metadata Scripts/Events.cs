@@ -168,8 +168,8 @@ public class Events
 		AddRelationshipElement(xmlDoc, EventMixerMasterElement, "panner", $"{{{MixerBusPannerGuid2}}}");
 		AddRelationshipElement(xmlDoc, EventMixerMasterElement, "mixer", $"{{{EventMixerGuid}}}");
 
-		// Action Sheet Header for Sounds
-		/*
+        // Action Sheet Header for Sounds
+        /*
 		if (SoundsPresent && IsAction)
 		{
 			SetupHeaderXML(xmlDoc, root, "MultiSound", $"{{{MultiSoundGuid}}}", out XmlElement MultiSoundElement);
@@ -177,22 +177,23 @@ public class Events
 		}
 		*/
 
-		#region Single Sound Modules
-		if (eTimeline.TriggerBoxes.Length > 0)
+        #region Single Sound Modules
+        // TODO - i actually think this is CMDB/EVIB (Nested Event)
+        if (eTimeline.TriggerBoxes.Length > 0)
 		{
 			foreach (var s in eTimeline.TriggerBoxes)
 			{
 				SetupHeaderXML(xmlDoc, root, "SingleSound", $"{{{s.Guid}}}", out XmlElement SoundElement);
 				if (s.StartTime != 0) 
-					AddPropertyElement(xmlDoc, SoundElement, "start", $"{s.StartTime}");
-				AddPropertyElement(xmlDoc, SoundElement, "length", $"{s.Length}");
+					AddPropertyElement(xmlDoc, SoundElement, "start", $"{GetValue(s.StartTime)}");
+				AddPropertyElement(xmlDoc, SoundElement, "length", $"{GetValue(s.Length)}");
                 //AddPropertyElement(xmlDoc, SoundElement, "looping", $"true");// probably can't be done
 
                 // link audiofile GUID
                 // im pretty sure FTriggerBox Guid is the same as the WavEntry Guid, so this should work, but idk
                 // this very well might not work
-                if (WavGUIDs.ContainsKey(s.Guid))
-                    AddRelationshipElement(xmlDoc, SoundElement, "audioFile", $"{{{WavGUIDs[s.Guid]}}}");
+                if (WavGUIDs.TryGetValue(s.Guid, out Guid AudioGuid))
+                    AddRelationshipElement(xmlDoc, SoundElement, "audioFile", $"{{{AudioGuid}}}");
 			}
 		}
 		#endregion
@@ -301,7 +302,7 @@ public class Events
             foreach (var s in eTimeline.SustainPoints)
             {
                 SetupHeaderXML(xmlDoc, root, "SustainPoint", $"{{{SustainPoints[s]}}}", out XmlElement SustainPointElement);
-                AddPropertyElement(xmlDoc, SustainPointElement, "position", $"{s.Position}");
+                AddPropertyElement(xmlDoc, SustainPointElement, "position", $"{GetValue(s.Position)}");
                 AddRelationshipElement(xmlDoc, SustainPointElement, "timeline", $"{{{eTimeline.BaseGuid}}}");
                 AddRelationshipElement(xmlDoc, SustainPointElement, "markerTrack", $"{{{MarkerTrackGuid}}}");
 				// TODO - maybe do something with Evaluators?
@@ -315,11 +316,11 @@ public class Events
             {
 				string XMLHeader = (m.Length > 0) ? "LoopRegion" : "NamedMarker"; // Either Region or normal marker
                 SetupHeaderXML(xmlDoc, root, XMLHeader, $"{{{m.BaseGuid}}}", out XmlElement NamedMarkerElement);
-                AddPropertyElement(xmlDoc, NamedMarkerElement, "position", $"{m.Position}");
+                AddPropertyElement(xmlDoc, NamedMarkerElement, "position", $"{GetValue(m.Position)}");
 
 				// Region Only
                 if (m.Length > 0) 
-					AddPropertyElement(xmlDoc, NamedMarkerElement, "length", $"{m.Length}");
+					AddPropertyElement(xmlDoc, NamedMarkerElement, "length", $"{GetValue(m.Length)}");
 
 				if (m.Name != string.Empty)
 					AddPropertyElement(xmlDoc, NamedMarkerElement, "name", $"{m.Name}");
@@ -344,7 +345,7 @@ public class Events
             foreach (var m in eTimeline.TimelineTempoMarkers)
             {
                 SetupHeaderXML(xmlDoc, root, "TempoMarker", $"{{{m.BaseGuid}}}", out XmlElement TempoMarkerElement);
-                AddPropertyElement(xmlDoc, TempoMarkerElement, "position", $"{m.Position}");
+                AddPropertyElement(xmlDoc, TempoMarkerElement, "position", $"{GetValue(m.Position)}");
                 AddPropertyElement(xmlDoc, TempoMarkerElement, "tempo", $"{m.Tempo}");
                 AddPropertyElement(xmlDoc, TempoMarkerElement, "timeSignatureNumerator", $"{m.TimeSignature}");
                 AddRelationshipElement(xmlDoc, TempoMarkerElement, "timeline", $"{{{eTimeline.BaseGuid}}}");
