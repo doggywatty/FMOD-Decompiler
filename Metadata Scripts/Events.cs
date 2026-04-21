@@ -374,7 +374,7 @@ public class Events
 				if (m.Name != string.Empty)
 					AddPropertyElement(xmlDoc, NamedMarkerElement, "name", $"{m.Name}");
 
-				if (TransRegion != null && m.Length > 0)
+				if (TransRegion != null)
 				{
                     // Normal = 0, Loop = 1, Magnet = 2
                     int RegionType = TransRegion.Flags switch
@@ -387,6 +387,8 @@ public class Events
 					if (RegionType != 1)
 						AddPropertyElement(xmlDoc, NamedMarkerElement, "looping", $"{RegionType}");
 				}
+				else if (m.Length > 0)
+                    AddPropertyElement(xmlDoc, NamedMarkerElement, "looping", "0");
 
                 AddRelationshipElement(xmlDoc, NamedMarkerElement, "timeline", $"{{{eTimeline.BaseGuid}}}");
                 AddRelationshipElement(xmlDoc, NamedMarkerElement, "markerTrack", $"{{{MarkerTrackGuid}}}");
