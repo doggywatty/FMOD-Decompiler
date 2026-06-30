@@ -1,6 +1,8 @@
 ﻿using Fmod5Sharp.FmodTypes;
 using FModBankParser.Nodes;
+using FModBankParser.Nodes.Instruments;
 using FModBankParser.Objects;
+using System.Globalization;
 using System.Runtime.InteropServices;
 
 public class Program
@@ -19,7 +21,7 @@ public class Program
 
 	#region Colored Text
 	// thank you https://stackoverflow.com/questions/2743260/is-it-possible-to-write-to-the-console-in-colour-in-net
-	public static string SPACE = "\r                                            "; // shortcut for when not verbose
+	public static string SPACE = "\r											"; // shortcut for when not verbose
 	public static string NORMAL = Console.IsOutputRedirected ? "" : "\x1b[39m";
 	public static string RED = Console.IsOutputRedirected ? "" : "\x1b[91m";
 	public static string GREEN = Console.IsOutputRedirected ? "" : "\x1b[92m";
@@ -73,6 +75,7 @@ public class Program
 	public static Dictionary<string, Guid> EventFolderGUIDs = [];
 	public static Dictionary<string, Guid> AudioFileGUIDs = [];
 	public static Dictionary<FModGuid, Guid> WavGUIDs = [];
+	public static Dictionary<FModGuid, BaseInstrumentNode> AllInstrumentNodes = [];
 	#endregion
 
 	#region Initialize Main Variables
@@ -118,7 +121,7 @@ public class Program
 
 		// If also saving to log
 		if (toLog)
-			File.AppendAllTextAsync($"{outputProjectPath}/log.txt", "\n" + message);
+			File.AppendAllText($"{outputProjectPath}/log.txt", "\n" + message);
  
 	}
 
@@ -140,6 +143,7 @@ public class Program
 
 	public static async Task Main(string[] args)
 	{
+		CultureInfo.CurrentCulture = CultureInfo.InvariantCulture;
 		#region Check Arguments
 		for (int i = 0; i < args.Length; i++)
 		{
@@ -172,7 +176,7 @@ public class Program
 		{
 			GetConsoleMode(GetStdHandle(-11), out int mode);
 			SetConsoleMode(GetStdHandle(-11), mode | 0x4);
-			Console.Clear();
+			try { Console.Clear(); } catch { }
 		}
 
 		Console.WriteLine($"Welcome to the FMOD Bank Decompiler {GREEN}(Version 2.0.0 DEV){NORMAL}"
@@ -189,19 +193,19 @@ public class Program
 		);
 
 		#region Arguments and Folders
-		// if no arguments were added
-		if (args.Length >= 2)
-		{
-			bankFolder = args[0];
-			outputProjectPath = args[1];
-		}
-		else
+		// if no arguments were added, prompt interactively
+		if (args.Length == 0)
 		{
 			Console.Write("Enter the path to the Bank Folder: ");
 			bankFolder = Console.ReadLine();
 
 			Console.Write("Enter the path to output the FSPRO Project: ");
 			outputProjectPath = Console.ReadLine();
+		}
+		else if (bankFolder == "" || outputProjectPath == "")
+		{
+			PushToConsoleLog("ERROR: Missing required arguments. Use --input <path> --output <path>", RED);
+			return;
 		}
 
 		// clean and Validate (Trim whitespace and remove quotes)
@@ -243,10 +247,12 @@ public class Program
 
 		#region Setup Output Folders
 
-		// to ensure clean
-		// yes it's pretty dumb, but i want it clean
+		// ensure output directory exists and is clean
 		if (Directory.Exists(outputProjectPath))
+		{
+			PushToConsoleLog($"WARNING: Output folder exists, overwriting: {outputProjectPath}", YELLOW);
 			Directory.Delete(outputProjectPath, true);
+		}
 		Directory.CreateDirectory(outputProjectPath);
 
 		// Main Sub-Directories
@@ -266,7 +272,6 @@ public class Program
 		Directory.CreateDirectory(outputProjectPath + "/Metadata/ParameterPresetFolder");
 		Directory.CreateDirectory(outputProjectPath + "/Metadata/ProfilerFolder");
 		Directory.CreateDirectory(outputProjectPath + "/Metadata/SandboxFolder");
-		Directory.CreateDirectory(outputProjectPath + "/Metadata/Snapshot");
 		Directory.CreateDirectory(outputProjectPath + "/Metadata/SnapshotGroup");
 		Directory.CreateDirectory(outputProjectPath + "/Metadata/Event");
 
@@ -280,7 +285,6 @@ public class Program
 		// XML Files that are in their own subfolders
 		MasterXMLs.Create_MasterAssetXML();
 		MasterXMLs.Create_MasterBankFoldersXML();
-		MasterXMLs.Create_MasterBankXML();
 		MasterXMLs.Create_EventFolderXML();
 		MasterXMLs.Create_PlatformXML();
 		MasterXMLs.Create_EncodingSettingXML();
@@ -340,12 +344,8 @@ public class Program
 				continue;
 			}
 
-			// Clear previous bank stuff
-			EventFolderGUIDs.Clear();
-			AudioFileGUIDs.Clear();
-
 			// Spinner for when --verbose was not used
-			if (verbose)
+			if (!verbose)
 				StartSpinnerAsync("Extracting Bank Info...", new Random().Next(2), 1000, SpinnerKill.Token);
 
 			// Associate WavEntries with their Audio File
@@ -378,6 +378,10 @@ public class Program
 					WavGUIDs.TryAdd(WavGuid, SavedAudioFileGuid);
 			}
 
+			// Aggregate instrument nodes across all banks for cross-bank resolution
+			foreach (var kvp in bank.InstrumentNodes)
+				AllInstrumentNodes.TryAdd(kvp.Key, kvp.Value);
+
 			// Export all Sounds
 			foreach (FmodSoundBank sndBank in bank.SoundBankData)
 				ExtractSoundAssets.ExtractSoundFiles(sndBank, bankName);
@@ -386,13 +390,10 @@ public class Program
 			// Start actual extraction
 			#region Bank Specific XMLs
 			// basically just the XML Files for most assets that references their given bank file
-			// Master.bank has already been added, so skip it
-			if (bankName != "Master.bank")
-			{
-				string truebankName = bankName.Replace(".bank", "/");
-				MasterXMLs.Create_BankAssetXML(truebankName);
-				MasterXMLs.Create_BankFileXML(bankGuid, truebankName);
-			}
+			bool isMaster = bankName == "Master.bank";
+			string truebankName = bankName.Replace(".bank", "/");
+			MasterXMLs.Create_BankAssetXML(truebankName);
+			MasterXMLs.Create_BankFileXML(bankGuid, truebankName, isMaster);
 			#endregion
 
 			#region Event Stuff
@@ -414,21 +415,21 @@ public class Program
 			}
 			#endregion
 			#region Snapshots
-			Dictionary<FModGuid, int> Snaps = [];
 			foreach (FModGuid s in bank.SnapshotNodes.Keys)
 			{
 				SnapshotNode Snap = bank.SnapshotNodes[s];
-				Snaps[Snap.BaseGuid] = Snap.Priority;
 				Snapshots.SnapshotXML(Snap);
 			}
-			// get all snapshots in a list, then order them by priority, and also convert to System.Guid
-			Snapshots.SnapshotGroupXML([.. Snaps.OrderBy(s => s.Value).Select(s => s.Key.ToGuid())]);
 			#endregion
 
 			// Parameters
 			foreach (FModGuid p in bank.ParameterNodes.Keys)
 				Parameters.ParameterXML(bank.ParameterNodes[p]);
 		}
+
+		#region Finalize Global Metadata
+		Snapshots.SnapshotGroupXML();
+		#endregion
 
 		#region Finish
 		// if not verbose, stop spinner
@@ -473,7 +474,7 @@ public class Program
 				string fullMessage = displayMsg + "	" + sequence[sequenceCode, counterValue];
 
 				// ensure last line is clear
-				Console.Write("\r                                                    ");
+				Console.Write("\r													");
 
 				// Write the new spinner message while clearing last line
 				Console.Write("\r" + fullMessage);

@@ -5,6 +5,8 @@ using static XMLHelper;
 
 public class Snapshots
 {
+	private static Dictionary<Guid, int> AllSnapshotsByPriority = [];
+
 	public static void SnapshotXML(SnapshotNode Snap)
 	{
 		Guid AutomatablePropertiesGUID = Guid.NewGuid();
@@ -15,13 +17,19 @@ public class Snapshots
 		// Setup XML
 		SetupXML(out XmlDocument xmlDoc, out XmlElement root);
 
+		Guid snapGuid = Snap.BaseGuid.ToGuid();
+		lock (AllSnapshotsByPriority)
+			AllSnapshotsByPriority[snapGuid] = Snap.Priority;
+
 		SetupHeaderXML(xmlDoc, root, "Snapshot", $"{{{Snap.BaseGuid}}}", out XmlElement SnapElement);
 
-		if (StringTable != null && StringTable.TryGetString(Snap.BaseGuid, out string SnapPath))
+		if (StringTable != null && StringTable.TryGetString(Snap.BaseGuid, out string SnapPath) && !string.IsNullOrEmpty(SnapPath))
 		{
 			string SnapName = SnapPath.Split('/')[^1];
 			AddPropertyElement(xmlDoc, SnapElement, "name", SnapName);
 		}
+		else
+			AddPropertyElement(xmlDoc, SnapElement, "name", $"Snapshot-{Snap.BaseGuid.ToString()[..8]}");
 		AddPropertyElement(xmlDoc, SnapElement, "behavior", $"{(Snap.BlendingSnapshot ? 1 : 0)}");
 
 		AddRelationshipElement(xmlDoc, SnapElement, "mixer", $"{{{MasterMixerXMLGUID}}}");
@@ -41,23 +49,25 @@ public class Snapshots
 		xmlDoc.AppendChild(root);
 
 		// Save
-		SaveXML(xmlDoc, $"{outputProjectPath}/Metadata/Snapshot/{{{Snap.BaseGuid}}}.xml");
+		SaveXML(xmlDoc, $"{outputProjectPath}/Metadata/SnapshotGroup/{{{Snap.BaseGuid}}}.xml");
 	}
 
-	public static void SnapshotGroupXML(List<Guid> SnapList)
+	public static void SnapshotGroupXML()
 	{
-		Guid XMLGUID = Guid.NewGuid();
-
 		// Setup XML
 		SetupXML(out XmlDocument xmlDoc, out XmlElement root);
 
-		SetupHeaderXML(xmlDoc, root, "SnapshotList", $"{{{XMLGUID}}}", out XmlElement SnapListElement);
-		AddMultiRelationshipElement(xmlDoc, SnapListElement, "items", [.. SnapList]);
+		SetupHeaderXML(xmlDoc, root, "SnapshotList", $"{{{MasterSnapshotGUID}}}", out XmlElement SnapListElement);
+		if (AllSnapshotsByPriority.Count > 0)
+		{
+			var orderedSnaps = AllSnapshotsByPriority.OrderBy(s => s.Value).Select(s => s.Key).ToArray();
+			AddMultiRelationshipElement(xmlDoc, SnapListElement, "items", orderedSnaps);
+		}
 		AddRelationshipElement(xmlDoc, SnapListElement, "mixer", $"{{{MasterMixerXMLGUID}}}");
 
 		xmlDoc.AppendChild(root);
 
 		// Save
-		SaveXML(xmlDoc, $"{outputProjectPath}/Metadata/SnapshotGroup/{{{XMLGUID}}}.xml");
+		SaveXML(xmlDoc, $"{outputProjectPath}/Metadata/SnapshotGroup/{{{MasterSnapshotGUID}}}.xml");
 	}
 }

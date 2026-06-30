@@ -1,33 +1,33 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <OutputType>Exe</OutputType>
-    <TargetFramework>net10.0</TargetFramework>
-    <RootNamespace>FMOD_Decompiler</RootNamespace>
-    <ImplicitUsings>enable</ImplicitUsings>
-    <Nullable>enable</Nullable>
-    <PlatformTarget>x64</PlatformTarget>
-    <Platforms>AnyCPU;x64</Platforms>
-    <ApplicationIcon>icon.ico</ApplicationIcon>
+	<OutputType>Exe</OutputType>
+	<TargetFramework>net10.0</TargetFramework>
+	<RootNamespace>FMOD_Decompiler</RootNamespace>
+	<ImplicitUsings>enable</ImplicitUsings>
+	<Nullable>enable</Nullable>
+	<PlatformTarget>x64</PlatformTarget>
+	<Platforms>AnyCPU;x64</Platforms>
+	<ApplicationIcon>icon.ico</ApplicationIcon>
   </PropertyGroup>
 
   <ItemGroup>
-    <None Remove="icon.ico" />
-    <None Remove="icon.png" />
+	<None Remove="icon.ico" />
+	<None Remove="icon.png" />
   </ItemGroup>
 
   <ItemGroup>
-    <Content Include="icon.ico" />
+	<Content Include="icon.ico" />
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Fmod5Sharp" Version="3.1.0" />
-    <PackageReference Include="FModBankParser" Version="1.2.0" />
-    <PackageReference Include="NAudio" Version="2.3.0" />
-    <PackageReference Include="NVorbis" Version="0.10.5" />
+	<PackageReference Include="Fmod5Sharp" Version="3.1.0" />
+	<PackageReference Include="FModBankParser" Version="1.2.0" />
+	<PackageReference Include="NAudio" Version="2.3.0" />
+	<PackageReference Include="NVorbis" Version="0.10.5" />
   </ItemGroup>
 
   <ItemGroup>
-    <Resource Include="icon.ico" />
+	<Resource Include="icon.ico" />
   </ItemGroup>
 </Project>

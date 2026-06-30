@@ -182,7 +182,7 @@ public class MasterXMLs
 		xmlDoc.AppendChild(root);
 
 		// XML File Path
-		string filePath = outputProjectPath + $"/Metadata/SnapshotGroup/{{{MasterSandboxFolderGUID}}}.xml";
+		string filePath = outputProjectPath + $"/Metadata/SnapshotGroup/{{{MasterSnapshotGUID}}}.xml";
 
 		// Save
 		SaveXML(xmlDoc, filePath);
@@ -281,13 +281,15 @@ public class MasterXMLs
 	#endregion
 
 	#region XML Files per each Bank File
-	public static void Create_BankFileXML(FModGuid BankGUID, string BankName)
+	public static void Create_BankFileXML(FModGuid BankGUID, string BankName, bool isMasterBank = false)
 	{
 		// Setup XML
 		SetupXML(out XmlDocument xmlDoc, out XmlElement root);
 
 		SetupHeaderXML(xmlDoc, root, "Bank", $"{{{BankGUID}}}", out XmlElement Element);
 		AddPropertyElement(xmlDoc, Element, "name", BankName);
+		if (isMasterBank)
+			AddPropertyElement(xmlDoc, Element, "isMasterBank", "true");
 		AddRelationshipElement(xmlDoc, Element, "folder", $"{{{MasterBankFolderGUID}}}");
 
 		xmlDoc.AppendChild(root);
