@@ -7,19 +7,7 @@ using System.Runtime.InteropServices;
 
 public class Program
 {
-	#region Compiler Warning bullshit
-		#pragma warning disable CS1998
-		#pragma warning disable CS4014
-		#pragma warning disable CS8600
-		#pragma warning disable CS8601
-		#pragma warning disable CS8602
-		#pragma warning disable CS8603
-		#pragma warning disable CS8604
-		#pragma warning disable CS8605
-		#pragma warning disable CS8625
-	#endregion
-
-	#region Colored Text
+    #region Colored Text
 	// thank you https://stackoverflow.com/questions/2743260/is-it-possible-to-write-to-the-console-in-colour-in-net
 	public static string SPACE = "\r											"; // shortcut for when not verbose
 	public static string NORMAL = Console.IsOutputRedirected ? "" : "\x1b[39m";
@@ -129,7 +117,7 @@ public class Program
 	public static Guid GetRandomGUID() => Guid.NewGuid();
 
 	// because some things need to be converted like this
-	public static double GetValue(dynamic val) => ((int)val) / 48000.0;
+	public static double GetValue(long val) => val / 48000.0;
 
 	public static List<string> SplitEventPath(string EventPath)
 	{
@@ -197,10 +185,9 @@ public class Program
 		if (args.Length == 0)
 		{
 			Console.Write("Enter the path to the Bank Folder: ");
-			bankFolder = Console.ReadLine();
-
+			bankFolder = Console.ReadLine() ?? "";
 			Console.Write("Enter the path to output the FSPRO Project: ");
-			outputProjectPath = Console.ReadLine();
+			outputProjectPath = Console.ReadLine() ?? "";
 		}
 		else if (bankFolder == "" || outputProjectPath == "")
 		{
@@ -208,9 +195,8 @@ public class Program
 			return;
 		}
 
-		// clean and Validate (Trim whitespace and remove quotes)
-		bankFolder = bankFolder?.Replace("\"", "").Trim();
-		outputProjectPath = outputProjectPath?.Replace("\"", "").Trim();
+		bankFolder = bankFolder.Replace("\"", "").Trim();
+		outputProjectPath = outputProjectPath.Replace("\"", "").Trim();
 
 		if (string.IsNullOrWhiteSpace(bankFolder))
 		{
@@ -238,11 +224,11 @@ public class Program
 		if (projectname == "Generic-Project" && !IsGUI)
 		{
 			Console.Write("Enter the Project Name: ");
-			projectname = Console.ReadLine();
+			projectname = Console.ReadLine() ?? "";
 		}
 		var USESPACE = !verbose ? SPACE : "";
 
-		if (projectname == "")
+		if (string.IsNullOrEmpty(projectname))
 			projectname = "Generic-Project";
 
 		#region Setup Output Folders
@@ -332,68 +318,65 @@ public class Program
 		foreach (string bankFilePath in FolderFiles)
 		{
 			var bank = FModBankParser.FModBankParser.LoadSoundBank(new FileInfo(bankFilePath));
-			string bankName = bank.BankName;
+			string rawBankName = bank.BankName;
 			FModGuid bankGuid = bank.BankInfo.BaseGuid;
 
-			PushToConsoleLog($"Loaded Bank: {bankName} (GUID: {bankGuid})", GREEN);
+			PushToConsoleLog($"Loaded Bank: {rawBankName} (GUID: {bankGuid})", GREEN);
 			PushToConsoleLog($"Bank Version: {bank.BankInfo.FileVersion}", GREEN);
 
-			if (bankName == "Master.strings.bank")
+			// Normalize bank name: strip .bank extension if present
+			string bankName = rawBankName.EndsWith(".bank", StringComparison.OrdinalIgnoreCase)
+				? rawBankName[..^5]
+				: rawBankName;
+
+			if (string.Equals(bankName, "Master.strings", StringComparison.OrdinalIgnoreCase))
 			{
-				StringTable = bank.StringTable.RadixTree;
+				if (bank.StringTable?.RadixTree is not null)
+					StringTable = bank.StringTable.RadixTree;
 				continue;
 			}
 
-			// Spinner for when --verbose was not used
 			if (!verbose)
+			{
+#pragma warning disable CS4014
 				StartSpinnerAsync("Extracting Bank Info...", new Random().Next(2), 1000, SpinnerKill.Token);
+#pragma warning restore CS4014
+			}
 
-			// Associate WavEntries with their Audio File
 			#region Setup WavEntries
-			// really annoying that this is the only real way i can think of to associate them
-			// also sucks that the audio files themselves can't have their original Guids
-			// but that's FMOD for ya
 			foreach (FModGuid WavGuid in bank.WavEntries.Keys) 
 			{
-				// get wav node
 				WaveformResourceNode Wav = bank.WavEntries[WavGuid];
 				string? WavSampleName =
-					bank.SoundBankData[Wav.SoundBankIndex] // get bank which has the WavEntry
-					.Samples[Wav.SubsoundIndex] // get WavEntry's associated Sample
-					.Name; // get Sample Name (that's all we need)
+					bank.SoundBankData[Wav.SoundBankIndex]
+					.Samples[Wav.SubsoundIndex]
+					.Name;
 
 				if (WavSampleName is null) 
 					continue;
 
-				// since many WavEntries can reference the same audio file
-				// create a new Guid for the audio file if its a new one
 				if (!AudioFileGUIDs.TryGetValue(WavSampleName, out Guid SavedAudioFileGuid))
 				{
 					Guid AudioFileGuid = GetRandomGUID();
 					AudioFileGUIDs.Add(WavSampleName, AudioFileGuid);
 					WavGUIDs.TryAdd(WavGuid, AudioFileGuid);
 				}
-				// if it was previously referenced, don't set a new one and get the old one
 				else
 					WavGUIDs.TryAdd(WavGuid, SavedAudioFileGuid);
 			}
 
-			// Aggregate instrument nodes across all banks for cross-bank resolution
 			foreach (var kvp in bank.InstrumentNodes)
 				AllInstrumentNodes.TryAdd(kvp.Key, kvp.Value);
 
-			// Export all Sounds
 			foreach (FmodSoundBank sndBank in bank.SoundBankData)
 				ExtractSoundAssets.ExtractSoundFiles(sndBank, bankName);
 			#endregion
 
-			// Start actual extraction
 			#region Bank Specific XMLs
-			// basically just the XML Files for most assets that references their given bank file
-			bool isMaster = bankName == "Master.bank";
-			string truebankName = bankName.Replace(".bank", "/");
-			MasterXMLs.Create_BankAssetXML(truebankName);
-			MasterXMLs.Create_BankFileXML(bankGuid, truebankName, isMaster);
+			bool isMaster = string.Equals(bankName, "Master", StringComparison.OrdinalIgnoreCase);
+			string bankAssetPath = bankName + "/";
+			MasterXMLs.Create_BankAssetXML(bankAssetPath);
+			MasterXMLs.Create_BankFileXML(bankGuid, bankAssetPath, isMaster);
 			#endregion
 
 			#region Event Stuff
@@ -403,7 +386,7 @@ public class Program
 			{
 				EventNode Event = bank.EventNodes[eGuid];
 
-				if (StringTable.TryGetString(Event.BaseGuid, out string EventPath))
+				if (StringTable is not null && StringTable.TryGetString(Event.BaseGuid, out string EventPath))
 				{
 					// Create XMLs for the Event Path (if they don't exist already)
 					EventFolder.ExtractEventFolders(EventPath);

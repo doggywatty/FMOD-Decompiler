@@ -7,7 +7,7 @@ public class ExtractSoundAssets
 	public static void ExtractSoundFiles(FmodSoundBank bank, string bankfilename)
 	{
 		string outPath = outputProjectPath + "/Assets";
-		var outDir = Directory.CreateDirectory($"{outPath}/{bankfilename.Replace(".bank", "")}/");
+		var outDir = Directory.CreateDirectory($"{outPath}/{bankfilename}/");
 
 		PushToConsoleLog($"\nExtracting Sound Files from {bankfilename}...\n", YELLOW);
 		PushToConsoleLog($"Sounds Found: {bank.Samples.Count}", YELLOW);

@@ -40,16 +40,19 @@ public class AudioFile
 		SaveXML(xmlDoc, $"{outputProjectPath}/Metadata/AudioFile/{{{audioGuid}}}.xml");
 	}
 
-	// needed because FMOD5Sharp has no way of doing it
 	private static float GetAudioLength(string filePath)
 	{
-		dynamic reader;
-		switch (Path.GetExtension(filePath).ToLower())
+		string ext = Path.GetExtension(filePath);
+		if (string.Equals(ext, ".wav", StringComparison.OrdinalIgnoreCase))
 		{
-			case ".wav": reader = new WaveFileReader(filePath); break;
-			case ".ogg": reader = new VorbisReader(filePath); break;
-			default: return 0;
+			using var reader = new WaveFileReader(filePath);
+			return (float)reader.TotalTime.TotalSeconds;
 		}
-		return (float)reader.TotalTime.TotalSeconds;
+		if (string.Equals(ext, ".ogg", StringComparison.OrdinalIgnoreCase))
+		{
+			using var reader = new VorbisReader(filePath);
+			return (float)reader.TotalTime.TotalSeconds;
+		}
+		return 0;
 	}
 }

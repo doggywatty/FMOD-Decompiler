@@ -7,7 +7,6 @@ using FModBankParser.Objects;
 using System.Xml;
 using static Program;
 using static XMLHelper;
-#pragma warning disable CS8602
 public class Events
 {
 	public static void EventXML(EventNode Event, string EventPath, FModReader ParentBank)
@@ -49,11 +48,18 @@ public class Events
 		List<FModGuid> AllModules = [.. SoundModules, .. NestModules];
 		bool hasAnyModules = AllModules.Count > 0;
 
-		// Filter to only modules that can resolve to actual audio files
-		// Check both instrument chain resolution AND direct WAV GUID mapping
 		List<FModGuid> ValidSoundModules = AllModules
 			.Where(guid => ResolveWavResourceGuids(guid).Any() || WavGUIDs.ContainsKey(guid))
 			.ToList();
+
+		bool hasResolvableModules = ValidSoundModules.Count > 0;
+		if (!hasResolvableModules && hasAnyModules)
+		{
+			// Check if remaining modules are nested events or commands (valid, no wav needed)
+			hasResolvableModules = AllModules.Any(guid =>
+				AllInstrumentNodes.TryGetValue(guid, out BaseInstrumentNode? inst) &&
+				(inst is EventInstrumentNode || inst is CommandInstrumentNode));
+		}
 
 		Dictionary<FSustainPoint, Guid> SustainPoints = [];
 		if (eTimeline.SustainPoints.Length > 0)
@@ -204,9 +210,8 @@ public class Events
 		}
 		#endregion
 
-		// Log warning if no valid audio modules could be resolved
-		if (ValidSoundModules.Count == 0 && hasAnyModules)
-			PushToConsoleLog($"Warning: Event has no resolvable audio: {EventPath} (generating basic structure)", YELLOW);
+		if (!hasResolvableModules && hasAnyModules)
+			PushToConsoleLog($"Warning: No resolvable modules in event: {EventPath}", YELLOW);
 
 		#region Commands, Nested Events, and Sound Modules
 		if (eTimeline.TriggerBoxes.Length > 0)
@@ -562,32 +567,24 @@ public class Events
 			AddPropertyElement(xmlDoc, SoundElement, "start", $"{GetValue(startTime)}");
 		AddPropertyElement(xmlDoc, SoundElement, "length", $"{GetValue(length)}");
 
+		// Resolve audio file: try instrument chain first, then direct WAV GUID
 		List<FModGuid> wavResourceGuids = ResolveWavResourceGuids(guid);
+		Guid? resolvedAudioGuid = null;
+
 		foreach (var wavResGuid in wavResourceGuids)
 		{
-			if (WavGUIDs.TryGetValue(wavResGuid, out Guid AudioGuid))
+			if (WavGUIDs.TryGetValue(wavResGuid, out Guid audioGuid))
 			{
-				AddRelationshipElement(xmlDoc, SoundElement, "audioFile", $"{{{AudioGuid}}}");
+				resolvedAudioGuid = audioGuid;
 				break;
 			}
 		}
 
-		if (!wavResourceGuids.Any() && WavGUIDs.TryGetValue(guid, out Guid DirectAudioGuid))
-			AddRelationshipElement(xmlDoc, SoundElement, "audioFile", $"{{{DirectAudioGuid}}}");
-		else if (!wavResourceGuids.Any())
-		{
-			// Try direct WAV GUID lookup by comparing GUID values
-			foreach (var kvp in WavGUIDs)
-			{
-				if (kvp.Key.ToString().Contains(guid.ToString()))
-				{
-					AddRelationshipElement(xmlDoc, SoundElement, "audioFile", $"{{{kvp.Value}}}");
-					break;
-				}
-			}
-		}
+		resolvedAudioGuid ??= WavGUIDs.GetValueOrDefault(guid);
 
-		if (!wavResourceGuids.Any() && !WavGUIDs.ContainsKey(guid))
+		if (resolvedAudioGuid.HasValue)
+			AddRelationshipElement(xmlDoc, SoundElement, "audioFile", $"{{{resolvedAudioGuid}}}");
+		else
 			PushToConsoleLog($"WARNING: Could not resolve audio file for trigger box {guid} in event {eventPath}", YELLOW);
 	}
 	#endregion
@@ -626,14 +623,15 @@ public class Events
 	#endregion
 
 	#region Get Event Names
-	// Get Folder above
 	public static string GetHigherEventFolder(string EventPath)
 	{
 		List<string> folders = SplitEventPath(EventPath);
-		return (folders.Count >= 1) 
-			? $"{EventFolderGUIDs[folders[^1] + $"{folders.Count - 1}"]}" // if like event:/music/soundtest/pause, or event:/soundtest/pause, get /soundtest
-			: $"{MasterEventFolderGUID}"; // else if like event:/sound, get Master Folder
-
+		if (folders.Count >= 1)
+		{
+			string folderKey = string.Join("/", folders);
+			return $"{EventFolderGUIDs[folderKey]}";
+		}
+		return $"{MasterEventFolderGUID}";
 	}
 
 	// Get Shortened Name

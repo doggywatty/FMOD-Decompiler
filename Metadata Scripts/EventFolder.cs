@@ -7,35 +7,27 @@ public class EventFolder
 	#region Find All Event Folders
 	public static void ExtractEventFolders(string EventPath) 
 	{
-		// figure out all subfolders from an event path and make an XML for each subfolder
-		// aka event:/music/soundtest/pause
-		//			^folder ^folder  ^event (ignore event)
-
 		List<string> folders = SplitEventPath(EventPath);
 
-		// goes through every subfolder in cleansed path (ex: /music and /soundtest)
 		int folder_level = 0;
 		foreach (var folder in folders)
 		{
-			if (!EventFolderGUIDs.ContainsKey(folder + $"{folder_level}"))
+			string folderKey = string.Join("/", folders.Take(folder_level + 1));
+
+			if (!EventFolderGUIDs.ContainsKey(folderKey))
 			{
-				PushToConsoleLog($"Saving Event Folder: /{folder}", MAGENTA);
-
-				// Create GUID for "folder"
-				EventFolderGUIDs.TryAdd(folder + $"{folder_level}", GetRandomGUID());
-
-				// Create XML
-				EventFolderXML(folder, folders, folder_level);
+				PushToConsoleLog($"Saving Event Folder: /{folderKey}", MAGENTA);
+				EventFolderGUIDs.TryAdd(folderKey, GetRandomGUID());
+				EventFolderXML(folderKey, folders, folder_level);
 			}
-			// increase after every folder
 			folder_level++;
 		}
 	}
 	#endregion
 	#region Event Folder XML
-	static void EventFolderXML(string folderName, List<string> folders, int folder_level)
+	static void EventFolderXML(string folderKey, List<string> folders, int folder_level)
 	{
-		Guid eFolderGuid = EventFolderGUIDs[folderName + $"{folder_level}"];
+		Guid eFolderGuid = EventFolderGUIDs[folderKey];
 
 		// Setup XML
 		SetupXML(out XmlDocument xmlDoc, out XmlElement root);
@@ -44,22 +36,15 @@ public class EventFolder
 		// Create Header and Link its own GUID to itself
 		SetupHeaderXML(xmlDoc, root, "EventFolder", $"{{{eFolderGuid}}}", out XmlElement objectElement);
 
-		// Set its Folder Name
-		AddPropertyElement(xmlDoc, objectElement, "name", folderName);
+		AddPropertyElement(xmlDoc, objectElement, "name", folders[folder_level]);
 
-		// Get GUID of Higher Folder
-		string linkGUID = $"{{{MasterEventFolderGUID}}}";// Default to MasterEventFolder
-
-		// check if current folder isn't a root event folder (like event:/music/)
-		// because those have to use default
-		if (folders[0] != folderName)
+		// Determine parent folder key (full path of the folder above)
+		string linkGUID = $"{{{MasterEventFolderGUID}}}";
+		if (folder_level > 0)
 		{
-			// Get GUID of Higher Folder
-			int higher_folder = folder_level - 1;
-			// Link it
-			linkGUID = $"{{{EventFolderGUIDs[folders[higher_folder] + $"{higher_folder}"]}}}";
+			string parentKey = string.Join("/", folders.Take(folder_level));
+			linkGUID = $"{{{EventFolderGUIDs[parentKey]}}}";
 		}
-		// Link the GUID of the folder above it
 		AddRelationshipElement(xmlDoc, objectElement, "folder", linkGUID);
 
 		// Save the XML document to File

@@ -9,10 +9,10 @@ public class Snapshots
 
 	public static void SnapshotXML(SnapshotNode Snap)
 	{
-		Guid AutomatablePropertiesGUID = Guid.NewGuid();
-		Guid MarkerTrackGUID = Guid.NewGuid();
-		Guid TimelineGUID = Guid.NewGuid();
-		Guid SnapshotMasterTrackGUID = Guid.NewGuid();
+		Guid AutomatablePropertiesGUID = GetRandomGUID();
+		Guid MarkerTrackGUID = GetRandomGUID();
+		Guid TimelineGUID = GetRandomGUID();
+		Guid SnapshotMasterTrackGUID = GetRandomGUID();
 
 		// Setup XML
 		SetupXML(out XmlDocument xmlDoc, out XmlElement root);
