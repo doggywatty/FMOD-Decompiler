@@ -40,6 +40,63 @@ public class AudioFile
 		SaveXML(xmlDoc, $"{outputProjectPath}/Metadata/AudioFile/{{{audioGuid}}}.xml");
 	}
 
+	/*
+		ProgrammerSound needs a placeholder AudioFile.
+		The placeholder audio is stored as a loose file (never in a bank) and it can't be extracted,
+		so generate a short silent WAV so the reference resolves and the project opens.
+	*/
+	public static Guid CreatePlaceholderAudioFile(string assetFolder)
+	{
+		Guid audioGuid = GetRandomGUID();
+		string relFolder = assetFolder.Trim('/');
+		string dir = $"{outputProjectPath}/Assets/{relFolder}";
+		Directory.CreateDirectory(dir);
+
+		string fileName = $"placeholder_{audioGuid.ToString()[..6]}_silent.wav";
+		string filePath = Path.Combine(dir, fileName);
+
+		const int sampleRate = 44100;
+		const short channels = 2;
+		const int seconds = 1;
+		int numSamples = sampleRate * seconds;
+		int dataBytes = numSamples * channels * 2;
+		using (var ms = new MemoryStream())
+		{
+			using (var w = new BinaryWriter(ms))
+			{
+				w.Write(new[] { 'R', 'I', 'F', 'F' });
+				w.Write(36 + dataBytes);
+				w.Write(new[] { 'W', 'A', 'V', 'E' });
+				w.Write(new[] { 'f', 'm', 't', ' ' });
+				w.Write(16); // fmt chunk size
+				w.Write((short)1); // PCM
+				w.Write(channels);
+				w.Write(sampleRate);
+				w.Write(sampleRate * channels * 2); // byte rate
+				w.Write((short)(channels * 2)); // block align
+				w.Write((short)16); // bits per sample
+				w.Write(new[] { 'd', 'a', 't', 'a' });
+				w.Write(dataBytes);
+				w.Write(new byte[dataBytes]);
+			}
+			File.WriteAllBytes(filePath, ms.ToArray());
+		}
+
+		string relativePath = Path.GetRelativePath($"{outputProjectPath}/Assets", filePath).Replace("\\", "/");
+
+		SetupXML(out XmlDocument xmlDoc, out XmlElement root);
+		SetupHeaderXML(xmlDoc, root, "AudioFile", $"{{{audioGuid}}}", out XmlElement objectElement);
+		AddPropertyElement(xmlDoc, objectElement, "assetPath", relativePath);
+		AddPropertyElement(xmlDoc, objectElement, "frequencyInKHz", "44.1");
+		AddPropertyElement(xmlDoc, objectElement, "channelCount", "2");
+		AddPropertyElement(xmlDoc, objectElement, "length", seconds.ToString(CultureInfo.InvariantCulture));
+		AddRelationshipElement(xmlDoc, objectElement, "masterAssetFolder", $"{{{MasterAssetsGUID}}}");
+		xmlDoc.AppendChild(root);
+
+		SaveXML(xmlDoc, $"{outputProjectPath}/Metadata/AudioFile/{{{audioGuid}}}.xml");
+		return audioGuid;
+	}
+
 	private static float GetAudioLength(string filePath)
 	{
 		string ext = Path.GetExtension(filePath);

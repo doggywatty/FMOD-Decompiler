@@ -428,5 +428,6 @@ FodyWeavers.xsd
 *.msm
 *.msp
 
-# Output Folders when testing
+# Output Folders when i was testing
 *test*/
+analyze_banks.py

@@ -82,6 +82,11 @@ public class XMLHelper
 	// Save the XML File with Indentations and stuff
 	public static void SaveXML(XmlDocument xmlDoc, string filepath)
 	{
+		// make sure the target folder exists, a missing folder used to abort the whole conversion
+		string? dir = Path.GetDirectoryName(filepath);
+		if (!string.IsNullOrEmpty(dir) && !Directory.Exists(dir))
+			Directory.CreateDirectory(dir);
+
 		// Make Indentation Settings
 		XmlWriterSettings settings = new XmlWriterSettings
 		{

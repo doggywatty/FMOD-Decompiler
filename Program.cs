@@ -1,5 +1,6 @@
 ﻿using Fmod5Sharp.FmodTypes;
 using FModBankParser.Nodes;
+using FModBankParser.Nodes.Buses;
 using FModBankParser.Nodes.Instruments;
 using FModBankParser.Objects;
 using System.Globalization;
@@ -50,10 +51,13 @@ public class Program
 	public static Guid MasterSandboxFolderGUID = GetRandomGUID();
 	public static Guid MasterSnapshotGUID = GetRandomGUID();
 
-	public static Guid MasterXMLGUID = GetRandomGUID();// for Master.XML
-	public static Guid MasterMixerXMLGUID = GetRandomGUID();// for Mixer.XML
-	public static Guid MasterTagsXMLGUID = GetRandomGUID();// for Tags.XML
-	public static Guid MasterWorkspaceXMLGUID = GetRandomGUID();// for Workspace.XML
+	public static Guid ParameterPresetFolderGUID = GetRandomGUID();
+
+	public static Guid MasterXMLGUID = GetRandomGUID(); // for Master.XML
+	public static Guid MasterMixerXMLGUID = GetRandomGUID(); // for Mixer.XML
+	public static Guid EventOutputBusGUID = GetRandomGUID(); // catch-all MixerGroup every event routes into
+	public static Guid MasterTagsXMLGUID = GetRandomGUID(); // for Tags.XML
+	public static Guid MasterWorkspaceXMLGUID = GetRandomGUID(); // for Workspace.XML
 
 	public static Guid Master1GUID = GetRandomGUID();// for Master.XML (effectChain)
 	public static Guid Master2GUID = GetRandomGUID();// for Master.XML (panner)
@@ -64,6 +68,22 @@ public class Program
 	public static Dictionary<string, Guid> AudioFileGUIDs = [];
 	public static Dictionary<FModGuid, Guid> WavGUIDs = [];
 	public static Dictionary<FModGuid, BaseInstrumentNode> AllInstrumentNodes = [];
+	
+	// Maps ParameterNode BaseGuid to ParameterPreset object GUID (for ParameterProxy.preset links)
+	public static Dictionary<FModGuid, Guid> ParameterPresetGUIDs = [];
+	
+	// Tracks already emitted ParameterPresets so duplicate ParameterNodes across banks don't double-write
+	public static HashSet<string> EmittedParameterPresets = [];
+	
+	// Tracks already emitted Bank GUIDs (localized banks share GUIDs, just emit once)
+	public static HashSet<string> EmittedBankGUIDs = [];
+
+	/*
+		Every bus seen across all banks, plus the bus GUIDs that events already claim (EventMixerMaster / EventMixerInput / EventMixerGroup)
+		Whatever is left over is the standalone mixer tree and gets emitted as MixerGroup / MixerReturn, which snapshots animate directly
+	*/
+	public static Dictionary<string, BaseBusNode> AllBusNodes = [];
+	public static HashSet<string> ReferencedBusGuids = [];
 	#endregion
 
 	#region Initialize Main Variables
@@ -258,11 +278,13 @@ public class Program
 		Directory.CreateDirectory(outputProjectPath + "/Metadata/ParameterPresetFolder");
 		Directory.CreateDirectory(outputProjectPath + "/Metadata/ProfilerFolder");
 		Directory.CreateDirectory(outputProjectPath + "/Metadata/SandboxFolder");
+		Directory.CreateDirectory(outputProjectPath + "/Metadata/Snapshot");
 		Directory.CreateDirectory(outputProjectPath + "/Metadata/SnapshotGroup");
 		Directory.CreateDirectory(outputProjectPath + "/Metadata/Event");
-
-		// Main FSPro File
-		MasterXMLs.Create_FSPROFile(projectname);
+		// Standalone mixer tree
+		Directory.CreateDirectory(outputProjectPath + "/Metadata/Group");
+		Directory.CreateDirectory(outputProjectPath + "/Metadata/Return");
+		Directory.CreateDirectory(outputProjectPath + "/Metadata/VCA");
 
 		#endregion
 		#region Built-in XML Files
@@ -278,7 +300,6 @@ public class Program
 		MasterXMLs.Create_ParameterPresetFolderXML();
 		MasterXMLs.Create_ProfilerFolderXML();
 		MasterXMLs.Create_SandboxFolderXML();
-		MasterXMLs.Create_SnapshotGroupXML();
 
 		// XML Files in the /Metadata folder
 		MasterXMLs.Create_MasterXML();
@@ -324,10 +345,8 @@ public class Program
 			PushToConsoleLog($"Loaded Bank: {rawBankName} (GUID: {bankGuid})", GREEN);
 			PushToConsoleLog($"Bank Version: {bank.BankInfo.FileVersion}", GREEN);
 
-			// Normalize bank name: strip .bank extension if present
-			string bankName = rawBankName.EndsWith(".bank", StringComparison.OrdinalIgnoreCase)
-				? rawBankName[..^5]
-				: rawBankName;
+			// normalize bank name, strip .bank extension if present
+			string bankName = rawBankName.EndsWith(".bank", StringComparison.OrdinalIgnoreCase) ? rawBankName[..^5] : rawBankName;
 
 			if (string.Equals(bankName, "Master.strings", StringComparison.OrdinalIgnoreCase))
 			{
@@ -338,9 +357,9 @@ public class Program
 
 			if (!verbose)
 			{
-#pragma warning disable CS4014
+				#pragma warning disable CS4014
 				StartSpinnerAsync("Extracting Bank Info...", new Random().Next(2), 1000, SpinnerKill.Token);
-#pragma warning restore CS4014
+				#pragma warning restore CS4014
 			}
 
 			#region Setup WavEntries
@@ -352,35 +371,98 @@ public class Program
 					.Samples[Wav.SubsoundIndex]
 					.Name;
 
-				if (WavSampleName is null) 
+				if (string.IsNullOrEmpty(WavSampleName)) 
 					continue;
 
-				if (!AudioFileGUIDs.TryGetValue(WavSampleName, out Guid SavedAudioFileGuid))
+				/*
+					just normalize to the extension-less name
+					AudioFile.AudioFileXML derives its key from the written file name, so any difference here produces a GUID that is never written out and leaves a dangling "audioFile" reference (then studio flags the event..)
+				*/
+				string wavKey = Path.GetFileNameWithoutExtension(WavSampleName);
+				if (string.IsNullOrEmpty(wavKey))
+					wavKey = WavSampleName;
+
+				if (!AudioFileGUIDs.TryGetValue(wavKey, out Guid SavedAudioFileGuid))
 				{
 					Guid AudioFileGuid = GetRandomGUID();
-					AudioFileGUIDs.Add(WavSampleName, AudioFileGuid);
+					AudioFileGUIDs.Add(wavKey, AudioFileGuid);
 					WavGUIDs.TryAdd(WavGuid, AudioFileGuid);
 				}
 				else
 					WavGUIDs.TryAdd(WavGuid, SavedAudioFileGuid);
 			}
 
+			/*
+				Pre-populate AudioFile GUIDs from raw samples so localized/audio-table banks (Dialogue_*) with no WavEntries still get stable GUIDs and no warnings.
+				Key on the extensionless name because that's what AudioFileXML looks up.
+			*/
+			foreach (FmodSoundBank sndBank in bank.SoundBankData)
+			{
+				foreach (var sample in sndBank.Samples)
+				{
+					string? sname = sample.Name;
+					if (string.IsNullOrEmpty(sname)) continue;
+					string keyBase = Path.GetFileNameWithoutExtension(sname);
+					if (string.IsNullOrEmpty(keyBase)) continue;
+					AudioFileGUIDs.TryAdd(keyBase, GetRandomGUID());
+				}
+			}
+
 			foreach (var kvp in bank.InstrumentNodes)
 				AllInstrumentNodes.TryAdd(kvp.Key, kvp.Value);
 
+			foreach (var kvp in bank.BusNodes)
+				AllBusNodes.TryAdd(kvp.Key.ToString(), kvp.Value);
+
+			// Mark the buses this bank' events already own so they are not re-emitted as part of the standalone mixer tree.
+			foreach (var ev in bank.EventNodes.Values)
+			{
+				if (!ev.MasterTrackGuid.IsEmpty)
+					ReferencedBusGuids.Add(ev.MasterTrackGuid.ToString());
+				if (!ev.InputBusGuid.IsEmpty)
+					ReferencedBusGuids.Add(ev.InputBusGuid.ToString());
+				if (ev.NonMasterTracks != null)
+					foreach (var nmt in ev.NonMasterTracks)
+						ReferencedBusGuids.Add(nmt.ToString());
+			}
+
+			/*
+				A bank with sounds but no events/instruments is an audio table (loose files).
+				Localized variants (for example, Dialogue_CN/EN/JP) share a GUID, so the audio table source dir is the shared prefix without the language suffix
+			*/
+			bool isAudioTable = bank.EventNodes.Count == 0 && bank.InstrumentNodes.Count == 0 && bank.SoundBankData.Count > 0;
+			string? tableDir = null;
+			if (isAudioTable)
+			{
+				int lastUnderscore = bankName.LastIndexOf('_');
+				tableDir = lastUnderscore > 0 ? bankName[..lastUnderscore] : bankName;
+			}
+
 			foreach (FmodSoundBank sndBank in bank.SoundBankData)
-				ExtractSoundAssets.ExtractSoundFiles(sndBank, bankName);
+				ExtractSoundAssets.ExtractSoundFiles(sndBank, bankName, isAudioTable, tableDir);
 			#endregion
 
 			#region Bank Specific XMLs
 			bool isMaster = string.Equals(bankName, "Master", StringComparison.OrdinalIgnoreCase);
 			string bankAssetPath = bankName + "/";
-			MasterXMLs.Create_BankAssetXML(bankAssetPath);
-			MasterXMLs.Create_BankFileXML(bankGuid, bankAssetPath, isMaster);
+			// localized banks (Dialogue_CN/EN/JP) share one Bank GUID, only emit the Bank XML once.
+			bool firstTimeForGuid = EmittedBankGUIDs.Add(bankGuid.ToString());
+			if (firstTimeForGuid)
+				MasterXMLs.Create_BankFileXML(bankGuid, isAudioTable ? tableDir ?? bankName : bankName, isMaster, isAudioTable, tableDir);
+			// Audio tables hold loose files, so they don't own an EncodableAsset.
+			if (!isAudioTable)
+				MasterXMLs.Create_BankAssetXML(bankAssetPath);
 			#endregion
+
+			// Parameters FIRST so ParameterPresetGUIDs map is ready for ParameterProxy.preset links
+			foreach (FModGuid p in bank.ParameterNodes.Keys)
+				Parameters.ParameterXML(bank.ParameterNodes[p]);
 
 			#region Event Stuff
 			PushToConsoleLog($"Event Count: {bank.EventNodes.Count}", GREEN);
+
+			// Track which SnapshotNodes were consumed via snapshot-events, so the legacy fallback below doesn't duplicate them.
+			HashSet<string> consumedSnapshotNodes = new();
 
 			foreach (FModGuid eGuid in bank.EventNodes.Keys)
 			{
@@ -388,30 +470,50 @@ public class Program
 
 				if (StringTable is not null && StringTable.TryGetString(Event.BaseGuid, out string EventPath))
 				{
+					// Banks store Snapshots as EventNodes with snapshot:/ paths, route them to Snapshot handling, not Event handling
+					if (EventPath.StartsWith("snapshot:/", StringComparison.OrdinalIgnoreCase))
+					{
+						bank.SnapshotNodes.TryGetValue(Event.SnapshotGuid, out SnapshotNode? snapData);
+						if (snapData is not null)
+							consumedSnapshotNodes.Add(Event.SnapshotGuid.ToString());
+						Snapshots.SnapshotXML(Event, snapData, EventPath);
+						continue;
+					}
+
 					// Create XMLs for the Event Path (if they don't exist already)
 					EventFolder.ExtractEventFolders(EventPath);
 					// Create XML for the event
 					Events.EventXML(Event, EventPath, bank);
 				}
 				else
-					PushToConsoleLog($"WARNING: Event Path could not be resolved for Event ID ({Event.BaseGuid})", YELLOW);
+				{
+					PushToConsoleLog($"WARNING: Event Path could not be resolved for Event ID ({Event.BaseGuid}); using fallback name", YELLOW);
+					string fallbackName = $"Event-{Event.BaseGuid.ToString()[..8]}";
+					string fallbackPath = $"event:/{fallbackName}";
+					EventFolder.ExtractEventFolders(fallbackPath);
+					Events.EventXML(Event, fallbackPath, bank);
+				}
 			}
 			#endregion
 			#region Snapshots
 			foreach (FModGuid s in bank.SnapshotNodes.Keys)
 			{
+				if (consumedSnapshotNodes.Contains(s.ToString()))
+					continue;
+				// Fallback for SnapshotNodes with no matching snapshot-event (like said before, it should be rare, again)
 				SnapshotNode Snap = bank.SnapshotNodes[s];
-				Snapshots.SnapshotXML(Snap);
+				PushToConsoleLog($"WARNING: SnapshotNode {s} has no matching snapshot-event, using fallback", YELLOW);
+				Snapshots.SnapshotXML_Legacy(Snap);
 			}
 			#endregion
-
-			// Parameters
-			foreach (FModGuid p in bank.ParameterNodes.Keys)
-				Parameters.ParameterXML(bank.ParameterNodes[p]);
 		}
 
 		#region Finalize Global Metadata
 		Snapshots.SnapshotGroupXML();
+		// Emit the standalone mixer buses (snapshots animate them by GUID)
+		MasterXMLs.Create_StandaloneMixerBuses();
+		// Create the FSPro file LAST so it can include all object references
+		MasterXMLs.Create_FSPROFile(projectname);
 		#endregion
 
 		#region Finish

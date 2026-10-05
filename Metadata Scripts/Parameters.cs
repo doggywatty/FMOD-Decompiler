@@ -5,6 +5,11 @@ using static XMLHelper;
 
 public class Parameters
 {
+	// FMOD Studio writes only non-default values on a GameParameter
+	private const float DefaultInitialValue = 0f;
+	private const float DefaultMinimum = 0f;
+	private const float DefaultMaximum = 1f;
+
 	private struct ParamFlags(string type)
 	{
 		public string Type { get; set; } = type;
@@ -15,29 +20,28 @@ public class Parameters
 
 	public static void ParameterXML(ParameterNode Param)
 	{
+		string dedupKey = Param.BaseGuid.ToString();
+		lock (EmittedParameterPresets)
+		{
+			if (!EmittedParameterPresets.Add(dedupKey))
+				return;
+		}
 		Guid XMLGUID = GetRandomGUID();
+		// Remember the preset GUID so ParameterProxy.preset can link to it
+		ParameterPresetGUIDs.TryAdd(Param.BaseGuid, XMLGUID);
 
-		#region Preset Segement
-		// Setup XML
+		#region Preset Segment
 		SetupXML(out XmlDocument xmlDoc, out XmlElement root);
 		SetupHeaderXML(xmlDoc, root, "ParameterPreset", $"{{{XMLGUID}}}", out XmlElement PresetElement);
 
-		// Parmeter Name
 		AddPropertyElement(xmlDoc, PresetElement, "name", Param.Name);
-		// Link back to Master Parm GUID
-		AddRelationshipElement(xmlDoc, PresetElement, "folder", $"{{{MasterParameterPresetGUID}}}");
-		// Link to Parameter Settings in Second Segment below
+		// Every preset in the original project lives inside a real ParameterPresetFolder, not directly under the master folder
+		AddRelationshipElement(xmlDoc, PresetElement, "folder", $"{{{ParameterPresetFolderGUID}}}");
 		AddRelationshipElement(xmlDoc, PresetElement, "parameter", $"{{{Param.BaseGuid}}}");
 		#endregion
+
 		#region Parameter Segment
 		SetupHeaderXML(xmlDoc, root, "GameParameter", $"{{{Param.BaseGuid}}}", out XmlElement ParamElement);
-
-		// Main Properties
-		AddPropertyElement(xmlDoc, ParamElement, "initialValue", $"{Param.DefaultValue}");
-		if (Param.Minimum != 0)
-			AddPropertyElement(xmlDoc, ParamElement, "minimum", $"{Param.Minimum}");
-		if (Param.Maximum != 1)
-			AddPropertyElement(xmlDoc, ParamElement, "maximum", $"{Param.Maximum}");
 
 		#region Resolve Parameter Types
 		ParamFlags ParamData = new((Param.Flags & 0x28) switch
@@ -62,34 +66,43 @@ public class Parameters
 			0x7 => 8, // Speed (Relative)
 			0x8 => 9, // Speed (Absolute)
 			0x9 => 10, // Distance (Normalized)
-
-			// if GAME CONTROLLED, then we're not using this
-			0x0 => -1, // Game Controlled
-			_ => -1
+			_ => -1, // GAME CONTROLLED has no built-in type
 		};
 		#endregion
-		#region XML Parameter Types
-		// if Labeled
-		if (Param.Labels.Length > 0 && ParamData.Type == "Labeled")
-		{
-			AddPropertyElement(xmlDoc, ParamElement, "parameterType", "2"); // "2" == Labeled
-			AddMultiPropertyElement(xmlDoc, ParamElement, "enumerationLabels", Param.Labels); // add labels
-		}
-		// if Discrete
-		else if (ParamData.Type == "Discrete")
-			AddPropertyElement(xmlDoc, ParamElement, "parameterType", "1"); // "1" == Discrete
-		// if using Built-in Types
-		else if (BuiltinParamType != -1)
-			AddPropertyElement(xmlDoc, ParamElement, "parameterType", $"{BuiltinParamType}");
-		// if Continuious (or unknown)
-		else
-			AddPropertyElement(xmlDoc, ParamElement, "parameterType", "0"); // "0" == Continuious
-		#endregion
 
-		// Other Properties
+		bool isLabeled = Param.Labels.Length > 0 && ParamData.Type == "Labeled";
+		bool isDiscrete = !isLabeled && ParamData.Type == "Discrete";
+
+		/*
+			0 = continuous (default, omitted)
+			1 = discrete
+			2 = labeled
+		*/
+		int effectiveType = isLabeled ? 2 : (isDiscrete ? 1 : (BuiltinParamType != -1 ? BuiltinParamType : 0));
+		if (effectiveType != 0)
+			AddPropertyElement(xmlDoc, ParamElement, "parameterType", $"{effectiveType}");
+
+		if (isLabeled)
+			AddMultiPropertyElement(xmlDoc, ParamElement, "enumerationLabels", Param.Labels);
+
+		/*
+			Range. For a labeled parameter Studio stores the LABEL COUNT (verified: the examples
+			`Surface` parameter has 3 labels and stores maximum=3, while the bank holds max=2).
+			For everything else the bank range is used directly.
+		*/
+		float min = Param.Minimum;
+		float max = isLabeled ? Param.Labels.Length : Param.Maximum;
+		if (min != DefaultMinimum)
+			AddPropertyElement(xmlDoc, ParamElement, "minimum", $"{min}");
+		if (max != DefaultMaximum)
+			AddPropertyElement(xmlDoc, ParamElement, "maximum", $"{max}");
+
+		if (Param.DefaultValue != DefaultInitialValue)
+			AddPropertyElement(xmlDoc, ParamElement, "initialValue", $"{Param.DefaultValue}");
+
 		if (ParamData.IsGlobal)
 			AddPropertyElement(xmlDoc, ParamElement, "isGlobal", "true");
-		if (ParamData.IsReadOnly) 
+		if (ParamData.IsReadOnly)
 			AddPropertyElement(xmlDoc, ParamElement, "isReadOnly", "true");
 		if (ParamData.IsHeld)
 			AddPropertyElement(xmlDoc, ParamElement, "isHeld", "true");
@@ -104,7 +117,6 @@ public class Parameters
 
 		xmlDoc.AppendChild(root);
 
-		// Save
 		SaveXML(xmlDoc, $"{outputProjectPath}/Metadata/ParameterPreset/{{{XMLGUID}}}.xml");
 	}
 }
